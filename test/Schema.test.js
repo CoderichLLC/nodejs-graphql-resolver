@@ -1,8 +1,8 @@
-const Resolver = require('../src/Resolver');
+const Schema = require('../src/Schema');
 
-describe('Resolver', () => {
+describe('Schema', () => {
   test('parse', () => {
-    expect(Resolver.parse(`
+    expect(new Schema(`
       scalar Mixed
 
       type Person @model(key: "person") {
@@ -13,10 +13,10 @@ describe('Resolver', () => {
         books: [Book!]
       }
 
-      type Book {
+      type Book @model(source: "postgres") {
         name: String!
       }
-    `)).toEqual({
+    `).parse()).toEqual({
       models: {
         Person: {
           fields: {
@@ -56,6 +56,11 @@ describe('Resolver', () => {
             name: {
               type: 'String',
               required: true,
+            },
+          },
+          directives: {
+            model: {
+              source: 'postgres',
             },
           },
         },
