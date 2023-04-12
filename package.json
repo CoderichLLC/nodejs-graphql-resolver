@@ -15,7 +15,8 @@
     "dev": "coderich-dev"
   },
   "dependencies": {
-    "@coderich/query": "0.0.1"
+    "@coderich/query": "0.0.1",
+    "@coderich/util": "0.0.7"
   },
   "devDependencies": {
     "@coderich/dev": "0.0.17",

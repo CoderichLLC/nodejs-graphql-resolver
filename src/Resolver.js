@@ -1,19 +1,21 @@
 const Query = require('./Query');
 
 module.exports = class Resolver {
-  #schema;
-  #drivers;
+  #config;
 
   constructor(config) {
-    const { schema, drivers } = config;
-    this.#schema = schema;
+    this.#config = config;
   }
 
   match(model) {
-    return new Query({ resolver: this, schema: this.#schema, model });
+    return new Query({ resolver: this, schema: this.#config.schema, query: { model } });
+  }
+
+  query(query) {
+    return this.resolve(query.resolve());
   }
 
   resolve(query) {
-    return { schema: this.#schema, query };
+    return query;
   }
 };
