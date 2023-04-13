@@ -1,17 +1,18 @@
 const Path = require('path');
 const Schema = require('../src/Schema');
-const Resolver = require('../src/Resolver');
+const QueryResolver = require('../src/QueryResolver');
 
-describe('Resolver', () => {
+describe('QueryResolver', () => {
   const schema = new Schema(Path.join(__dirname, 'schema.graphql')).parse();
-  const resolver = new Resolver({ schema });
+  const resolver = { resolve: query => query };
+  const factory = query => new QueryResolver({ resolver, schema, query });
 
   test('Query syntax', () => {
-    expect(resolver.match('Author').id(1).one()).toEqual({ model: 'Author', op: 'findOne', where: { _id: 1 }, select: { _id: true, authored: true, biography: true, name: true } });
-    expect(resolver.match('Library').id(1).one()).toEqual({ model: 'Library', op: 'findOne', where: { _id: 1 }, select: { _id: true, name: true, books: true } });
-    expect(resolver.match('Book').id(1).one()).toEqual({ model: 'Book', op: 'findOne', where: { id: 1 }, select: { name: true, author: true } });
-    expect(resolver.match('Author').select('id').where({ id: 2, name: 'rich', bio: 'amaze' }).one()).toEqual({ model: 'Author', op: 'findOne', where: { _id: 2, name: 'rich', biography: 'amaze' }, select: { _id: true } });
-    expect(resolver.match('Author').many()).toEqual({ model: 'Author', op: 'findMany', select: { _id: true, name: true, biography: true, authored: true } });
+    expect(factory({ model: 'Author' }).id(1).one()).toEqual({ model: 'Author', op: 'findOne', where: { _id: 1 }, select: { _id: true, authored: true, biography: true, name: true } });
+    expect(factory({ model: 'Library' }).id(1).one()).toEqual({ model: 'Library', op: 'findOne', where: { _id: 1 }, select: { _id: true, name: true, books: true } });
+    expect(factory({ model: 'Book' }).id(1).one()).toEqual({ model: 'Book', op: 'findOne', where: { id: 1 }, select: { name: true, author: true } });
+    expect(factory({ model: 'Author' }).select('id').where({ id: 2, name: 'rich', bio: 'amaze' }).one()).toEqual({ model: 'Author', op: 'findOne', where: { _id: 2, name: 'rich', biography: 'amaze' }, select: { _id: true } });
+    expect(factory({ model: 'Author' }).many()).toEqual({ model: 'Author', op: 'findMany', select: { _id: true, name: true, biography: true, authored: true } });
   });
 
   // test('.clone + .query()', () => {

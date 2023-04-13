@@ -6,6 +6,7 @@ describe('Schema', () => {
     expect(new Schema(Path.join(__dirname, 'schema.graphql')).parse()).toEqual({
       models: {
         Author: {
+          pk: 'id',
           name: 'Author',
           keyMap: {
             id: '_id',
@@ -16,11 +17,6 @@ describe('Schema', () => {
               name: 'id',
               type: 'ID',
               isRequired: true,
-              directives: {
-                field: {
-                  key: '_id',
-                },
-              },
             },
             name: {
               name: 'name',
@@ -30,11 +26,6 @@ describe('Schema', () => {
             bio: {
               name: 'bio',
               type: 'Mixed',
-              directives: {
-                field: {
-                  key: 'biography',
-                },
-              },
             },
             authored: {
               name: 'authored',
@@ -45,6 +36,7 @@ describe('Schema', () => {
           },
         },
         Library: {
+          pk: 'id',
           name: 'Library',
           keyMap: {
             id: '_id',
@@ -54,11 +46,6 @@ describe('Schema', () => {
               name: 'id',
               type: 'ID',
               isRequired: true,
-              directives: {
-                field: {
-                  key: '_id',
-                },
-              },
             },
             name: {
               name: 'name',
@@ -72,13 +59,9 @@ describe('Schema', () => {
               isArrayRequired: true,
             },
           },
-          directives: {
-            model: {
-              key: 'library',
-            },
-          },
         },
         Book: {
+          pk: 'id',
           name: 'Book',
           fields: {
             name: {
@@ -90,11 +73,6 @@ describe('Schema', () => {
               name: 'author',
               type: 'Author',
               isRequired: true,
-            },
-          },
-          directives: {
-            model: {
-              source: 'postgres',
             },
           },
         },

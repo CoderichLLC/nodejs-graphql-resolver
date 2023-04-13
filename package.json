@@ -16,11 +16,14 @@
   },
   "dependencies": {
     "@coderich/query": "0.0.1",
-    "@coderich/util": "0.0.7"
+    "@coderich/util": "0.0.7",
+    "@hapi/boom": "10.0.1"
   },
   "devDependencies": {
     "@coderich/dev": "0.0.17",
-    "graphql": "16.6.0"
+    "@shelf/jest-mongodb": "4.1.7",
+    "graphql": "16.6.0",
+    "mongodb": "5.2.0"
   },
   "peerDependencies": {
     "graphql": "*"

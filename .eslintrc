@@ -22,7 +22,7 @@
     "newline-per-chained-call": ["error", { "ignoreChainWithDepth": 10 }],
     "no-return-assign": ["error", "except-parens"],
     "no-unused-vars": ["error", { "args": "none" }],
-    "object-curly-newline": ["error", { "minProperties": 10, "consistent": true }],
+    "object-curly-newline": ["error", { "minProperties": 0, "consistent": true }],
     "comma-dangle": ["error", {
       "arrays": "always-multiline",
       "objects": "always-multiline",

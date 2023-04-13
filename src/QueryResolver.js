@@ -1,9 +1,10 @@
 const Util = require('@coderich/util');
-const BaseQuery = require('@coderich/query');
+const QueryBuilder = require('./QueryBuilder');
 
-module.exports = class Query extends BaseQuery {
+module.exports = class QueryResolver extends QueryBuilder {
   #model;
   #schema;
+  #hydrate;
   #resolver;
   #arrayOp;
 
@@ -18,13 +19,14 @@ module.exports = class Query extends BaseQuery {
 
   clone(q) {
     const query = super.clone(q).resolve();
-    return new Query({ schema: this.#schema, resolver: this.#resolver, query });
+    return new QueryResolver({ schema: this.#schema, resolver: this.#resolver, query });
   }
 
   resolve() {
     const query = super.resolve();
-    const { where, select = Object.values(this.#model.fields).map(field => field.name) } = query;
+    const { where, input, select = Object.values(this.#model.fields).map(field => field.name) } = query;
     const $select = select.reduce((prev, field) => Object.assign(prev, { [field]: true }), {});
+    query.input = this.#normalize(input, this.#model.keyMap);
     query.where = this.#normalize(where, this.#model.keyMap);
     query.select = this.#normalize($select, this.#model.keyMap);
     return this.#resolver.resolve(query);
