@@ -1,16 +1,29 @@
-const { map } = require('@coderich/util');
+const Util = require('@coderich/util');
 const Pipeline = require('./Pipeline');
 const QueryResolver = require('./QueryResolver');
 
 module.exports = class Resolver {
-  #config;
+  #schema;
+  #context;
+  #driver;
 
   constructor(config) {
-    this.#config = config;
+    this.#driver = config.driver;
+    this.#schema = config.schema;
+    this.#context = config.context;
+  }
+
+  idValue(value) {
+    return this.#driver.idValue(value);
   }
 
   match(model) {
-    return new QueryResolver({ resolver: this, schema: this.#config.schema, query: { model } });
+    return new QueryResolver({
+      resolver: this,
+      schema: this.#schema,
+      context: this.#context,
+      query: { model },
+    });
   }
 
   query(query) {
@@ -18,17 +31,18 @@ module.exports = class Resolver {
   }
 
   resolve(query) {
-    const model = this.#config.schema.models[query.model];
-    return this.#config.mongoClient.resolve(query).then(data => this.#normalize(model, data, ['defaultValue', 'castValue', 'ensureArrayValue'].map(el => Pipeline[el])));
+    const model = this.#schema.models[query.model];
+    const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
+    const crudLines = crudMap[query.crud] || [];
+    return this.#driver.resolve(query).then(data => this.#normalize(model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el])));
   }
 
   #normalize(model, data, transformers = []) {
-    // console.log(data);
     if (data == null) return null;
     if (typeof data !== 'object') return data;
 
-    const $data = map(data, (doc) => {
-      return Object.entries(doc).reduce((prev, [key, value]) => {
+    const $data = Util.map(data, (doc) => {
+      const $doc = Object.entries(doc).reduce((prev, [key, startValue]) => {
         const [$key] = Object.entries(model.keyMap || {}).find(([k, v]) => v === key) || [key];
         const field = model.fields[$key];
 
@@ -36,14 +50,21 @@ module.exports = class Resolver {
         if (!field) return prev;
 
         // Transform value
-        const $value = transformers.reduce((val, t) => {
-          const v = t({ model, field, value: val });
-          // const v = t({ base, model, field, path, docPath, rootPath, parentPath, startValue, value, resolver, context });
-          return v === undefined ? val : v;
-        }, value);
+        let $value = transformers.reduce((value, t) => {
+          const v = t({ model, field, value, startValue, resolver: this, context: this.#context });
+          return v === undefined ? value : v;
+        }, startValue);
+
+        // If it's embedded - delegate
+        if (field.model && !field.isFKReference) {
+          $value = this.#normalize(field.model, $value, transformers);
+        }
 
         return Object.assign(prev, { [$key]: $value });
       }, {});
+
+      Object.defineProperty($doc, '$id', { value: $doc.id });
+      return $doc;
     });
 
     return $data;

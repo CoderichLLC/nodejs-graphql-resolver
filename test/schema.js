@@ -22,7 +22,7 @@ module.exports = {
       name: String! @field(deserialize: toTitleCase, serialize: toLowerCase)
       authored: [Book] @join(by: author) @field(connection: true)
       emailAddress: String! @field(key: "email_address", validate: email)
-      friends: [Person] @field(validate: selfless, onDelete: cascade, connection: true)
+      friends: [Person] @field(transform: dedupe, validate: selfless, onDelete: cascade, connection: true)
       status: String @field(key: "state")
       state: String @field(key: "address_state")
       telephone: String @field(default: "###-###-####")

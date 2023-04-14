@@ -1,13 +1,3 @@
-// const { set } = require('lodash');
-// const { MongoMemoryReplSet } = require('mongodb-memory-server');
-// const { timeout } = require('../src/service/app.service');
-// const Schema = require('../src/core/Schema');
-// const Resolver = require('../src/core/Resolver');
-// const gql = require('./fixtures/schema');
-// const stores = require('./stores');
-
-// const Path = require('path');
-// const { parseFixtures } = require('@coderich/dev');
 const MongoClient = require('./mongo/MongoClient');
 const Schema = require('../src/Schema');
 const Resolver = require('../src/Resolver');
@@ -45,16 +35,17 @@ const sorter = (a, b) => {
 };
 
 describe('TestSuite', () => {
-  let schema, resolver, mongoClient;
+  let schema, resolver, driver;
+  const context = { network: { id: 'networkId' } };
 
   beforeAll(() => {
-    mongoClient = new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' });
+    driver = new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' });
     schema = new Schema(typeDefs).parse();
-    resolver = new Resolver({ schema, mongoClient });
+    resolver = new Resolver({ schema, context, driver });
   });
 
   afterAll(() => {
-    return mongoClient.disconnect();
+    return driver.disconnect();
   });
 
   describe('Create', () => {
@@ -100,68 +91,68 @@ describe('TestSuite', () => {
     test('Chapter', async () => {
       chapter1 = await resolver.match('Chapter').save({ name: 'chapter1', book: healthBook.id });
       chapter2 = await resolver.match('Chapter').save({ name: 'chapter2', book: healthBook.id });
-      // chapter3 = await resolver.match('Chapter').save({ name: 'newChapter', book: mobyDick }); // Sending the entire object...
+      chapter3 = await resolver.match('Chapter').save({ name: 'newChapter', book: mobyDick }); // Sending the entire object...
       expect(chapter1.id).toBeDefined();
       expect(chapter1.name).toEqual('Chapter1');
       expect(chapter1.book).toEqual(healthBook.id);
       expect(chapter2.id).toBeDefined();
       expect(chapter2.name).toEqual('Chapter2');
       expect(chapter2.book).toEqual(healthBook.id);
-      // expect(chapter3.id).toBeDefined();
-      // expect(chapter3.name).toEqual('Newchapter');
-      // expect(chapter3.book).toEqual(mobyDick.id);
+      expect(chapter3.id).toBeDefined();
+      expect(chapter3.name).toEqual('Newchapter');
+      expect(chapter3.book).toEqual(mobyDick.id);
     });
 
-    // test('Page', async () => {
-    //   page1 = await resolver.match('Page').save({ number: 1, chapter: chapter1.id, verbage: 'This is the introduction, of sorts.' });
-    //   page2 = await resolver.match('Page').save({ number: 2, chapter: chapter1.id, verbage: 'Now you know.' });
-    //   page3 = await resolver.match('Page').save({ number: 1, chapter: chapter2.id, verbage: 'Ready for more?' });
-    //   page4 = await resolver.match('Page').save({ number: 2, chapter: chapter2.id, verbage: 'The end.' });
-    //   page5 = await resolver.match('Page').save({ number: 1, chapter: chapter3.id, verbage: 'Moby Dick.' });
-    //   await resolver.match('Page').save({ number: 3, chapter: chapter2.id, verbage: 'The real end.' });
-    //   expect(page1.id).toBeDefined();
-    //   expect(page2.id).toBeDefined();
-    //   expect(page3.id).toBeDefined();
-    //   expect(page4.id).toBeDefined();
-    //   expect(page5.id).toBeDefined();
-    // });
+    test('Page', async () => {
+      page1 = await resolver.match('Page').save({ number: 1, chapter: chapter1.id, verbage: 'This is the introduction, of sorts.' });
+      page2 = await resolver.match('Page').save({ number: 2, chapter: chapter1.id, verbage: 'Now you know.' });
+      page3 = await resolver.match('Page').save({ number: 1, chapter: chapter2.id, verbage: 'Ready for more?' });
+      page4 = await resolver.match('Page').save({ number: 2, chapter: chapter2.id, verbage: 'The end.' });
+      page5 = await resolver.match('Page').save({ number: 1, chapter: chapter3.id, verbage: 'Moby Dick.' });
+      await resolver.match('Page').save({ number: 3, chapter: chapter2.id, verbage: 'The real end.' });
+      expect(page1.id).toBeDefined();
+      expect(page2.id).toBeDefined();
+      expect(page3.id).toBeDefined();
+      expect(page4.id).toBeDefined();
+      expect(page5.id).toBeDefined();
+    });
 
-    // test('Building', async () => {
-    //   bookBuilding = { year: 1990, type: 'business', tenants: [christie.id] };
-    //   libraryBuilding = { type: 'business', tenants: [christie.id] };
-    //   apartmentBuilding = { type: 'home', year: 1980, tenants: [richard.id, christie.id], landlord: richard.id };
-    //   expect(1).toBe(1);
-    // });
+    test('Building', async () => {
+      bookBuilding = { year: 1990, type: 'business', tenants: [christie.id] };
+      libraryBuilding = { type: 'business', tenants: [christie.id] };
+      apartmentBuilding = { type: 'home', year: 1980, tenants: [richard.id, christie.id], landlord: richard.id };
+      expect(1).toBe(1);
+    });
 
-    // test('BookStore', async () => {
-    //   bookstore1 = await resolver.match('BookStore').save({ name: 'Best Books Ever', books: [mobyDick.id, mobyDick.id, healthBook.id], building: bookBuilding });
-    //   bookstore2 = await resolver.match('BookStore').save({ name: 'New Books', books: [mobyDick.id], building: Object.assign({}, bookBuilding, { description: 'A building' }) });
-    //   expect(bookstore1.id).toBeDefined();
-    //   expect(bookstore1.books.length).toEqual(3);
-    //   expect(bookstore1.building.type).toEqual('business');
-    //   expect(bookstore1.building.year).toEqual(1990);
-    //   expect(bookstore1.building.tenants).toEqual([christie.id]);
-    //   expect(bookstore1.building.description).toEqual('A building from the bloom');
-    //   expect(bookstore2.id).toBeDefined();
-    //   expect(bookstore2.books.length).toEqual(1);
-    //   expect(bookstore2.building.type).toEqual('business');
-    //   expect(bookstore2.building.description).toEqual('A building');
-    //   expect(bookBuilding.description).not.toBeDefined();
-    // });
+    test('BookStore', async () => {
+      bookstore1 = await resolver.match('BookStore').save({ name: 'Best Books Ever', books: [mobyDick.id, mobyDick.id, healthBook.id], building: bookBuilding });
+      bookstore2 = await resolver.match('BookStore').save({ name: 'New Books', books: [mobyDick.id], building: { ...bookBuilding, description: 'A building' } });
+      expect(bookstore1.id).toBeDefined();
+      expect(bookstore1.books.length).toEqual(3);
+      expect(bookstore1.building.type).toEqual('business');
+      expect(bookstore1.building.year).toEqual(1990);
+      expect(bookstore1.building.tenants).toEqual([christie.id]);
+      expect(bookstore1.building.description).toEqual('A building from the bloom');
+      expect(bookstore2.id).toBeDefined();
+      expect(bookstore2.books.length).toEqual(1);
+      expect(bookstore2.building.type).toEqual('business');
+      expect(bookstore2.building.description).toEqual('A building');
+      expect(bookBuilding.description).not.toBeDefined();
+    });
 
-    // test('Library', async () => {
-    //   library = await resolver.match('Library').save({ name: 'Public Library', books: [mobyDick.id, healthBook.id, healthBook.id], building: libraryBuilding });
-    //   expect(library.id).toBeDefined();
-    //   expect(library.books.length).toEqual(3);
-    //   expect(library.building.type).toEqual('business');
-    // });
+    test('Library', async () => {
+      library = await resolver.match('Library').save({ name: 'Public Library', books: [mobyDick.id, healthBook.id, healthBook.id], building: libraryBuilding });
+      expect(library.id).toBeDefined();
+      expect(library.books.length).toEqual(3);
+      expect(library.building.type).toEqual('business');
+    });
 
-    // test('Apartment', async () => {
-    //   apartment = await resolver.match('Apartment').save({ name: 'Piedmont Beauty', building: apartmentBuilding });
-    //   expect(apartment.id).toBeDefined();
-    //   expect(apartment.building.type).toEqual('home');
-    //   expect(apartment.building.tenants).toEqual([richard.id, christie.id]);
-    // });
+    test('Apartment', async () => {
+      apartment = await resolver.match('Apartment').save({ name: 'Piedmont Beauty', building: apartmentBuilding });
+      expect(apartment.id).toBeDefined();
+      expect(apartment.building.type).toEqual('home');
+      expect(apartment.building.tenants).toEqual([richard.id, christie.id]);
+    });
 
     // test('Art', async () => {
     //   artsy = await resolver.match('Art').save({ name: 'My Find Art', sections: [{ name: 'Section1', person: richard.id }] });

@@ -1,4 +1,4 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 
 module.exports = class MongClient {
   #mongoClient;
@@ -37,5 +37,16 @@ module.exports = class MongClient {
 
   disconnect() {
     return this.#connection.then(client => client.close());
+  }
+
+  idValue(value) {
+    if (value instanceof ObjectId) return value;
+
+    try {
+      const id = ObjectId(value);
+      return id;
+    } catch (e) {
+      return value;
+    }
   }
 };

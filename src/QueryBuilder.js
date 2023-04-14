@@ -61,15 +61,15 @@ module.exports = class Query {
   }
 
   one() {
-    return this.resolve(Object.assign(this.#query, { op: 'findOne' }));
+    return this.resolve(Object.assign(this.#query, { op: 'findOne', crud: 'read' }));
   }
 
   many() {
-    return this.resolve(Object.assign(this.#query, { op: 'findMany' }));
+    return this.resolve(Object.assign(this.#query, { op: 'findMany', crud: 'read' }));
   }
 
   count() {
-    return this.resolve(Object.assign(this.#query, { op: 'count' }));
+    return this.resolve(Object.assign(this.#query, { op: 'count', crud: 'read' }));
   }
 
   // first(first) {
@@ -88,8 +88,8 @@ module.exports = class Query {
 
   save(...args) {
     const { id, where } = this.#query;
-    const prefix = (id || where ? (args[1] ? 'upsert' : 'update') : 'create'); // eslint-disable-line
-    return this.#mutation(prefix, ...args);
+    const crud = (id || where ? (args[1] ? 'upsert' : 'update') : 'create'); // eslint-disable-line
+    return this.#mutation(crud, ...args);
   }
 
   delete(...args) {
@@ -106,12 +106,12 @@ module.exports = class Query {
     return this.#query;
   }
 
-  #mutation(prefix, ...args) {
+  #mutation(crud, ...args) {
     args = args.flat();
     const { id, limit } = this.#query;
-    const suffix = id || limit === 1 || (prefix === 'create' && args.length === 1) ? 'One' : 'Many';
+    const suffix = id || limit === 1 || (crud === 'create' && args.length === 1) ? 'One' : 'Many';
     const input = suffix === 'One' ? args[0] : args;
-    return this.resolve(Object.assign(this.#query, { op: `${prefix}${suffix}`, input }));
+    return this.resolve(Object.assign(this.#query, { op: `${crud}${suffix}`, crud, input }));
   }
 
   #propCheck(prop, ...checks) {
