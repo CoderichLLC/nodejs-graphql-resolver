@@ -1,0 +1,12 @@
+// Rename key
+// const $key = Object.entries(this.#model.keyMap || {}).reduce((p, [k, v]) => {
+//   const regex = new RegExp(`((?:^|\\.))${k}\\b`, 'g');
+//   return p.replace(regex, `$1${v}`);
+// }, key);
+
+// // Special array handling, ensure we understand the meaning
+// if (Array.isArray(value)) {
+//   const match = $key.match(/\$[a-zA-Z]{2}(?=']|$)/);
+//   const $value = value.map(el => this.#normalize(el));
+//   value = match ? $value : { [this.#arrayOp]: $value };
+// }

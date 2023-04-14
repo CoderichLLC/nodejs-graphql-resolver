@@ -53,12 +53,17 @@ module.exports = class Schema {
                 break;
               }
               case 'field-key': {
+                field.key = value;
                 model.keyMap = model.keyMap || {};
                 model.keyMap[field.name] = value;
                 break;
               }
+              case 'field-default': {
+                field.defaultValue = value;
+                break;
+              }
               default: {
-                if (['validate', 'construct', 'restruct', 'destruct', 'instruct', 'normalize', 'serialize', 'deserialize'].includes(key)) {
+                if (['validate', 'construct', 'restruct', 'destruct', 'instruct', 'normalize', 'transform', 'serialize', 'deserialize'].includes(key)) {
                   target.pipelines = target.pipelines || {};
                   target.pipelines[key] = target.pipelines[key] || [];
                   target.pipelines[key] = target.pipelines[key].concat(value).filter(Boolean);

@@ -4,6 +4,7 @@ type Author {
   id: ID! @field(key: "_id")
   name: String!
   bio: Mixed @field(key: "biography")
+  telephone: String @field(default: "###-###-####")
   authored: [Book!]
 }
 

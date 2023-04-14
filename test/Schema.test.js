@@ -14,6 +14,7 @@ describe('Schema', () => {
           },
           fields: {
             id: {
+              key: '_id',
               name: 'id',
               type: 'ID',
               isRequired: true,
@@ -24,8 +25,14 @@ describe('Schema', () => {
               isRequired: true,
             },
             bio: {
+              key: 'biography',
               name: 'bio',
               type: 'Mixed',
+            },
+            telephone: {
+              name: 'telephone',
+              type: 'String',
+              defaultValue: '###-###-####',
             },
             authored: {
               name: 'authored',
@@ -43,6 +50,7 @@ describe('Schema', () => {
           },
           fields: {
             id: {
+              key: '_id',
               name: 'id',
               type: 'ID',
               isRequired: true,

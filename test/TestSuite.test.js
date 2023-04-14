@@ -51,8 +51,6 @@ describe('TestSuite', () => {
     mongoClient = new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' });
     schema = new Schema(typeDefs).parse();
     resolver = new Resolver({ schema, mongoClient });
-    // const fixtures = parseFixtures(Path.join(__dirname, '__fixtures__'));
-    // return Promise.all(Object.entries(fixtures).map(([key, value]) => mongoClient.collection(key).insertMany([value].flat())));
   });
 
   afterAll(() => {
@@ -65,53 +63,54 @@ describe('TestSuite', () => {
       expect(richard.id).toBeDefined();
       expect(richard._id).not.toBeDefined(); // eslint-disable-line
       expect(richard.name).toBe('Richard');
-      // expect(richard.telephone).toBe('###-###-####'); // Default value
+      expect(richard.telephone).toBe('###-###-####'); // Default value
 
       christie = await resolver.match('Person').save({ name: 'Christie', emailAddress: 'christie@gmail.com', friends: [richard.id], telephone: 1112223333, network: 'network', nonsense: 'nonsense' });
       expect(christie.id).toBeDefined();
       expect(christie.friends).toEqual([richard.id]);
       expect(christie.nonsense).not.toBeDefined();
-      // expect(christie.telephone).toBe('1112223333'); // Explicitly set
+      expect(christie.telephone).toBe('1112223333'); // Explicitly set
 
-      // // Tricky data stuff
-      // expect(richard.status).toBe('alive');
-      // expect(richard.state).toBe('NJ');
-      // // expect(richard['multiLang.en']).toBe('en');
-      // // expect(richard['multiLang.es']).toBe('es');
-      // expect(richard.strip).not.toBeDefined(); // DB key should be stripped
-      // expect(richard.network).toBe('networkId');
+      // Tricky data stuff
+      expect(richard.status).toBe('alive');
+      expect(richard.state).toBe('NJ');
+      expect(richard.multiLang).toBe('lang');
+      // expect(richard['multiLang.en']).toBe('en');
+      // expect(richard['multiLang.es']).toBe('es');
+      expect(richard.strip).not.toBeDefined(); // DB key should be stripped
+      expect(richard.network).toBe('networkId');
       // expect(richard.createdAt).toBeTruthy();
       // expect(richard.updatedAt).toBeTruthy();
     });
 
-    // test('Book', async () => {
-    //   mobyDick = await resolver.match('Book').save({ name: 'moby dick', price: 9.99, bids: [1.99, 1.20, 5.00], bestSeller: true, author: richard.id });
-    //   expect(mobyDick.id).toBeDefined();
-    //   expect(mobyDick.name).toBe('Moby Dick');
-    //   expect(mobyDick.price).toBe(9.99);
-    //   expect(mobyDick.author).toEqual(richard.id);
+    test('Book', async () => {
+      mobyDick = await resolver.match('Book').save({ name: 'moby dick', price: 9.99, bids: [1.99, 1.20, 5.00], bestSeller: true, author: richard.id });
+      expect(mobyDick.id).toBeDefined();
+      expect(mobyDick.name).toBe('Moby Dick');
+      expect(mobyDick.price).toBe(9.99);
+      expect(mobyDick.author).toEqual(richard.id);
 
-    //   healthBook = await resolver.match('Book').save({ name: 'Health and Wellness', bids: [5.00, 9.00, 12.50], price: '29.99', author: christie.id });
-    //   expect(healthBook.id).toBeDefined();
-    //   expect(healthBook.name).toEqual('Health And Wellness');
-    //   expect(healthBook.price).toEqual(29.99);
-    //   expect(healthBook.author).toEqual(christie.id);
-    // });
+      healthBook = await resolver.match('Book').save({ name: 'Health and Wellness', bids: [5.00, 9.00, 12.50], price: '29.99', author: christie.id });
+      expect(healthBook.id).toBeDefined();
+      expect(healthBook.name).toEqual('Health And Wellness');
+      expect(healthBook.price).toEqual(29.99);
+      expect(healthBook.author).toEqual(christie.id);
+    });
 
-    // test('Chapter', async () => {
-    //   chapter1 = await resolver.match('Chapter').save({ name: 'chapter1', book: healthBook.id });
-    //   chapter2 = await resolver.match('Chapter').save({ name: 'chapter2', book: healthBook.id });
-    //   chapter3 = await resolver.match('Chapter').save({ name: 'newChapter', book: mobyDick }); // Sending the entire object...
-    //   expect(chapter1.id).toBeDefined();
-    //   expect(chapter1.name).toEqual('Chapter1');
-    //   expect(chapter1.book).toEqual(healthBook.id);
-    //   expect(chapter2.id).toBeDefined();
-    //   expect(chapter2.name).toEqual('Chapter2');
-    //   expect(chapter2.book).toEqual(healthBook.id);
-    //   expect(chapter3.id).toBeDefined();
-    //   expect(chapter3.name).toEqual('Newchapter');
-    //   expect(chapter3.book).toEqual(mobyDick.id);
-    // });
+    test('Chapter', async () => {
+      chapter1 = await resolver.match('Chapter').save({ name: 'chapter1', book: healthBook.id });
+      chapter2 = await resolver.match('Chapter').save({ name: 'chapter2', book: healthBook.id });
+      // chapter3 = await resolver.match('Chapter').save({ name: 'newChapter', book: mobyDick }); // Sending the entire object...
+      expect(chapter1.id).toBeDefined();
+      expect(chapter1.name).toEqual('Chapter1');
+      expect(chapter1.book).toEqual(healthBook.id);
+      expect(chapter2.id).toBeDefined();
+      expect(chapter2.name).toEqual('Chapter2');
+      expect(chapter2.book).toEqual(healthBook.id);
+      // expect(chapter3.id).toBeDefined();
+      // expect(chapter3.name).toEqual('Newchapter');
+      // expect(chapter3.book).toEqual(mobyDick.id);
+    });
 
     // test('Page', async () => {
     //   page1 = await resolver.match('Page').save({ number: 1, chapter: chapter1.id, verbage: 'This is the introduction, of sorts.' });

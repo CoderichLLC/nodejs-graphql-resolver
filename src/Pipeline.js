@@ -59,7 +59,27 @@ module.exports = class Pipeline {
     // Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
     Pipeline.define('idKey', ({ model, value }) => (value == null ? model.idValue() : value), { ignoreNull: false });
     Pipeline.define('idField', ({ model, field, value }) => field.getIdModel().idValue(value.id || value));
-    Pipeline.define('ensureArrayValue', ({ field, value }) => (field.toObject().isArray && !Array.isArray(value) ? [value] : value), { itemize: false });
+    Pipeline.define('ensureArrayValue', ({ field, value }) => (field.isArray && !Array.isArray(value) ? [value] : value), { itemize: false });
+    Pipeline.define('defaultValue', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
+
+    // Structures
+    Pipeline.define('$instruct', (params) => {
+      return (params.field.pipelines?.instruct || []).reduce((value, t) => {
+        return Pipeline[t]({ ...params, value });
+      }, params.value);
+    }, { ignoreNull: false });
+
+    Pipeline.define('$normalize', (params) => {
+      return (params.field.pipelines?.normalize || []).reduce((value, t) => {
+        return Pipeline[t]({ ...params, value });
+      }, params.value);
+    }, { ignoreNull: false });
+
+    Pipeline.define('$transform', (params) => {
+      return (params.field.pipelines?.transform || []).reduce((value, t) => {
+        return Pipeline[t]({ ...params, value });
+      }, params.value);
+    }, { ignoreNull: false });
 
     // Pipeline.define('ensureId', ({ resolver, field, value }) => {
     //   const { type } = field.toObject();
@@ -70,32 +90,27 @@ module.exports = class Pipeline {
     //   });
     // }, { itemize: false });
 
-    Pipeline.define('defaultValue', ({ field, value }) => {
-      const { defaultValue } = field.toObject();
-      return value === undefined ? defaultValue : value;
-    }, { ignoreNull: false });
-
     Pipeline.define('castValue', ({ field, value }) => {
-      const { type, isEmbedded } = field.toObject();
+      const { type, isEmbedded } = field;
 
       if (isEmbedded) return value;
 
       return map(value, (v) => {
-        switch (type) {
-          case 'String': {
+        switch (type.toLowerCase()) {
+          case 'string': {
             return `${v}`;
           }
-          case 'Float': case 'Number': {
+          case 'float': case 'number': {
             const num = Number(v);
             if (!Number.isNaN(num)) return num;
             return v;
           }
-          case 'Int': {
+          case 'int': {
             const num = Number(v);
             if (!Number.isNaN(num)) return parseInt(v, 10);
             return v;
           }
-          case 'Boolean': {
+          case 'boolean': {
             if (v === 'true') return true;
             if (v === 'false') return false;
             return v;
