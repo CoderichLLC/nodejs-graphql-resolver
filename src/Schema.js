@@ -59,6 +59,10 @@ module.exports = class Schema {
                 model.idField = value;
                 break;
               }
+              case 'model-embed': {
+                model.isEmbedded = value;
+                break;
+              }
               case 'field-key': {
                 field.key = value;
                 model.keyMap = model.keyMap || {};
@@ -101,13 +105,14 @@ module.exports = class Schema {
           // });
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const $field = field;
+          // const $model = model;
           $field.isPrimaryKey = Boolean($field.name === model.idField);
           $field.isPersistable = uvl($field.isPersistable, model.isPersistable, true);
 
           // Field resolution comes first
           thunks.unshift(($schema) => {
             $field.model = $schema.models[$field.type];
-            $field.isFKReference = $field.model?.isMarkedModel;
+            $field.isFKReference = $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             $field.isIdField = Boolean($field.isPrimaryKey || $field.isFKReference);
             if ($field.isIdField) $field.pipelines.serialize.unshift('idField');
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
@@ -119,10 +124,6 @@ module.exports = class Schema {
           // Required (last - push)
           // if (modelRef && !isEmbedded) $structures.validators.push(Pipeline.ensureId);
 
-          // // Define target mapping
-          // field.pipelines.doc = ['defaultValue', 'castValue', 'ensureArrayValue', 'normalizers', 'instructs', ...crudKeys, `$${serdes}rs`, `${serdes}rs`, 'transforms'];
-          // field.pipelines.input = ['defaultValue', 'castValue', 'ensureArrayValue', 'normalizers', 'instructs', ...crudKeys, `$${serdes}rs`, `${serdes}rs`, 'transforms'];
-          // field.pipelines.where = ['castValue', 'instructs', `$${serdes}rs`];
           isField = false;
         } else if (node.kind === Kind.LIST_TYPE) {
           isList = false;
@@ -134,6 +135,7 @@ module.exports = class Schema {
     thunks.forEach(thunk => thunk(schema));
 
     // Return schema
+    // console.log(schema.models.Art.fields.sections);
     return schema;
   }
 };

@@ -154,11 +154,17 @@ describe('TestSuite', () => {
       expect(apartment.building.tenants).toEqual([richard.id, christie.id]);
     });
 
-    // test('Art', async () => {
-    //   artsy = await resolver.match('Art').save({ name: 'My Find Art', sections: [{ name: 'Section1', person: richard.id }] });
-    //   expect(artsy.id).toBeDefined();
-    //   expect(artsy.sections).toMatchObject([{ id: expect.anything(), name: 'section1', frozen: 'frozen', createdAt: expect.anything(), updatedAt: expect.anything() }]);
-    // });
+    test('Art', async () => {
+      artsy = await resolver.match('Art').save({ name: 'My Find Art', sections: [{ name: 'Section1', person: richard.id }] });
+      expect(artsy.id).toBeDefined();
+      expect(artsy.sections).toMatchObject([{
+        // id: expect.anything(),
+        name: 'section1',
+        frozen: 'frozen',
+        // createdAt: expect.anything(),
+        // updatedAt: expect.anything(),
+      }]);
+    });
   });
 
   // describe('Get', () => {

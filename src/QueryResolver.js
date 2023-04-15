@@ -31,7 +31,7 @@ module.exports = class QueryResolver extends QueryBuilder {
     const crudLines = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] }[crud] || [];
 
     query.input = this.#normalize('input', this.#model, input, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform'].map(el => Pipeline[el]));
-    query.where = this.#normalize('where', this.#model, Util.unflatten(where), ['castValue', '$instruct'].map(el => Pipeline[el]));
+    query.where = this.#normalize('where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el]));
     query.select = this.#normalize('select', this.#model, Util.unflatten(select.reduce((prev, field) => Object.assign(prev, { [field]: true }), {})));
 
     return this.#resolver.resolve(query);
@@ -43,39 +43,34 @@ module.exports = class QueryResolver extends QueryBuilder {
     const defaultInput = Object.values(model.fields).filter(field => Object.prototype.hasOwnProperty.call(field, 'defaultValue')).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const instructFields = Object.values(model.fields).filter(field => field.pipelines?.instruct).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
 
-    switch (target) {
-      case 'input': {
-        merge(data, defaultInput, data, instructFields);
-        break;
-      }
-      case 'where': {
-        merge(data, instructFields);
-        break;
-      }
-      default: break;
-    }
-
     // Next we normalize the $data
-    data = Object.entries(data).reduce((prev, [key, startValue]) => {
-      let [$key] = key.split('.');
-      const field = model.fields[$key];
-      if (!field) return Object.assign(prev, { [key]: startValue }); // "key" is correct here to preserve namespace
-      $key = field.key || key;
+    const $data = Util.map(data, (doc) => {
+      if (target === 'input') merge(doc, defaultInput, doc, instructFields);
+      else if (target === 'where') merge(doc, instructFields);
 
-      // Transform value
-      let $value = transformers.reduce((value, t) => {
-        const v = t({ model, field, value, startValue, resolver: this.#resolver, context: this.#context });
-        // const v = t({ base, model, field, path, docPath, rootPath, parentPath, startValue, value, resolver, context });
-        return v === undefined ? value : v;
-      }, startValue);
+      return Object.entries(doc).reduce((prev, [key, startValue]) => {
+        let [$key] = key.split('.');
+        const field = model.fields[$key];
+        if (!field) return Object.assign(prev, { [key]: startValue }); // "key" is correct here to preserve namespace
+        $key = field.key || key;
 
-      // If it's embedded - delegate
-      if (field.model && !field.isFKReference) $value = this.#normalize(target, field.model, $value, transformers);
+        // Transform value
+        let $value = transformers.reduce((value, t) => {
+          const v = t({ model, field, value, startValue, resolver: this.#resolver, context: this.#context });
+          // const v = t({ base, model, field, path, docPath, rootPath, parentPath, startValue, value, resolver, context });
+          return v === undefined ? value : v;
+        }, startValue);
 
-      // Assign it back
-      return Object.assign(prev, { [$key]: $value });
-    }, {});
+        // If it's embedded - delegate
+        if (field.model && !field.isFKReference) {
+          $value = this.#normalize(target, field.model, $value, transformers);
+        }
 
-    return data;
+        // Assign it back
+        return Object.assign(prev, { [$key]: $value });
+      }, {});
+    });
+
+    return $data;
   }
 };
