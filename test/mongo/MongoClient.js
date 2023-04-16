@@ -48,7 +48,6 @@ module.exports = class MongClient {
       const id = new ObjectId(value);
       return id;
     } catch (e) {
-      console.log(e);
       return value;
     }
   }

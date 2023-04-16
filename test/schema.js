@@ -20,7 +20,7 @@ module.exports = {
       id: ID! @field(key: "_id")
       age: Int @field(key: "my_age")
       name: String! @field(deserialize: toTitleCase, serialize: toLowerCase)
-      authored: [Book] @join(by: author) @field(connection: true)
+      authored: [Book] @link(by: author) @field(connection: true)
       emailAddress: String! @field(key: "email_address", validate: email)
       friends: [Person] @field(transform: dedupe, validate: selfless, onDelete: cascade, connection: true)
       status: String @field(key: "state")
@@ -43,7 +43,7 @@ module.exports = {
       author: Person! @field(validate: immutable, onDelete: cascade)
       bestSeller: Boolean
       bids: [Float]
-      chapters: [Chapter] @join(by: book)
+      chapters: [Chapter] @link(by: book)
     }
 
     type Chapter
@@ -53,7 +53,7 @@ module.exports = {
       id: ID! @field(key: "_id")
       name: String! @field(key: "chapter_name" transform: toTitleCase)
       book: Book! @field(onDelete: restrict)
-      pages: [Page] @join(by: chapter)
+      pages: [Page] @link(by: chapter)
     }
 
     type Page

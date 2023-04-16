@@ -53,7 +53,7 @@ module.exports = class Resolver {
     // console.log(data);
 
     const $data = Util.map(data, (doc) => {
-      const $doc = Object.entries(doc).reduce((prev, [key, startValue]) => {
+      return Object.entries(doc).reduce((prev, [key, startValue]) => {
         const [$key] = Object.entries(model.keyMap || {}).find(([k, v]) => v === key) || [key];
         const field = model.fields[$key];
 
@@ -73,9 +73,6 @@ module.exports = class Resolver {
 
         return Object.assign(prev, { [$key]: $value });
       }, {});
-
-      Object.defineProperty($doc, '$id', { value: $doc.id });
-      return $doc;
     });
 
     return $data;

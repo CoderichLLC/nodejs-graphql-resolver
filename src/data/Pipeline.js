@@ -66,7 +66,7 @@ module.exports = class Pipeline {
 
     // Questionable refactors
     Pipeline.define('idField', ({ model, field, value, resolver }) => {
-      return resolver.idValue(value.$id || value);
+      return resolver.idValue(value.id || value);
     });
 
     // Structures

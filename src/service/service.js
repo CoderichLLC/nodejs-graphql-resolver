@@ -1,6 +1,7 @@
 // const Util = require('@coderich/util');
 
 exports.isGlob = str => /\*|\?|\[.+\]/.test(str);
+// exports.isGlob = str => /^\*|\?/g.test(str);
 
 exports.globToRegex = (glob) => {
   const escapedGlob = glob.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
