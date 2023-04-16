@@ -1,5 +1,7 @@
-module.exports = class Query {
-  #query = Object.defineProperties({}, {
+module.exports = class QueryBuilder {
+  #query = Object.defineProperties({
+    flags: {},
+  }, {
     id: { writable: true, enumerable: false },
   });
 
@@ -60,8 +62,13 @@ module.exports = class Query {
     return this;
   }
 
-  one() {
-    return this.resolve(Object.assign(this.#query, { op: 'findOne', crud: 'read' }));
+  flags(flags) {
+    Object.assign(this.#query.flags, flags);
+    return this;
+  }
+
+  one(flags) {
+    return this.flags(flags).resolve(Object.assign(this.#query, { op: 'findOne', crud: 'read' }));
   }
 
   many() {
@@ -99,7 +106,7 @@ module.exports = class Query {
   }
 
   clone(query = {}) {
-    return new Query({ ...this.#query, ...query });
+    return new QueryBuilder({ ...this.#query, ...query });
   }
 
   resolve() {

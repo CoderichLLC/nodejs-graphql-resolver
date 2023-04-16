@@ -1,7 +1,8 @@
 const merge = require('lodash.merge');
 const Util = require('@coderich/util');
-const Pipeline = require('./Pipeline');
 const QueryBuilder = require('./QueryBuilder');
+const Pipeline = require('../data/Pipeline');
+const { resolveWhereClause } = require('../service/service');
 
 module.exports = class QueryResolver extends QueryBuilder {
   #model;
@@ -33,6 +34,7 @@ module.exports = class QueryResolver extends QueryBuilder {
     query.input = this.#normalize('input', this.#model, input, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform'].map(el => Pipeline[el]));
     query.where = this.#normalize('where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el]));
     query.select = this.#normalize('select', this.#model, Util.unflatten(select.reduce((prev, field) => Object.assign(prev, { [field]: true }), {})));
+    query.where = resolveWhereClause(query.where);
 
     return this.#resolver.resolve(query);
   }

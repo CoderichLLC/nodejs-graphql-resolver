@@ -1,5 +1,5 @@
 const Path = require('path');
-const Schema = require('../src/Schema');
+const Schema = require('../../src/data/Schema');
 
 describe('Schema', () => {
   test('parse', () => {

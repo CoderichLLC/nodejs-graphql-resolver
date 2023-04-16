@@ -1,4 +1,4 @@
-const Pipeline = require('../src/Pipeline');
+const Pipeline = require('../src/data/Pipeline');
 
 Pipeline.define('bookName', Pipeline.Deny('The Bible'));
 Pipeline.define('bookPrice', Pipeline.Range(0, 100));

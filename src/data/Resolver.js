@@ -1,6 +1,7 @@
+const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const Pipeline = require('./Pipeline');
-const QueryResolver = require('./QueryResolver');
+const QueryResolver = require('../query/QueryResolver');
 
 module.exports = class Resolver {
   #schema;
@@ -15,6 +16,10 @@ module.exports = class Resolver {
 
   idValue(value) {
     return this.#driver.idValue(value);
+  }
+
+  getContext() {
+    return this.#context;
   }
 
   match(model) {
@@ -34,7 +39,11 @@ module.exports = class Resolver {
     const model = this.#schema.models[query.model];
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[query.crud] || [];
-    return this.#driver.resolve(query).then(data => this.#normalize(model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el])));
+    return this.#driver.resolve(query).then((data) => {
+      const { flags } = query;
+      if (data == null && flags.required) throw Boom.notFound();
+      return this.#normalize(model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
+    });
   }
 
   #normalize(model, data, transformers = []) {

@@ -8,6 +8,6 @@ module.exports = {
   preset: '@shelf/jest-mongodb',
   collectCoverageFrom: ['src/**/**/*.js'],
   // globalSetup: '<rootDir>/test/jest.global.setup.js',
-  // setupFilesAfterEnv: ['<rootDir>/test/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testMatch: ['<rootDir>/test/**/?(*.)+(spec|test).[jt]s?(x)'],
 };

@@ -1,6 +1,6 @@
 const Path = require('path');
-const Schema = require('../src/Schema');
-const QueryResolver = require('../src/QueryResolver');
+const Schema = require('../../src/data/Schema');
+const QueryResolver = require('../../src/query/QueryResolver');
 
 describe('QueryResolver', () => {
   const schema = new Schema(Path.join(__dirname, 'schema.graphql')).parse();

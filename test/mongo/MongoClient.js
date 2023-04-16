@@ -16,10 +16,12 @@ module.exports = class MongClient {
   }
 
   findOne(query) {
+    // console.log(query.where);
     return this.collection(query.model).findOne(query.where);
   }
 
   findMany(query) {
+    // console.log(JSON.stringify(query.where));
     return this.collection(query.model).find(query.where).then(cursor => cursor.toArray());
   }
 
@@ -43,9 +45,10 @@ module.exports = class MongClient {
     if (value instanceof ObjectId) return value;
 
     try {
-      const id = ObjectId(value);
+      const id = new ObjectId(value);
       return id;
     } catch (e) {
+      console.log(e);
       return value;
     }
   }

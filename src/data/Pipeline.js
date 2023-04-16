@@ -118,6 +118,12 @@ module.exports = class Pipeline {
       }, params.value);
     }, { ignoreNull: false });
 
+    Pipeline.define('$where', (params) => {
+      return (params.field.pipelines?.destruct || []).reduce((value, t) => {
+        return Pipeline[t]({ ...params, value });
+      }, params.value);
+    }, { ignoreNull: false });
+
     //
     Pipeline.define('ensureId', ({ resolver, field, value }) => {
       const { type } = field.toObject();
