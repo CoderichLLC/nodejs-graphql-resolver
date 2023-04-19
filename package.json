@@ -18,6 +18,7 @@
     "@coderich/query": "0.0.1",
     "@coderich/util": "0.0.7",
     "@hapi/boom": "10.0.1",
+    "lodash.get": "4.4.2",
     "lodash.merge": "4.6.2",
     "lodash.uniqwith": "4.5.0"
   },

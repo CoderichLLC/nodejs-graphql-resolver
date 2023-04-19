@@ -1,6 +1,7 @@
 const Boom = require('@hapi/boom');
+const get = require('lodash.get');
 const { createHash } = require('crypto');
-const { map, flatten } = require('@coderich/util');
+const { map, flatten, promiseChain } = require('@coderich/util');
 const uniqWith = require('lodash.uniqwith');
 
 const ensureArray = a => (Array.isArray(a) ? a : [a].filter(el => el !== undefined));
@@ -19,11 +20,13 @@ module.exports = class Pipeline {
     const { ignoreNull = true, itemize = true, configurable = false } = { ...factory.options, ...options };
 
     const wrapper = Object.defineProperty((args) => {
+      // if (name === 'immutable') console.log(name, args);
+
       if (ignoreNull && args.value == null) return args.value;
 
       if (ignoreNull && itemize) {
         return map(args.value, (val, index) => {
-          const v = factory({ ...args, value: val, index });
+          const v = factory({ ...args, value: val });
           return v === undefined ? val : v;
         });
       }
@@ -70,63 +73,19 @@ module.exports = class Pipeline {
     });
 
     // Structures
-    Pipeline.define('$instruct', (params) => {
-      return (params.field.pipelines?.instruct || []).reduce((value, t) => {
-        return Pipeline[t]({ ...params, value });
-      }, params.value);
-    }, { ignoreNull: false });
-
-    Pipeline.define('$normalize', (params) => {
-      return (params.field.pipelines?.normalize || []).reduce((value, t) => {
-        return Pipeline[t]({ ...params, value });
-      }, params.value);
-    }, { ignoreNull: false });
-
-    Pipeline.define('$serialize', (params) => {
-      return (params.field.pipelines?.serialize || []).reduce((value, t) => {
-        return Pipeline[t]({ ...params, value });
-      }, params.value);
-    }, { ignoreNull: false });
-
-    Pipeline.define('$deserialize', (params) => {
-      return (params.field.pipelines?.deserialize || []).reduce((value, t) => {
-        return Pipeline[t]({ ...params, value });
-      }, params.value);
-    }, { ignoreNull: false });
-
-    Pipeline.define('$transform', (params) => {
-      return (params.field.pipelines?.transform || []).reduce((value, t) => {
-        return Pipeline[t]({ ...params, value });
-      }, params.value);
-    }, { ignoreNull: false });
-
-    Pipeline.define('$construct', (params) => {
-      return (params.field.pipelines?.construct || []).reduce((value, t) => {
-        return Pipeline[t]({ ...params, value });
-      }, params.value);
-    }, { ignoreNull: false });
-
-    Pipeline.define('$restruct', (params) => {
-      return (params.field.pipelines?.restruct || []).reduce((value, t) => {
-        return Pipeline[t]({ ...params, value });
-      }, params.value);
-    }, { ignoreNull: false });
-
-    Pipeline.define('$destruct', (params) => {
-      return (params.field.pipelines?.destruct || []).reduce((value, t) => {
-        return Pipeline[t]({ ...params, value });
-      }, params.value);
-    }, { ignoreNull: false });
-
-    Pipeline.define('$validate', (params) => {
-      return Promise.all((params.field.pipelines?.validate || []).map((t) => {
-        return Promise.resolve(Pipeline[t](params));
-      }));
-    }, { ignoreNull: false });
+    Pipeline.define('$instruct', params => Pipeline.#resolve(params, 'instruct'), { ignoreNull: false });
+    Pipeline.define('$normalize', params => Pipeline.#resolve(params, 'normalize'), { ignoreNull: false });
+    Pipeline.define('$serialize', params => Pipeline.#resolve(params, 'serialize'), { ignoreNull: false });
+    Pipeline.define('$deserialize', params => Pipeline.#resolve(params, 'deserialize'), { ignoreNull: false });
+    Pipeline.define('$transform', params => Pipeline.#resolve(params, 'transform'), { ignoreNull: false });
+    Pipeline.define('$construct', params => Pipeline.#resolve(params, 'construct'), { ignoreNull: false });
+    Pipeline.define('$restruct', params => Pipeline.#resolve(params, 'restruct'), { ignoreNull: false });
+    Pipeline.define('$destruct', params => Pipeline.#resolve(params, 'destruct'), { ignoreNull: false });
+    Pipeline.define('$validate', params => Pipeline.#resolve(params, 'validate'), { ignoreNull: false });
 
     //
     Pipeline.define('ensureId', ({ resolver, field, value }) => {
-      const { type } = field.toObject();
+      const { type } = field;
       const ids = Array.from(new Set(ensureArray(value).map(v => `${v}`)));
 
       return resolver.match(type).where({ id: ids }).count().then((count) => {
@@ -168,19 +127,20 @@ module.exports = class Pipeline {
 
     // Required fields
     Pipeline.define('required', ({ model, field, value }) => {
-      if (value == null) throw Boom.badRequest(`${model}.${field} is required`);
+      if (value == null) throw Boom.badRequest(`${model.name}.${field.name} is required`);
     }, { ignoreNull: false });
 
     // A field cannot hold a reference to itself
-    Pipeline.define('selfless', ({ model, field, parent, parentPath, value }) => {
-      if (`${value}` === `${parentPath('id')}`) throw Boom.badRequest(`${model}.${field} cannot hold a reference to itself`);
+    Pipeline.define('selfless', ({ root, model, field, value }) => {
+      if (`${value}` === `${root.id}`) throw Boom.badRequest(`${model}.${field} cannot hold a reference to itself`);
     });
 
     // Once set it cannot be changed
-    Pipeline.define('immutable', ({ model, field, docPath, parentPath, path, value }) => {
-      const hint = { id: parentPath('id') };
-      const oldVal = docPath(path, hint);
-      if (oldVal !== undefined && value !== undefined && `${hashObject(oldVal)}` !== `${hashObject(value)}`) throw Boom.badRequest(`${model}.${field} is immutable; cannot be changed once set ${oldVal} -> ${value}`);
+    Pipeline.define('immutable', ({ root, model, field, value, path }) => {
+      // console.log(path, root, get(root, path));
+      // const hint = { id: parentPath('id') };
+      // const oldVal = docPath(path, hint);
+      // if (oldVal !== undefined && value !== undefined && `${hashObject(oldVal)}` !== `${hashObject(value)}`) throw Boom.badRequest(`${model}.${field} is immutable; cannot be changed once set ${oldVal} -> ${value}`);
     });
 
     // List of allowed values
@@ -204,6 +164,15 @@ module.exports = class Pipeline {
         if (test < min || test > max) throw Boom.badRequest(`${model}.${field} must satisfy range ${min}:${max}; found '${value}'`);
       };
     }, { itemize: false });
+  }
+
+  static #resolve(params, pipeline) {
+    const transformers = params.field.pipelines?.[pipeline] || [];
+
+    return promiseChain(transformers.map(t => async (chain) => {
+      const value = chain.pop();
+      return Pipeline[t]({ ...params, value });
+    }), params.value).then(chain => chain.pop());
   }
 };
 

@@ -116,13 +116,11 @@ module.exports = class Schema {
             $field.isIdField = Boolean($field.isPrimaryKey || $field.isFKReference);
             if ($field.isIdField) $field.pipelines.serialize.unshift('idField');
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
+            if ($field.isIdField) $field.pipelines.validate.push('ensureId'); // Last
           });
 
           // // IDs (first - shift)
           // if (isPrimaryKeyId && type === 'ID') $structures.serializers.unshift(Pipeline.idKey);
-
-          // Required (last - push)
-          // if (modelRef && !isEmbedded) $structures.validators.push(Pipeline.ensureId);
 
           isField = false;
         } else if (node.kind === Kind.LIST_TYPE) {

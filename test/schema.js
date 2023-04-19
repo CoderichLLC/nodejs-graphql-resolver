@@ -21,7 +21,7 @@ module.exports = {
       age: Int @field(key: "my_age")
       name: String! @field(deserialize: toTitleCase, serialize: toLowerCase)
       authored: [Book] @link(by: author) @field(connection: true)
-      emailAddress: String! @field(key: "email_address", validate: email)
+      emailAddress: String! @field(key: "email_address")
       friends: [Person] @field(transform: dedupe, validate: selfless, onDelete: cascade, connection: true)
       status: String @field(key: "state")
       state: String @field(key: "address_state")

@@ -46,33 +46,34 @@ module.exports = class Resolver {
     });
   }
 
-  #normalize(model, data, transformers = []) {
-    if (data == null) return null;
-    if (typeof data !== 'object') return data;
+  async #normalize(model, parent, transformers = [], paths = [], root = parent) {
+    if (parent == null) return null;
+    if (typeof parent !== 'object') return parent;
 
-    const $data = Util.map(data, (doc) => {
-      return Object.entries(doc).reduce((prev, [key, startValue]) => {
+    return Util.mapPromise(parent, (doc) => {
+      return Util.promiseChain(Object.entries(doc).map(([key, startValue]) => async (chain) => {
+        const prev = chain.pop();
         const [$key] = Object.entries(model.keyMap || {}).find(([k, v]) => v === key) || [key];
         const field = model.fields[$key];
+        const path = paths.concat($key);
 
         // Remove fields not defined in schema
         if (!field) return prev;
 
         // Transform value
-        let $value = transformers.reduce((value, t) => {
-          const v = t({ model, field, value, startValue, resolver: this, context: this.#context });
+        let $value = await Util.promiseChain(transformers.map(t => async (ch) => {
+          const value = ch.pop();
+          const v = await t({ root, parent, model, field, value, path, startValue, resolver: this, context: this.#context });
           return v === undefined ? value : v;
-        }, startValue);
+        }), startValue).then(ch => ch.pop());
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference) {
-          $value = this.#normalize(field.model, $value, transformers);
+          $value = await this.#normalize(field.model, $value, transformers, paths.concat($key), root);
         }
 
         return Object.assign(prev, { [$key]: $value });
-      }, {});
+      }), {}).then(chain => chain.pop());
     });
-
-    return $data;
   }
 };
