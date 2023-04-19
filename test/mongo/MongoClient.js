@@ -78,13 +78,11 @@ module.exports = class MongoDriver {
 
     // Inspect the query
     const { $addFields } = Util.unflatten(Object.entries(Util.flatten(query.where, false)).reduce((prev, [key, value]) => {
-      const regex = new RegExp(`((?:^|\\.))${key}\\b`, 'g');
-      const $key = key.replace(regex, `$1${key}`);
-      console.log(key, $key);
+      const $key = key.split('.').reverse().find(k => !k.startsWith('$'));
 
       if (ensureArray(value).some(el => el instanceof RegExp)) {
-        const conversion = Array.isArray(value) ? { $map: { input: `$${key}`, as: 'el', in: { $toString: '$$el' } } } : { $toString: `$${key}` };
-        Object.assign(prev.$addFields, { [key]: conversion });
+        const conversion = Array.isArray(value) ? { $map: { input: `$${$key}`, as: 'el', in: { $toString: '$$el' } } } : { $toString: `$${$key}` };
+        Object.assign(prev.$addFields, { [$key]: conversion });
       }
       return prev;
     }, { $addFields: {} }), false);
@@ -108,19 +106,15 @@ module.exports = class MongoDriver {
       // // Joins
       // if (joins) $aggregate.push(...joins.map(({ to: from, by: foreignField, from: localField, as }) => ({ $lookup: { from, foreignField, localField, as } })));
 
-      // // Sort, Skip, Limit documents
+      // Sort, Skip, Limit documents
       // if (sort && Object.keys(sort).length) $aggregate.push({ $sort: toKeyObj(sort) });
-      // if (skip) $aggregate.push({ $skip: skip });
-      // if (limit) $aggregate.push({ $limit: limit });
+      if (skip) $aggregate.push({ $skip: skip });
+      if (limit) $aggregate.push({ $limit: limit });
 
-      // // Pagination
+      // Pagination
       // if (after) $aggregate.push({ $match: { $or: Object.entries(after).reduce((prev, [key, value]) => prev.concat({ [key]: { [sort[key] === 1 ? '$gte' : '$lte']: value } }), []) } });
       // if (before) $aggregate.push({ $match: { $or: Object.entries(before).reduce((prev, [key, value]) => prev.concat({ [key]: { [sort[key] === 1 ? '$lte' : '$gte']: value } }), []) } });
-      // if (first) $aggregate.push({ $limit: first });
-
-      // // Projection
-      // const $project = MongoDriver.getProjectFields(shape);
-      // $aggregate.push({ $project });
+      if (first) $aggregate.push({ $limit: first });
     }
 
     if (query.flags?.debug) console.log(inspect($aggregate, { depth: null, showHidden: false, colors: true }));
