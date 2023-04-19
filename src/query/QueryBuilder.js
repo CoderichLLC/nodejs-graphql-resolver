@@ -7,6 +7,8 @@ module.exports = class QueryBuilder {
 
   constructor(query = {}) {
     Object.assign(this.#query, query);
+    this.sortBy = this.sort;
+    this.opts = this.options;
   }
 
   id(id) {
@@ -116,8 +118,9 @@ module.exports = class QueryBuilder {
   #mutation(crud, ...args) {
     args = args.flat();
     const { id, limit } = this.#query;
-    const suffix = id || limit === 1 || (crud === 'create' && args.length === 1) ? 'One' : 'Many';
-    const input = suffix === 'One' ? args[0] : args;
+    const suffix = id || limit === 1 || (crud === 'create' && args.length > 1) ? 'Many' : 'One';
+    let input = suffix === 'One' ? args[0] : args;
+    if (input === undefined) input = {};
     return this.resolve(Object.assign(this.#query, { op: `${crud}${suffix}`, crud, input }));
   }
 

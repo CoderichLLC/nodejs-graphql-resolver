@@ -50,8 +50,6 @@ module.exports = class Resolver {
     if (data == null) return null;
     if (typeof data !== 'object') return data;
 
-    // console.log(data);
-
     const $data = Util.map(data, (doc) => {
       return Object.entries(doc).reduce((prev, [key, startValue]) => {
         const [$key] = Object.entries(model.keyMap || {}).find(([k, v]) => v === key) || [key];

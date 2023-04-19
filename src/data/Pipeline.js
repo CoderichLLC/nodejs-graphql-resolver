@@ -118,10 +118,10 @@ module.exports = class Pipeline {
       }, params.value);
     }, { ignoreNull: false });
 
-    Pipeline.define('$where', (params) => {
-      return (params.field.pipelines?.destruct || []).reduce((value, t) => {
-        return Pipeline[t]({ ...params, value });
-      }, params.value);
+    Pipeline.define('$validate', (params) => {
+      return Promise.all((params.field.pipelines?.validate || []).map((t) => {
+        return Promise.resolve(Pipeline[t](params));
+      }));
     }, { ignoreNull: false });
 
     //
