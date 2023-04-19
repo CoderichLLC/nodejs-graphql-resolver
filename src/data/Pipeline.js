@@ -5,7 +5,10 @@ const { map, flatten, promiseChain } = require('@coderich/util');
 const uniqWith = require('lodash.uniqwith');
 
 const ensureArray = a => (Array.isArray(a) ? a : [a].filter(el => el !== undefined));
-const hashObject = obj => createHash('md5').update(Object.entries(flatten(obj)).join('|')).digest('hex');
+const hashObject = (obj) => {
+  const flat = obj.toHexString ? obj.toHexString() : Object.entries(flatten(obj)).join('|');
+  return createHash('md5').update(flat).digest('hex');
+};
 
 module.exports = class Pipeline {
   constructor() {
@@ -63,14 +66,10 @@ module.exports = class Pipeline {
     Pipeline.define('timestamp', ({ value }) => Date.now(), { ignoreNull: false });
     Pipeline.define('createdAt', ({ value }) => value || Date.now(), { ignoreNull: false });
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
-    Pipeline.define('idKey', ({ model, value }) => (value == null ? model.idValue() : value), { ignoreNull: false });
     Pipeline.define('ensureArrayValue', ({ field, value }) => (field.isArray && !Array.isArray(value) ? [value] : value), { itemize: false });
     Pipeline.define('defaultValue', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
-
-    // Questionable refactors
-    Pipeline.define('idField', ({ model, field, value, resolver }) => {
-      return resolver.idValue(value.id || value);
-    });
+    Pipeline.define('idField', ({ resolver, value }) => resolver.idValue(value.id || value));
+    Pipeline.define('idKey', ({ resolver, value }) => resolver.idValue(value), { ignoreNull: false });
 
     // Structures
     Pipeline.define('$instruct', params => Pipeline.#resolve(params, 'instruct'), { ignoreNull: false });
@@ -87,15 +86,14 @@ module.exports = class Pipeline {
     Pipeline.define('ensureId', ({ resolver, field, value }) => {
       const { type } = field;
       const ids = Array.from(new Set(ensureArray(value).map(v => `${v}`)));
-
       return resolver.match(type).where({ id: ids }).count().then((count) => {
         if (count !== ids.length) throw Boom.notFound(`${type} Not Found`);
       });
     }, { itemize: false });
 
+    //
     Pipeline.define('castValue', ({ field, value }) => {
       const { type, isEmbedded } = field;
-
       if (isEmbedded) return value;
 
       return map(value, (v) => {
@@ -131,16 +129,14 @@ module.exports = class Pipeline {
     }, { ignoreNull: false });
 
     // A field cannot hold a reference to itself
-    Pipeline.define('selfless', ({ root, model, field, value }) => {
-      if (`${value}` === `${root.id}`) throw Boom.badRequest(`${model}.${field} cannot hold a reference to itself`);
+    Pipeline.define('selfless', ({ query, model, field, value }) => {
+      if (`${value}` === `${query.doc?.id}`) throw Boom.badRequest(`${model}.${field} cannot hold a reference to itself`);
     });
 
     // Once set it cannot be changed
-    Pipeline.define('immutable', ({ root, model, field, value, path }) => {
-      // console.log(path, root, get(root, path));
-      // const hint = { id: parentPath('id') };
-      // const oldVal = docPath(path, hint);
-      // if (oldVal !== undefined && value !== undefined && `${hashObject(oldVal)}` !== `${hashObject(value)}`) throw Boom.badRequest(`${model}.${field} is immutable; cannot be changed once set ${oldVal} -> ${value}`);
+    Pipeline.define('immutable', ({ query, model, field, value, path }) => {
+      const oldVal = get(query.doc, path);
+      if (oldVal !== undefined && value !== undefined && `${hashObject(oldVal)}` !== `${hashObject(value)}`) throw Boom.badRequest(`${model}.${field} is immutable; cannot be changed once set ${oldVal} -> ${value}`);
     });
 
     // List of allowed values

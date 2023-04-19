@@ -2,6 +2,7 @@ const { inspect } = require('util');
 const Util = require('@coderich/util');
 const { MongoClient, ObjectId } = require('mongodb');
 
+const queryOptions = { collation: { locale: 'en', strength: 2 } };
 const ensureArray = a => (Array.isArray(a) ? a : [a].filter(el => el !== undefined));
 
 module.exports = class MongoDriver {
@@ -31,12 +32,12 @@ module.exports = class MongoDriver {
 
   findMany(query) {
     const $aggregate = MongoDriver.aggregateQuery(query);
-    return this.collection(query.model).aggregate($aggregate, { collation: { locale: 'en', strength: 2 } }).then(cursor => cursor.toArray());
+    return this.collection(query.model).aggregate($aggregate, queryOptions).then(cursor => cursor.toArray());
   }
 
   count(query) {
     const $aggregate = MongoDriver.aggregateQuery(query, true);
-    return this.collection(query.model).aggregate($aggregate, { collation: { locale: 'en', strength: 2 } }).then((cursor) => {
+    return this.collection(query.model).aggregate($aggregate, queryOptions).then((cursor) => {
       return cursor.next().then((doc) => {
         return doc ? doc.count : 0;
       });
@@ -45,6 +46,11 @@ module.exports = class MongoDriver {
 
   createOne(query) {
     return this.collection(query.model).insertOne(query.input).then(result => ({ ...query.input, _id: result.insertedId }));
+  }
+
+  updateOne(query) {
+    const $update = { $set: query.input };
+    return this.collection(query.model).updateOne(query.where, $update, queryOptions);
   }
 
   collection(name) {

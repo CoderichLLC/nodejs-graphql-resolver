@@ -100,7 +100,7 @@ module.exports = class Schema {
           const idField = $model.fields[$model.idField];
           $model.primaryKey = nvl(idField?.key, idField?.name, 'id');
 
-          // // Model resolution last (after field resolution)
+          // // Model resolution after field resolution (push)
           // thunks.push(() => {
           // });
         } else if (node.kind === Kind.FIELD_DEFINITION) {
@@ -109,18 +109,16 @@ module.exports = class Schema {
           $field.isPrimaryKey = Boolean($field.name === model.idField);
           $field.isPersistable = uvl($field.isPersistable, model.isPersistable, true);
 
-          // Field resolution comes first
+          // Field resolution comes first (unshift)
           thunks.unshift(($schema) => {
             $field.model = $schema.models[$field.type];
             $field.isFKReference = $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             $field.isIdField = Boolean($field.isPrimaryKey || $field.isFKReference);
             if ($field.isIdField) $field.pipelines.serialize.unshift('idField');
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
-            if ($field.isIdField) $field.pipelines.validate.push('ensureId'); // Last
+            if ($field.isFKReference) $field.pipelines.validate.push('ensureId'); // Absolute Last
+            if ($field.isPrimaryKey && $field.type === 'ID') $field.pipelines.serialize.unshift('idKey'); // Absolute first
           });
-
-          // // IDs (first - shift)
-          // if (isPrimaryKeyId && type === 'ID') $structures.serializers.unshift(Pipeline.idKey);
 
           isField = false;
         } else if (node.kind === Kind.LIST_TYPE) {

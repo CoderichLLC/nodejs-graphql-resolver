@@ -81,19 +81,19 @@ module.exports = class QueryBuilder {
     return this.resolve(Object.assign(this.#query, { op: 'count', crud: 'read' }));
   }
 
-  // first(first) {
-  //   this.#propCheck('first', 'id', 'last');
-  //   this.isCursorPaging = true;
-  //   this.#query.first = first + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
-  //   return this;
-  // }
+  first(first) {
+    this.#propCheck('first', 'id', 'last');
+    this.isCursorPaging = true;
+    this.#query.first = first + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
+    return this;
+  }
 
-  // last(last) {
-  //   this.#propCheck('last', 'id', 'first');
-  //   this.isCursorPaging = true;
-  //   this.#query.last = last + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
-  //   return this;
-  // }
+  last(last) {
+    this.#propCheck('last', 'id', 'first');
+    this.isCursorPaging = true;
+    this.#query.last = last + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
+    return this;
+  }
 
   save(...args) {
     const { id, where } = this.#query;
@@ -118,7 +118,7 @@ module.exports = class QueryBuilder {
   #mutation(crud, ...args) {
     args = args.flat();
     const { id, limit } = this.#query;
-    const suffix = id || limit === 1 || (crud === 'create' && args.length > 1) ? 'Many' : 'One';
+    const suffix = id || limit === 1 || (crud === 'create' && args.length < 2) ? 'One' : 'Many';
     let input = suffix === 'One' ? args[0] : args;
     if (input === undefined) input = {};
     return this.resolve(Object.assign(this.#query, { op: `${crud}${suffix}`, crud, input }));
