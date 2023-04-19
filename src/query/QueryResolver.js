@@ -32,7 +32,7 @@ module.exports = class QueryResolver extends QueryBuilder {
     const crudLines = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] }[crud] || [];
 
     query.input = await this.#normalize('input', this.#model, input, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el]));
-    query.where = await this.#normalize('where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el]));
+    query.where = await this.#normalize('where', this.#model, Util.unflatten(where), ['castValue', 'ensureArrayValue', '$instruct', '$serialize'].map(el => Pipeline[el]));
     query.select = await this.#normalize('select', this.#model, Util.unflatten(select.reduce((prev, field) => Object.assign(prev, { [field]: true }), {})));
     query.where = resolveWhereClause(query.where);
 

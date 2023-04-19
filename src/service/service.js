@@ -1,12 +1,14 @@
-// const Util = require('@coderich/util');
+const Util = require('@coderich/util');
 
 exports.isGlob = str => /\*|\?|\[.+\]/.test(str);
 // exports.isGlob = str => /^\*|\?/g.test(str);
 
-exports.globToRegex = (glob) => {
-  const escapedGlob = glob.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regexPattern = escapedGlob.replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
-  return new RegExp(`^${regexPattern}$`);
+exports.globToRegex = (mixed) => {
+  return Util.map(mixed, (glob) => {
+    const escapedGlob = glob.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regexPattern = escapedGlob.replace(/\\\*/g, '.*').replace(/\\\?/g, '.');
+    return new RegExp(`^${regexPattern}$`);
+  });
 };
 
 exports.resolveWhereClause = (clause = {}, arrayOp = '$in') => {

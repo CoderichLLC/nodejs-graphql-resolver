@@ -1,4 +1,8 @@
+const { inspect } = require('util');
+const Util = require('@coderich/util');
 const { MongoClient, ObjectId } = require('mongodb');
+
+const ensureArray = a => (Array.isArray(a) ? a : [a].filter(el => el !== undefined));
 
 module.exports = class MongoDriver {
   #mongoClient;
@@ -16,13 +20,13 @@ module.exports = class MongoDriver {
   // }
 
   resolve(query) {
+    if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
     if (!this[query.op]) console.log(query);
     return this[query.op](query);
   }
 
   findOne(query) {
-    // console.log(query.where);
-    return this.collection(query.model).findOne(query.where);
+    return this.findMany(Object.assign(query, { first: 1 })).then(([doc]) => doc);
   }
 
   findMany(query) {
@@ -72,9 +76,21 @@ module.exports = class MongoDriver {
     const { where: $match, sort = {}, skip, limit, joins, after, before, first } = query;
     const $aggregate = [{ $match }];
 
-    // // Used for $regex matching
-    // const $addFields = MongoDriver.getAddFields(query);
-    // if (Object.keys($addFields).length) $aggregate.unshift({ $addFields });
+    // Inspect the query
+    const { $addFields } = Util.unflatten(Object.entries(Util.flatten(query.where, false)).reduce((prev, [key, value]) => {
+      const regex = new RegExp(`((?:^|\\.))${key}\\b`, 'g');
+      const $key = key.replace(regex, `$1${key}`);
+      console.log(key, $key);
+
+      if (ensureArray(value).some(el => el instanceof RegExp)) {
+        const conversion = Array.isArray(value) ? { $map: { input: `$${key}`, as: 'el', in: { $toString: '$$el' } } } : { $toString: `$${key}` };
+        Object.assign(prev.$addFields, { [key]: conversion });
+      }
+      return prev;
+    }, { $addFields: {} }), false);
+
+    // Used for $regex matching
+    if (Object.keys($addFields).length) $aggregate.unshift({ $addFields });
 
     if (count) {
       $aggregate.push({ $count: 'count' });
@@ -106,6 +122,8 @@ module.exports = class MongoDriver {
       // const $project = MongoDriver.getProjectFields(shape);
       // $aggregate.push({ $project });
     }
+
+    if (query.flags?.debug) console.log(inspect($aggregate, { depth: null, showHidden: false, colors: true }));
 
     return $aggregate;
   }
