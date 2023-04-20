@@ -2,6 +2,7 @@ const Util = require('@coderich/util');
 
 exports.isGlob = (str) => {
   if (typeof str !== 'string') return false;
+  if (str === '[object Object]') return false;
   // if (/^[a-fA-F0-9]{24}$/.test(str)) return false; // Exclude any string of 24 characters that contains only hexadecimal characters
   return /\*|\?|\[.+\]/.test(str);
 };

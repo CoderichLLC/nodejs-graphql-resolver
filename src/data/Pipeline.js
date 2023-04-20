@@ -121,7 +121,7 @@ module.exports = class Pipeline {
           }
         }
       });
-    }, { itemize: false });
+    });
 
     // Required fields
     Pipeline.define('required', ({ model, field, value }) => {

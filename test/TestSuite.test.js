@@ -446,30 +446,30 @@ describe('TestSuite', () => {
       // await expect(resolver.match('BookStore').save({ name: 'Best Books Ever', building: libraryBuilding })).rejects.toThrow(/duplicate/gi);
       await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: richard.id })).rejects.toThrow(/not found/gi);
       await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: [richard.id] })).rejects.toThrow(/not found/gi);
-      // await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: [mobyDick.id, bookBuilding] })).rejects.toThrow(/not found/gi);
+      await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: [mobyDick.id, bookBuilding] })).rejects.toThrow(/not found/gi);
     });
 
-    // test('Library', async () => {
-    //   await expect(resolver.match('Library').save()).rejects.toThrow(/required/gi);
-    //   await expect(resolver.match('Library').save({ name: 'New Library' })).rejects.toThrow(/required/gi);
-    //   await expect(resolver.match('Library').save({ name: 'New Library', building: 'bad-building' })).rejects.toThrow(/required/gi);
-    //   await expect(resolver.match('Library').save({ name: 'New Library', building: libraryBuilding })).rejects.toThrow(/duplicate/gi);
-    // });
+    test('Library', async () => {
+      await expect(resolver.match('Library').save()).rejects.toThrow(/required/gi);
+      await expect(resolver.match('Library').save({ name: 'New Library' })).rejects.toThrow(/required/gi);
+      // await expect(resolver.match('Library').save({ name: 'New Library', building: 'bad-building' })).rejects.toThrow(/required/gi);
+      // await expect(resolver.match('Library').save({ name: 'New Library', building: libraryBuilding })).rejects.toThrow(/duplicate/gi);
+    });
 
-    // test('Art', async () => {
-    //   await expect(resolver.match('Art').save({ name: 'sup', comments: ['whoops'] })).rejects.toThrow(/allow/gi);
-    //   await expect(resolver.match('Art').id(artsy.id).save({ sections: [Object.assign({}, artsy.sections[0], { frozen: 'rope' })] })).rejects.toThrow(/immutable/gi);
-    // });
+    test('Art', async () => {
+      await expect(resolver.match('Art').save({ name: 'sup', comments: ['whoops'] })).rejects.toThrow(/allow/gi);
+      await expect(resolver.match('Art').id(artsy.id).save({ sections: [{ ...artsy.sections[0], frozen: 'rope' }] })).rejects.toThrow(/immutable/gi);
+    });
   });
 
-  // describe('Data Normalization', () => {
-  //   test('uniq', async () => {
-  //     richard = await resolver.match('Person').id(richard.id).save({ name: 'richard', friends: [christie.id, christie.id, christie.id], telephone: 1234567890 });
-  //     expect(richard.name).toEqual('Richard');
-  //     expect(richard.telephone).toEqual('1234567890');
-  //     expect(richard.friends).toEqual([christie.id]);
-  //   });
-  // });
+  describe('Data Normalization', () => {
+    test('uniq', async () => {
+      richard = await resolver.match('Person').id(richard.id).save({ name: 'richard', friends: [christie.id, christie.id, christie.id], telephone: 1234567890 });
+      expect(richard.name).toEqual('Richard');
+      expect(richard.telephone).toEqual('1234567890');
+      expect(richard.friends).toEqual([christie.id]);
+    });
+  });
 
   // describe('Find (Deep)', () => {
   //   test('Person', async () => {

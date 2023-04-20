@@ -50,7 +50,7 @@ module.exports = class MongoDriver {
 
   updateOne(query) {
     const $update = { $set: query.input };
-    return this.collection(query.model).updateOne(query.where, $update, queryOptions);
+    return this.collection(query.model).updateOne(query.where, $update, queryOptions).then(() => query.input);
   }
 
   collection(name) {

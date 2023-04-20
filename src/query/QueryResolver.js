@@ -9,15 +9,13 @@ module.exports = class QueryResolver extends QueryBuilder {
   #schema;
   #context;
   #resolver;
-  #arrayOp;
 
   constructor(config) {
-    const { schema, context, resolver, query, arrayOp = '$eq' } = config;
+    const { schema, context, resolver, query } = config;
     super(query);
     this.#schema = schema;
     this.#context = context;
     this.#resolver = resolver;
-    this.#arrayOp = arrayOp;
     this.#model = schema.models[query.model];
   }
 
@@ -67,11 +65,10 @@ module.exports = class QueryResolver extends QueryBuilder {
       else if (target === 'where') merge(doc, instructFields);
 
       return Util.promiseChain(Object.entries(doc).map(([key, startValue]) => async (chain) => {
-        let [$key] = key.split('.');
-        const field = model.fields[$key];
         const prev = chain.pop();
+        const [$key] = key.split('.');
+        const field = model.fields[$key];
         if (!field) return Object.assign(prev, { [key]: startValue }); // "key" is correct here to preserve namespace
-        $key = field.key || key;
         const path = paths.concat(key);
 
         // Transform value
@@ -87,7 +84,8 @@ module.exports = class QueryResolver extends QueryBuilder {
         }
 
         // Assign it back
-        return Object.assign(prev, { [$key]: $value });
+        const $$key = field.key || key;
+        return Object.assign(prev, { [$$key]: $value });
       }), {}).then(chain => chain.pop());
     });
   }
