@@ -1,8 +1,6 @@
 const FS = require('fs');
+const Util = require('@coderich/util');
 const { Kind, print, parse, visit, isSchema } = require('graphql');
-
-const uvl = (...values) => values.reduce((prev, value) => (prev === undefined ? value : prev), undefined);
-const nvl = (...values) => values.reduce((prev, value) => (prev === null ? value : prev), null);
 
 module.exports = class Schema {
   #gql;
@@ -32,10 +30,10 @@ module.exports = class Schema {
 
         if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
           const name = node.name.value;
-          model = schema.models[name] = { name, idField: 'id', fields: {} };
+          model = schema.models[name] = { key: name, name, idField: 'id', fields: {} };
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const name = node.name.value;
-          field = model.fields[name] = { name, pipelines: { validate: [], serialize: [] } };
+          field = model.fields[name] = { key: name, name, pipelines: { validate: [], serialize: [] } };
           isField = true;
         } else if (node.kind === Kind.NON_NULL_TYPE) {
           field[isList ? 'isArrayRequired' : 'isRequired'] = true;
@@ -106,7 +104,7 @@ module.exports = class Schema {
         if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
           const $model = model;
           const idField = $model.fields[$model.idField];
-          $model.primaryKey = nvl(idField?.key, idField?.name, 'id');
+          $model.primaryKey = Util.nvl(idField?.key, idField?.name, 'id');
 
           // // Model resolution after field resolution (push)
           // thunks.push(() => {
@@ -115,7 +113,7 @@ module.exports = class Schema {
           const $field = field;
           // const $model = model;
           $field.isPrimaryKey = Boolean($field.name === model.idField);
-          $field.isPersistable = uvl($field.isPersistable, model.isPersistable, true);
+          $field.isPersistable = Util.uvl($field.isPersistable, model.isPersistable, true);
 
           // Field resolution comes first (unshift)
           thunks.unshift(($schema) => {
@@ -138,9 +136,16 @@ module.exports = class Schema {
     // Resolve data thunks
     thunks.forEach(thunk => thunk(schema));
 
+    // Resolve indexes
+    schema.indexes = schema.indexes.map((index) => {
+      const { key } = index.model;
+      const { name, type } = index;
+      const on = index.on.map(f => index.model.fields[f].key);
+      return { key, name, type, on };
+    });
+
     // Return schema
-    // console.log(schema.models.Art.fields.sections);
-    // console.log(schema.indexes);
+    // console.log(schema.models.Person);
     return schema;
   }
 };

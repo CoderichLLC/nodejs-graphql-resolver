@@ -1,4 +1,4 @@
-const { isGlob } = require('../../src/service/service');
+const { isGlob } = require('../../src/service/AppService');
 
 describe('service', () => {
   test('isGlob', () => {

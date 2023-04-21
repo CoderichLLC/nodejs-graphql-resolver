@@ -1,19 +1,20 @@
+const Validator = require('validator');
 const MongoClient = require('./test/mongo/MongoClient');
 const Schema = require('./src/data/Schema');
 const Resolver = require('./src/data/Resolver');
+const Pipeline = require('./src/data/Pipeline');
 const { typeDefs } = require('./test/schema');
 
 let driver;
 
+Pipeline.define('email', ({ value }) => {
+  if (!Validator.isEmail(value)) throw new Error('Invalid email');
+});
+
 const createIndexes = (mongoClient, indexes) => {
-  return Promise.all(indexes.map(({ model, name, type, on }) => {
-    const collection = model.key || model.name;
-    const $fields = on.reduce((prev, fieldName) => {
-      const field = model.fields[fieldName];
-      const key = field.key || field.name;
-      return Object.assign(prev, { [key]: 1 });
-    }, {});
-    return mongoClient.collection(collection).createIndex($fields, { name, [type]: true });
+  return Promise.all(indexes.map(({ key, name, type, on }) => {
+    const fields = on.reduce((prev, field) => Object.assign(prev, { [field]: 1 }), {});
+    return mongoClient.collection(key).createIndex(fields, { name, [type]: true });
   }));
 };
 
@@ -23,6 +24,7 @@ beforeAll(async () => {
   const context = { network: { id: 'networkId' } };
   await createIndexes(driver, schema.indexes);
   global.resolver = new Resolver({ schema, context, driver });
+  global.mongoClient = driver;
 });
 
 afterAll(() => {
