@@ -5,10 +5,23 @@ const { typeDefs } = require('./test/schema');
 
 let driver;
 
-beforeAll(() => {
+const createIndexes = (mongoClient, indexes) => {
+  return Promise.all(indexes.map(({ model, name, type, on }) => {
+    const collection = model.key || model.name;
+    const $fields = on.reduce((prev, fieldName) => {
+      const field = model.fields[fieldName];
+      const key = field.key || field.name;
+      return Object.assign(prev, { [key]: 1 });
+    }, {});
+    return mongoClient.collection(collection).createIndex($fields, { name, [type]: true });
+  }));
+};
+
+beforeAll(async () => {
   driver = new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' });
   const schema = new Schema(typeDefs).parse();
   const context = { network: { id: 'networkId' } };
+  await createIndexes(driver, schema.indexes);
   global.resolver = new Resolver({ schema, context, driver });
 });
 

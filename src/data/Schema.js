@@ -20,7 +20,7 @@ module.exports = class Schema {
   parse() {
     let model, field, isField, isList;
     const thunks = [];
-    const schema = { models: {} };
+    const schema = { models: {}, indexes: [] };
     const operations = ['Query', 'Mutation', 'Subscription'];
     const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
     const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
@@ -49,14 +49,22 @@ module.exports = class Schema {
           const target = isField ? field : model;
 
           if (name === 'model') model.isMarkedModel = true;
+          else if (name === 'index') schema.indexes.push({ model });
 
           node.arguments.forEach((arg) => {
             const key = arg.name.value;
-            const { value } = arg.value;
+            const { value: val, values } = arg.value;
+            const value = values ? values.map(n => n.value) : val;
+
+            if (name === 'index') schema.indexes[schema.indexes.length - 1][key] = value;
 
             switch (`${name}-${key}`) {
               case 'model-id': {
                 model.idField = value;
+                break;
+              }
+              case 'model-key': {
+                model.key = value;
                 break;
               }
               case 'model-embed': {
@@ -132,6 +140,7 @@ module.exports = class Schema {
 
     // Return schema
     // console.log(schema.models.Art.fields.sections);
+    // console.log(schema.indexes);
     return schema;
   }
 };
