@@ -20,14 +20,10 @@ module.exports = class MongoDriver {
   //   return this.collection(collection)[method](...args);
   // }
 
-  async resolve(query) {
-    try {
-      if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
-      if (!this[query.op]) console.log(query);
-      return await this[query.op](query);
-    } catch (e) {
-      throw e;
-    }
+  resolve(query) {
+    if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
+    if (!this[query.op]) console.log(query);
+    return this[query.op](query);
   }
 
   findOne(query) {
@@ -55,6 +51,15 @@ module.exports = class MongoDriver {
   updateOne(query) {
     const $update = { $set: query.input };
     return this.collection(query.model).updateOne(query.where, $update, queryOptions).then(() => query.input);
+  }
+
+  deleteOne(query) {
+    return this.collection(query.model).deleteOne(query.where).then(() => true);
+  }
+
+  deleteMany(query) {
+    console.log(query);
+    return this.collection(query.model).deleteMany(query.where).then(() => true);
   }
 
   collection(name) {

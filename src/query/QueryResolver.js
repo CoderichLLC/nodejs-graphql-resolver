@@ -51,6 +51,10 @@ module.exports = class QueryResolver extends QueryBuilder {
     return this.#resolver.resolve(query);
   }
 
+  // #findOne(query) {
+
+  // }
+
   async #normalize(query, target, model, data, transformers = [], paths = []) {
     const defaultInput = Object.values(model.fields).filter(field => Object.prototype.hasOwnProperty.call(field, 'defaultValue')).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const requiredInput = Object.values(model.fields).filter(field => field.isRequired && field.name !== 'id').reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
@@ -62,8 +66,7 @@ module.exports = class QueryResolver extends QueryBuilder {
       if (target === 'input') doc = merge(defaultInput, requiredInput, doc, instructFields);
       else if (target === 'where') merge(doc, instructFields);
 
-      return Util.promiseChain(Object.entries(doc).map(([keyPath, startValue]) => async (chain) => {
-        const prev = chain.pop();
+      return Util.pipeline(Object.entries(doc).map(([keyPath, startValue]) => async (prev) => {
         const path = paths.concat(keyPath);
         const [name] = target === 'input' ? [keyPath] : keyPath.split('.'); // Input is the only thing that can have key.path.keys
         const field = model.fields[name];
@@ -71,11 +74,10 @@ module.exports = class QueryResolver extends QueryBuilder {
         if (!field) return Object.assign(prev, { [keyPath]: startValue }); // "keyPath" is correct here to preserve namespace
 
         // Transform value
-        let $value = await Util.promiseChain(transformers.map(t => async (ch) => {
-          const value = ch.pop();
+        let $value = await Util.pipeline(transformers.map(t => async (value) => {
           const v = await t({ query, path, model, field, value, startValue, resolver: this.#resolver, context: this.#context });
           return v === undefined ? value : v;
-        }), startValue).then(ch => ch.pop());
+        }), startValue);
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference) {
@@ -84,7 +86,7 @@ module.exports = class QueryResolver extends QueryBuilder {
 
         // Assign it back
         return Object.assign(prev, { [field.key]: $value });
-      }), {}).then(chain => chain.pop());
+      }), {});
     });
   }
 };

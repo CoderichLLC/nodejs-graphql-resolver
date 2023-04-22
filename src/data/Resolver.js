@@ -52,8 +52,7 @@ module.exports = class Resolver {
     if (typeof data !== 'object') return data;
 
     return Util.mapPromise(data, (doc) => {
-      return Util.promiseChain(Object.entries(doc).map(([key, startValue]) => async (chain) => {
-        const prev = chain.pop();
+      return Util.pipeline(Object.entries(doc).map(([key, startValue]) => async (prev) => {
         const [$key] = Object.entries(model.keyMap || {}).find(([k, v]) => v === key) || [key];
         const field = model.fields[$key];
         const path = paths.concat($key);
@@ -62,11 +61,10 @@ module.exports = class Resolver {
         if (!field) return prev;
 
         // Transform value
-        let $value = await Util.promiseChain(transformers.map(t => async (ch) => {
-          const value = ch.pop();
+        let $value = await Util.pipeline(transformers.map(t => async (value) => {
           const v = await t({ query, model, field, value, path, startValue, resolver: this, context: this.#context });
           return v === undefined ? value : v;
-        }), startValue).then(ch => ch.pop());
+        }), startValue);
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference) {
@@ -74,7 +72,7 @@ module.exports = class Resolver {
         }
 
         return Object.assign(prev, { [$key]: $value });
-      }), {}).then(chain => chain.pop());
+      }), {});
     });
   }
 };

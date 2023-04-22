@@ -159,10 +159,9 @@ module.exports = class Pipeline {
   static #resolve(params, pipeline) {
     const transformers = params.field.pipelines?.[pipeline] || [];
 
-    return Util.promiseChain(transformers.map(t => async (chain) => {
-      const value = chain.pop();
+    return Util.pipeline(transformers.map(t => async (value) => {
       return Pipeline[t]({ ...params, value });
-    }), params.value).then(chain => chain.pop());
+    }), params.value);
   }
 };
 

@@ -7,8 +7,9 @@ module.exports = class QueryBuilder {
 
   constructor(query = {}) {
     Object.assign(this.#query, query);
-    this.sortBy = this.sort;
     this.opts = this.options;
+    this.sortBy = this.sort;
+    this.remove = this.delete;
   }
 
   id(id) {
