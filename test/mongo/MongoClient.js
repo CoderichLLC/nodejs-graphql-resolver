@@ -20,10 +20,14 @@ module.exports = class MongoDriver {
   //   return this.collection(collection)[method](...args);
   // }
 
-  resolve(query) {
-    if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
-    if (!this[query.op]) console.log(query);
-    return this[query.op](query);
+  async resolve(query) {
+    try {
+      if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
+      if (!this[query.op]) console.log(query);
+      return await this[query.op](query);
+    } catch (e) {
+      throw e;
+    }
   }
 
   findOne(query) {

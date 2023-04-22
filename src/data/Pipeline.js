@@ -1,14 +1,8 @@
 const Boom = require('@hapi/boom');
 const get = require('lodash.get');
-const { createHash } = require('crypto');
-const { map, flatten, promiseChain } = require('@coderich/util');
+const Util = require('@coderich/util');
 const uniqWith = require('lodash.uniqwith');
-
-const ensureArray = a => (Array.isArray(a) ? a : [a].filter(el => el !== undefined));
-const hashObject = (obj) => {
-  const flat = obj.toHexString ? obj.toHexString() : Object.entries(flatten(obj)).join('|');
-  return createHash('md5').update(flat).digest('hex');
-};
+const { hashObject } = require('../service/AppService');
 
 module.exports = class Pipeline {
   constructor() {
@@ -28,7 +22,7 @@ module.exports = class Pipeline {
       if (ignoreNull && args.value == null) return args.value;
 
       if (ignoreNull && itemize) {
-        return map(args.value, (val, index) => {
+        return Util.map(args.value, (val, index) => {
           const v = factory({ ...args, value: val });
           return v === undefined ? val : v;
         });
@@ -60,7 +54,7 @@ module.exports = class Pipeline {
     // Additional Transformers
     Pipeline.define('toTitleCase', ({ value }) => value.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()));
     Pipeline.define('toSentenceCase', ({ value }) => value.charAt(0).toUpperCase() + value.slice(1));
-    Pipeline.define('toId', ({ model, value }) => model.idValue(value));
+    // Pipeline.define('toId', ({ model, value }) => model.idValue(value));
     Pipeline.define('toArray', ({ value }) => (Array.isArray(value) ? value : [value]), { itemize: false });
     Pipeline.define('toDate', ({ value }) => new Date(value), { configurable: true });
     Pipeline.define('timestamp', ({ value }) => Date.now(), { ignoreNull: false });
@@ -69,7 +63,7 @@ module.exports = class Pipeline {
     Pipeline.define('ensureArrayValue', ({ field, value }) => (field.isArray && !Array.isArray(value) ? [value] : value), { itemize: false });
     Pipeline.define('defaultValue', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
     Pipeline.define('idField', ({ resolver, value }) => resolver.idValue(value.id || value));
-    Pipeline.define('idKey', ({ resolver, value }) => resolver.idValue(value), { ignoreNull: false });
+    // Pipeline.define('idKey', ({ resolver, value }) => resolver.idValue(value), { ignoreNull: false });
 
     // Structures
     Pipeline.define('$instruct', params => Pipeline.#resolve(params, 'instruct'), { ignoreNull: false });
@@ -85,7 +79,7 @@ module.exports = class Pipeline {
     //
     Pipeline.define('ensureId', ({ resolver, field, value }) => {
       const { type } = field;
-      const ids = Array.from(new Set(ensureArray(value).map(v => `${v}`)));
+      const ids = Util.filterBy(Util.ensureArray(value), (a, b) => `${a}` === `${b}`);
       return resolver.match(type).where({ id: ids }).count().then((count) => {
         if (count !== ids.length) throw Boom.notFound(`${type} Not Found`);
       });
@@ -96,7 +90,7 @@ module.exports = class Pipeline {
       const { type, isEmbedded } = field;
       if (isEmbedded) return value;
 
-      return map(value, (v) => {
+      return Util.map(value, (v) => {
         switch (type.toLowerCase()) {
           case 'string': {
             return `${v}`;
@@ -165,7 +159,7 @@ module.exports = class Pipeline {
   static #resolve(params, pipeline) {
     const transformers = params.field.pipelines?.[pipeline] || [];
 
-    return promiseChain(transformers.map(t => async (chain) => {
+    return Util.promiseChain(transformers.map(t => async (chain) => {
       const value = chain.pop();
       return Pipeline[t]({ ...params, value });
     }), params.value).then(chain => chain.pop());

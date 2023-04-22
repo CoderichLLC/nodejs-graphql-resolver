@@ -16,17 +16,21 @@
   },
   "dependencies": {
     "@coderich/query": "0.0.1",
-    "@coderich/util": "0.0.7",
+    "@coderich/util": "0.0.8",
     "@hapi/boom": "10.0.1",
+    "deepmerge": "4.3.1",
+    "fill-range": "7.0.1",
     "lodash.get": "4.4.2",
     "lodash.merge": "4.6.2",
-    "lodash.uniqwith": "4.5.0"
+    "lodash.uniqwith": "4.5.0",
+    "picomatch": "2.3.1"
   },
   "devDependencies": {
     "@coderich/dev": "0.0.17",
     "@shelf/jest-mongodb": "4.1.7",
     "graphql": "16.6.0",
-    "mongodb": "5.2.0"
+    "mongodb": "5.2.0",
+    "validator": "13.9.0"
   },
   "peerDependencies": {
     "graphql": "*"

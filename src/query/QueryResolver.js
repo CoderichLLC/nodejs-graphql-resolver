@@ -2,7 +2,7 @@ const merge = require('lodash.merge');
 const Util = require('@coderich/util');
 const QueryBuilder = require('./QueryBuilder');
 const Pipeline = require('../data/Pipeline');
-const { resolveWhereClause } = require('../service/service');
+const { resolveWhereClause } = require('../service/AppService');
 
 module.exports = class QueryResolver extends QueryBuilder {
   #model;
@@ -64,12 +64,13 @@ module.exports = class QueryResolver extends QueryBuilder {
       if (target === 'input') merge(doc, defaultInput, requiredInput, doc, instructFields);
       else if (target === 'where') merge(doc, instructFields);
 
-      return Util.promiseChain(Object.entries(doc).map(([key, startValue]) => async (chain) => {
+      return Util.promiseChain(Object.entries(doc).map(([keyPath, startValue]) => async (chain) => {
         const prev = chain.pop();
-        const [$key] = key.split('.');
-        const field = model.fields[$key];
-        if (!field) return Object.assign(prev, { [key]: startValue }); // "key" is correct here to preserve namespace
-        const path = paths.concat(key);
+        const path = paths.concat(keyPath);
+        const [name] = target === 'input' ? [keyPath] : keyPath.split('.'); // Input is the only thing that can have key.path.keys
+        const field = model.fields[name];
+
+        if (!field) return Object.assign(prev, { [keyPath]: startValue }); // "keyPath" is correct here to preserve namespace
 
         // Transform value
         let $value = await Util.promiseChain(transformers.map(t => async (ch) => {
@@ -80,12 +81,11 @@ module.exports = class QueryResolver extends QueryBuilder {
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference) {
-          $value = await this.#normalize(query, target, field.model, $value, transformers, paths.concat(key));
+          $value = await this.#normalize(query, target, field.model, $value, transformers, paths.concat(keyPath));
         }
 
         // Assign it back
-        const $$key = field.key || key;
-        return Object.assign(prev, { [$$key]: $value });
+        return Object.assign(prev, { [field.key]: $value });
       }), {}).then(chain => chain.pop());
     });
   }

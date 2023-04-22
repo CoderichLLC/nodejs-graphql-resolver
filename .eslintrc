@@ -6,7 +6,7 @@
     "ecmaVersion": 2020
   },
   "rules": {
-    "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/test/**", "**/test-integration/**"]}],
+    "import/no-extraneous-dependencies": ["error", {"devDependencies": ["**/test/**", "**/test-integration/**", "jest.*"]}],
     "no-unsafe-optional-chaining": ["error"],
     "arrow-body-style": ["off", "as-needed"],
     "arrow-parens": ["warn", "as-needed", { "requireForBlockBody": true }],

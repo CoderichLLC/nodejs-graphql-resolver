@@ -33,10 +33,10 @@ const sorter = (a, b) => {
 };
 
 describe('TestSuite', () => {
-  let resolver, context;
+  let mongoClient, resolver, context;
 
   beforeAll(() => {
-    ({ resolver } = global);
+    ({ mongoClient, resolver } = global);
     context = resolver.getContext();
   });
 
@@ -382,7 +382,7 @@ describe('TestSuite', () => {
       await expect(resolver.match('Person').save({ name: 'Richard' })).rejects.toThrow(/required/gi);
       await expect(resolver.match('Person').save({ name: 'NewGuy', emailAddress: 'newguy@gmail.com', friends: ['nobody'] })).rejects.toThrow(/not found/gi);
       await expect(resolver.match('Person').save({ name: 'NewGuy', emailAddress: 'newguy@gmail.com', friends: [richard.id, 'nobody'] })).rejects.toThrow(/not found/gi);
-      // await expect(resolver.match('Person').save({ name: 'NewGuy', emailAddress: 'newguygmail.com' })).rejects.toThrow(/email/gi);
+      await expect(resolver.match('Person').save({ name: 'NewGuy', emailAddress: 'newguygmail.com' })).rejects.toThrow(/email/gi);
       await expect(resolver.match('Person').id(richard.id).save({ name: 'Christie' })).rejects.toThrow(/duplicate/gi);
       await expect(resolver.match('Person').id(richard.id).save({ name: 'christie' })).rejects.toThrow(/duplicate/gi);
       await expect(resolver.match('Person').id(richard.id).save({ name: null })).rejects.toThrow(/required/gi);
@@ -446,7 +446,7 @@ describe('TestSuite', () => {
       await expect(resolver.match('BookStore').save({ name: 'Best Books Ever', building: libraryBuilding })).rejects.toThrow(/duplicate/gi);
       await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: richard.id })).rejects.toThrow(/not found/gi);
       await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: [richard.id] })).rejects.toThrow(/not found/gi);
-      await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: [mobyDick.id, bookBuilding] })).rejects.toThrow(/not found/gi);
+      await expect(resolver.match('BookStore').flags({ debug: true }).save({ name: 'More More Books', building: bookBuilding, books: [mobyDick.id, bookBuilding] })).rejects.toThrow(/not found/gi);
     });
 
     test('Library', async () => {
@@ -532,46 +532,46 @@ describe('TestSuite', () => {
   //   });
   // });
 
-  // describe('Update', () => {
-  //   test('Person', async () => {
-  //     const updated = await resolver.match('Person').id(richard.id).save({ name: 'Rich' });
-  //     expect(updated.createdAt).toEqual(richard.createdAt);
-  //     expect(updated.updatedAt).not.toEqual(richard.updatedAt);
-  //     expect(updated).toMatchObject({ id: richard.id, name: 'Rich' });
-  //     expect(await resolver.match('Person').id(richard.id).save({ name: 'richard' })).toMatchObject({ id: richard.id, name: 'Richard' });
-  //     expect(await resolver.match('Person').id(richard.id).save({ status: 'active' })).toMatchObject({ id: richard.id, name: 'Richard', status: 'active' });
-  //     expect(await resolver.match('Person').id(richard.id).save({ status: null })).toMatchObject({ id: richard.id, name: 'Richard', status: null });
-  //     expect(await resolver.match('Person').id(richard.id).save({ id: `${richard.id}` })).toMatchObject({ id: richard.id, name: 'Richard', status: null });
-  //   });
+  describe('Update', () => {
+    test('Person', async () => {
+      const updated = await resolver.match('Person').id(richard.id).save({ name: 'Rich' });
+      // expect(updated.createdAt).toEqual(richard.createdAt);
+      // expect(updated.updatedAt).not.toEqual(richard.updatedAt);
+      expect(updated).toMatchObject({ id: richard.id, name: 'Rich' });
+      expect(await resolver.match('Person').id(richard.id).save({ name: 'richard' })).toMatchObject({ id: richard.id, name: 'Richard' });
+      expect(await resolver.match('Person').id(richard.id).save({ status: 'active' })).toMatchObject({ id: richard.id, name: 'Richard', status: 'active' });
+      expect(await resolver.match('Person').id(richard.id).save({ status: null })).toMatchObject({ id: richard.id, name: 'Richard', status: null });
+      expect(await resolver.match('Person').id(richard.id).save({ id: `${richard.id}` })).toMatchObject({ id: richard.id, name: 'Richard', status: null, network: 'networkId' });
+    });
 
-  //   test('Book', async () => {
-  //     expect(await resolver.match('Book').id(mobyDick.id).save({ name: 'mopey dick' })).toMatchObject({ id: mobyDick.id, name: 'Mopey Dick' });
-  //     expect(await resolver.match('Book').id(mobyDick.id).save({ name: 'moby dick' })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick' });
-  //     expect(await resolver.match('Book').id(mobyDick.id).save({ bids: [] })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [] });
-  //     expect(await resolver.match('Book').id(mobyDick.id).save({ bids: null })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: null });
-  //   });
+    test('Book', async () => {
+      expect(await resolver.match('Book').id(mobyDick.id).save({ name: 'mopey dick' })).toMatchObject({ id: mobyDick.id, name: 'Mopey Dick' });
+      expect(await resolver.match('Book').id(mobyDick.id).save({ name: 'moby dick' })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick' });
+      // expect(await resolver.match('Book').id(mobyDick.id).save({ bids: [] })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [] });
+      // expect(await resolver.match('Book').id(mobyDick.id).save({ bids: null })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: null });
+    });
 
-  //   test('Apartment', async () => {
-  //     expect(await resolver.match('Apartment').id(apartment.id).save({ 'building.year': 1978 })).toMatchObject({ building: { year: 1978 } });
-  //     expect(await resolver.match('Apartment').id(apartment.id).one()).toMatchObject({ name: apartment.name, building: { year: 1978, tenants: [richard.id, christie.id] } });
-  //   });
+    // test('Apartment', async () => {
+    //   expect(await resolver.match('Apartment').id(apartment.id).save({ 'building.year': 1978 })).toMatchObject({ building: { year: 1978 } });
+    //   expect(await resolver.match('Apartment').id(apartment.id).one()).toMatchObject({ name: apartment.name, building: { year: 1978, tenants: [richard.id, christie.id] } });
+    // });
 
-  //   test('Embedded', async () => {
-  //     const { id, sections } = artsy;
-  //     sections.push({ name: 'New Section' });
-  //     expect(await resolver.match('Art').id(id).save({ sections })).toMatchObject({
-  //       sections: [{ ...sections[0], updatedAt: expect.anything() }, { id: expect.anything(), name: 'new section', createdAt: expect.anything(), updatedAt: expect.anything() }],
-  //     });
-  //   });
+    // test('Embedded', async () => {
+    //   const { id, sections } = artsy;
+    //   sections.push({ name: 'New Section' });
+    //   expect(await resolver.match('Art').id(id).save({ sections })).toMatchObject({
+    //     sections: [{ ...sections[0], updatedAt: expect.anything() }, { id: expect.anything(), name: 'new section', createdAt: expect.anything(), updatedAt: expect.anything() }],
+    //   });
+    // });
 
-  //   test('Push/Pull/Splice', async () => {
-  //     expect(await resolver.match('Book').id(mobyDick.id).push('bids', 2.99, 1.99, 5.55)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 1.99, 5.55] });
-  //     expect(await resolver.match('Book').id(mobyDick.id).pull('bids', 1.99)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 5.55] });
-  //     expect(await resolver.match('Book').id(healthBook.id).push('bids', 0.25, 0.25, 11.00, 0.25, 5.00)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 9.00, 12.50, 0.25, 0.25, 11.00, 0.25, 5.00] });
-  //     expect(await resolver.match('Book').id(healthBook.id).pull('bids', 0.25, '9.00')).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 12.50, 11.00, 5.00] });
-  //     expect(await resolver.match('Book').id(healthBook.id).splice('bids', 5.00, 4.99)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [4.99, 12.50, 11.00, 4.99] });
-  //   });
-  // });
+    // test('Push/Pull/Splice', async () => {
+    //   expect(await resolver.match('Book').id(mobyDick.id).push('bids', 2.99, 1.99, 5.55)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 1.99, 5.55] });
+    //   expect(await resolver.match('Book').id(mobyDick.id).pull('bids', 1.99)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 5.55] });
+    //   expect(await resolver.match('Book').id(healthBook.id).push('bids', 0.25, 0.25, 11.00, 0.25, 5.00)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 9.00, 12.50, 0.25, 0.25, 11.00, 0.25, 5.00] });
+    //   expect(await resolver.match('Book').id(healthBook.id).pull('bids', 0.25, '9.00')).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 12.50, 11.00, 5.00] });
+    //   expect(await resolver.match('Book').id(healthBook.id).splice('bids', 5.00, 4.99)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [4.99, 12.50, 11.00, 4.99] });
+    // });
+  });
 
   // describe('Remove', () => {
   //   test('Person', async () => {
