@@ -123,7 +123,7 @@ module.exports = class Schema {
             if ($field.isIdField) $field.pipelines.serialize.unshift('idField');
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
             if ($field.isFKReference) $field.pipelines.validate.push('ensureId'); // Absolute Last
-            if ($field.isPrimaryKey && $field.type === 'ID') $field.pipelines.serialize.unshift('idKey'); // Absolute first
+            // if ($field.isPrimaryKey && $field.type === 'ID') $field.pipelines.serialize.unshift('idKey'); // Absolute first
           });
 
           isField = false;
@@ -145,7 +145,6 @@ module.exports = class Schema {
     });
 
     // Return schema
-    // console.log(schema.models.Person);
     return schema;
   }
 };
