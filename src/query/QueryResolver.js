@@ -52,8 +52,6 @@ module.exports = class QueryResolver extends QueryBuilder {
   }
 
   async #normalize(query, target, model, data, transformers = [], paths = []) {
-    if (typeof data !== 'object') return data;
-
     const defaultInput = Object.values(model.fields).filter(field => Object.prototype.hasOwnProperty.call(field, 'defaultValue')).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const requiredInput = Object.values(model.fields).filter(field => field.isRequired && field.name !== 'id').reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const instructFields = Object.values(model.fields).filter(field => field.pipelines?.instruct).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
@@ -61,7 +59,7 @@ module.exports = class QueryResolver extends QueryBuilder {
     // Next we normalize the $data
     return Util.mapPromise(data, (doc, index) => {
       if (Array.isArray(data)) paths = paths.concat(index);
-      if (target === 'input') merge(doc, defaultInput, requiredInput, doc, instructFields);
+      if (target === 'input') doc = merge(defaultInput, requiredInput, doc, instructFields);
       else if (target === 'where') merge(doc, instructFields);
 
       return Util.promiseChain(Object.entries(doc).map(([keyPath, startValue]) => async (chain) => {

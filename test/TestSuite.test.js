@@ -441,18 +441,18 @@ describe('TestSuite', () => {
     test('BookStore', async () => {
       await expect(resolver.match('BookStore').save()).rejects.toThrow(/required/gi);
       await expect(resolver.match('BookStore').save({ name: 'New Books' })).rejects.toThrow(/required/gi);
-      // await expect(resolver.match('BookStore').save({ name: 'New Books', building: 'bad-building' })).rejects.toThrow(/required/gi);
+      await expect(resolver.match('BookStore').save({ name: 'New Books', building: 'bad-building' })).rejects.toThrow(/required/gi);
       await expect(resolver.match('BookStore').save({ name: 'besT bookS eveR', building: bookBuilding })).rejects.toThrow(/duplicate/gi);
       await expect(resolver.match('BookStore').save({ name: 'Best Books Ever', building: libraryBuilding })).rejects.toThrow(/duplicate/gi);
       await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: richard.id })).rejects.toThrow(/not found/gi);
       await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: [richard.id] })).rejects.toThrow(/not found/gi);
-      await expect(resolver.match('BookStore').flags({ debug: true }).save({ name: 'More More Books', building: bookBuilding, books: [mobyDick.id, bookBuilding] })).rejects.toThrow(/not found/gi);
+      await expect(resolver.match('BookStore').save({ name: 'More More Books', building: bookBuilding, books: [mobyDick.id, bookBuilding] })).rejects.toThrow(/not found/gi);
     });
 
     test('Library', async () => {
       await expect(resolver.match('Library').save()).rejects.toThrow(/required/gi);
       await expect(resolver.match('Library').save({ name: 'New Library' })).rejects.toThrow(/required/gi);
-      // await expect(resolver.match('Library').save({ name: 'New Library', building: 'bad-building' })).rejects.toThrow(/required/gi);
+      await expect(resolver.match('Library').save({ name: 'New Library', building: 'bad-building' })).rejects.toThrow(/required/gi);
       await expect(resolver.match('Library').save({ name: 'New Library', building: libraryBuilding })).rejects.toThrow(/duplicate/gi);
     });
 
@@ -548,7 +548,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Book').id(mobyDick.id).save({ name: 'mopey dick' })).toMatchObject({ id: mobyDick.id, name: 'Mopey Dick' });
       expect(await resolver.match('Book').id(mobyDick.id).save({ name: 'moby dick' })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick' });
       // expect(await resolver.match('Book').id(mobyDick.id).save({ bids: [] })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [] });
-      // expect(await resolver.match('Book').id(mobyDick.id).save({ bids: null })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: null });
+      expect(await resolver.match('Book').id(mobyDick.id).save({ bids: null })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: null });
     });
 
     // test('Apartment', async () => {
