@@ -4,6 +4,8 @@ const QueryBuilder = require('./QueryBuilder');
 const Pipeline = require('../data/Pipeline');
 const { resolveWhereClause } = require('../service/AppService');
 
+// const crudLines = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] }[crud] || [];
+
 module.exports = class QueryResolver extends QueryBuilder {
   #model;
   #schema;
@@ -26,34 +28,50 @@ module.exports = class QueryResolver extends QueryBuilder {
 
   async resolve() {
     const query = super.resolve();
-    const { crud, where, select = Object.values(this.#model.fields).map(field => field.name) } = query;
-    const crudLines = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] }[crud] || [];
-
-    switch (query.op) {
-      case 'updateOne': {
-        await this.#resolver.match(this.#model.name).where(where).one({ required: true }).then((doc) => {
-          query.doc = doc;
-          query.input = query.merged = merge({}, doc, query.input);
-        });
-        break;
-      }
-      default: break;
-    }
+    const { where, select = Object.values(this.#model.fields).map(field => field.name) } = query;
 
     // Normalize
-    [query.input, query.where, query.select] = await Promise.all([
-      this.#normalize(query, 'input', this.#model, query.input, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el])),
-      this.#normalize(query, 'where', this.#model, Util.unflatten(where), ['castValue', 'ensureArrayValue', '$instruct', '$serialize'].map(el => Pipeline[el])),
+    [query.where, query.select] = await Promise.all([
+      this.#normalize(query, 'where', this.#model, Util.unflatten(where), ['castValue', 'ensureArrayValue', '$instruct', '$serialize'].map(el => Pipeline[el])).then(resolveWhereClause),
       this.#normalize(query, 'select', this.#model, Util.unflatten(select.reduce((prev, field) => Object.assign(prev, { [field]: true }), {}))),
     ]);
 
-    query.where = resolveWhereClause(query.where);
-    return this.#resolver.resolve(query);
+    // Resolve
+    switch (query.op) {
+      case 'findOne': case 'findMany': case 'count': {
+        return this.#resolver.resolve(query);
+      }
+      case 'createOne': case 'createMany': {
+        query.input = await this.#normalize(query, 'input', this.#model, query.input, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', '$construct', '$serialize', '$transform', '$validate'].map(el => Pipeline[el]));
+        return this.#resolver.resolve(query);
+      }
+      case 'updateOne': case 'updateMany': {
+        return this.#get(query).then(async (doc) => {
+          query.doc = doc;
+          query.input = query.merged = await this.#normalize(query, 'input', this.#model, merge({}, doc, query.input), ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', '$restruct', '$serialize', '$transform', '$validate'].map(el => Pipeline[el]));
+          return this.#resolver.resolve(query);
+        });
+      }
+      case 'deleteOne': {
+        return this.#get(query).then((doc) => {
+          query.doc = doc;
+          return this.#resolver.resolve(query).then(() => doc);
+        });
+      }
+      case 'deleteMany': {
+        return this.#resolver.resolve(query.$clone({ op: 'findMany' })).then((docs) => {
+          return Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).delete()));
+        });
+      }
+      default: {
+        throw new Error(`Unknown operation "${query.op}"`);
+      }
+    }
   }
 
-  // #findOne(query) {
-
-  // }
+  #get(query) {
+    return this.#resolver.match(this.#model.name).where(query.where).one({ required: true });
+  }
 
   async #normalize(query, target, model, data, transformers = [], paths = []) {
     const defaultInput = Object.values(model.fields).filter(field => Object.prototype.hasOwnProperty.call(field, 'defaultValue')).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});

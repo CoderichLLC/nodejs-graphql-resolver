@@ -573,21 +573,21 @@ describe('TestSuite', () => {
     // });
   });
 
-  // describe('Remove', () => {
-  //   // test('Person', async () => {
-  //   //   expect(await resolver.match('Person').count()).toBeGreaterThan(0);
-  //   //   expect(await resolver.match('Person').where({ name: undefined }).delete()).toEqual([]);
-  //   // });
+  describe('Remove', () => {
+    test('Person', async () => {
+      expect(await resolver.match('Person').count()).toBe(2);
+      expect(await resolver.match('Person').where({ name: undefined }).delete()).toEqual([]);
+    });
 
-  //   test('Art', async () => {
-  //     const art = await resolver.match('Art').save({ name: 'bye bye', comments: ['yay'] });
-  //     expect(art).toBeDefined();
-  //     expect(await resolver.match('Art').id(art.id).one()).not.toBeNull();
-  //     // expect(await resolver.match('Art').id(art.id).remove()).toMatchObject({ id: art.id, name: 'Bye Bye' });
-  //     // expect(await resolver.match('Art').id(art.id).one()).toBeNull();
-  //     // await resolver.match('Art').id(artsy.id).remove(); // Need to delete it to not mess up later tests
-  //   });
-  // });
+    test('Art', async () => {
+      const art = await resolver.match('Art').save({ name: 'bye bye', comments: ['yay'] });
+      expect(art).toBeDefined();
+      expect(await resolver.match('Art').id(art.id).one()).not.toBeNull();
+      expect(await resolver.match('Art').id(art.id).remove()).toMatchObject({ id: art.id, name: 'Bye Bye' });
+      expect(await resolver.match('Art').id(art.id).one()).toBeNull();
+      expect(await resolver.match('Art').id(artsy.id).remove()).toMatchObject({ id: artsy.id, sections: [{ frozen: 'frozen' }] }); // Need to delete it to not mess up later tests
+    });
+  });
 
   // describe('Query (sortBy sliced results)', () => {
   //   test('sortBy', async () => {

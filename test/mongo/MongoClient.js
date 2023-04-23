@@ -54,12 +54,11 @@ module.exports = class MongoDriver {
   }
 
   deleteOne(query) {
-    return this.collection(query.model).deleteOne(query.where).then(() => true);
+    return this.collection(query.model).deleteOne(query.where);
   }
 
   deleteMany(query) {
-    console.log(query);
-    return this.collection(query.model).deleteMany(query.where).then(() => true);
+    return this.collection(query.model).deleteMany(query.where);
   }
 
   collection(name) {

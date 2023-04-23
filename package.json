@@ -15,7 +15,6 @@
     "dev": "coderich-dev"
   },
   "dependencies": {
-    "@coderich/query": "0.0.1",
     "@coderich/util": "0.0.9",
     "@hapi/boom": "10.0.1",
     "deepmerge": "4.3.1",

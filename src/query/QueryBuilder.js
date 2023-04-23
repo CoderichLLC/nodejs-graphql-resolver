@@ -3,6 +3,7 @@ module.exports = class QueryBuilder {
     flags: {},
   }, {
     id: { writable: true, enumerable: false },
+    $clone: { writable: false, enumerable: false, value: (...args) => this.clone(...args).#query },
   });
 
   constructor(query = {}) {

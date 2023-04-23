@@ -1,3 +1,29 @@
+* Timeshare dues
+* Maintainance for balcony
+* Mom bday gift
+
+---------
+
+* Array Merge
+* Unflatten input?
+* Deep resolve where clause vs joins...
+
+---------
+
+* Schema Decoration
+* Emitter
+* DataLoader
+* Batching
+
+---------
+
+* select('author.*') // populate/hydrate
+* where('author.name') // left join
+* where('authored.author.name') === where('name')
+* Things like "ensureId" are driver-specific? (eg. A SQL driver would have a FK relationship defined)
+
+---------
+
 // Rename key
 // const $key = Object.entries(this.#model.keyMap || {}).reduce((p, [k, v]) => {
 //   const regex = new RegExp(`((?:^|\\.))${k}\\b`, 'g');
@@ -10,3 +36,13 @@
 //   const $value = value.map(el => this.#normalize(el));
 //   value = match ? $value : { [this.#arrayOp]: $value };
 // }
+
+findOne: [select, where]
+findMany: [select, where]
+count: [select, where]
+updateOne: [select, where, input]
+updateMany: [select, where, input]
+upsertOne: [select, where, input]
+upsertMany: [select, where, input]
+deleteOne: [select, where]
+deleteMany: [select, where]
