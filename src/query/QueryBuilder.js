@@ -48,14 +48,14 @@ module.exports = class QueryBuilder {
 
   before(before) {
     this.#propCheck('before', 'id');
-    this.isCursorPaging = true;
+    this.#query.isCursorPaging = true;
     this.#query.before = before;
     return this;
   }
 
   after(after) {
     this.#propCheck('after', 'id');
-    this.isCursorPaging = true;
+    this.#query.isCursorPaging = true;
     this.#query.after = after;
     return this;
   }
@@ -85,16 +85,16 @@ module.exports = class QueryBuilder {
 
   first(first) {
     this.#propCheck('first', 'id', 'last');
-    this.isCursorPaging = true;
+    this.#query.isCursorPaging = true;
     this.#query.first = first + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
-    return this;
+    return this.resolve(Object.assign(this.#query, { op: 'findMany', crud: 'read' }));
   }
 
   last(last) {
     this.#propCheck('last', 'id', 'first');
-    this.isCursorPaging = true;
+    this.#query.isCursorPaging = true;
     this.#query.last = last + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
-    return this;
+    return this.resolve(Object.assign(this.#query, { op: 'findMany', crud: 'read' }));
   }
 
   save(...args) {
@@ -127,7 +127,7 @@ module.exports = class QueryBuilder {
   }
 
   #propCheck(prop, ...checks) {
-    if (['skip', 'limit'].includes(prop) && this.isCursorPaging) throw new Error(`Cannot use "${prop}" while using Cursor-Style Pagination`);
+    if (['skip', 'limit'].includes(prop) && this.#query.isCursorPaging) throw new Error(`Cannot use "${prop}" while using Cursor-Style Pagination`);
     if (['first', 'last', 'before', 'after'].includes(prop) && this.isClassicPaging) throw new Error(`Cannot use "${prop}" while using Classic-Style Pagination`);
     checks.forEach((check) => { if (this.#query[check]) throw new Error(`Cannot use "${prop}" while using "${check}"`); });
   }

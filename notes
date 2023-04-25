@@ -1,4 +1,3 @@
-* Timeshare dues
 * Maintainance for balcony
 * Mom bday gift
 
@@ -6,11 +5,12 @@
 
 * Array Merge
 * Unflatten input?
+* Pagination
+* Schema Decoration
 * Deep resolve where clause vs joins...
 
 ---------
 
-* Schema Decoration
 * Emitter
 * DataLoader
 * Batching

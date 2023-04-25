@@ -2,6 +2,7 @@ const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const Pipeline = require('./Pipeline');
 const QueryResolver = require('../query/QueryResolver');
+const { paginateResults } = require('../service/AppService');
 
 module.exports = class Resolver {
   #schema;
@@ -40,9 +41,19 @@ module.exports = class Resolver {
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[query.crud] || [];
 
-    return this.#driver.resolve(query).then((data) => {
+    return this.#driver.resolve(query.$clone({
+      get before() {
+        if (!query.isCursorPaging || !query.before) return undefined;
+        return JSON.parse(Buffer.from(query.before, 'base64').toString('ascii'));
+      },
+      get after() {
+        if (!query.isCursorPaging || !query.after) return undefined;
+        return JSON.parse(Buffer.from(query.after, 'base64').toString('ascii'));
+      },
+    })).then((data) => {
       const { flags } = query;
       if (data == null && flags.required) throw Boom.notFound();
+      if (query.isCursorPaging) data = paginateResults(data, query);
       return this.#normalize(query, model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
     });
   }
@@ -72,7 +83,10 @@ module.exports = class Resolver {
         }
 
         return Object.assign(prev, { [$key]: $value });
-      }), {});
+      }), Object.defineProperties({}, {
+        $pageInfo: { value: doc.$pageInfo },
+        $cursor: { value: doc.$cursor },
+      }));
     });
   }
 };

@@ -3,7 +3,6 @@ const Util = require('@coderich/util');
 const { MongoClient, ObjectId } = require('mongodb');
 
 const queryOptions = { collation: { locale: 'en', strength: 2 } };
-const ensureArray = a => (Array.isArray(a) ? a : [a].filter(el => el !== undefined));
 
 module.exports = class MongoDriver {
   #mongoClient;
@@ -87,19 +86,24 @@ module.exports = class MongoDriver {
   }
 
   static aggregateQuery(query, count = false) {
-    const { where: $match, sort = {}, skip, limit, joins, after, before, first } = query;
-    const $aggregate = [{ $match }];
+    const { where, sort = {}, skip, limit, joins, after, before, first } = query;
+    const $aggregate = [{ $match: where }];
 
     // Inspect the query
-    const { $addFields } = Util.unflatten(Object.entries(Util.flatten(query.where, false)).reduce((prev, [key, value]) => {
+    const { $addFields } = Util.unflatten(Object.entries(Util.flatten(where, false)).reduce((prev, [key, value]) => {
       const $key = key.split('.').reverse().find(k => !k.startsWith('$'));
 
-      if (ensureArray(value).some(el => el instanceof RegExp)) {
+      if (Util.ensureArray(value).some(el => el instanceof RegExp)) {
         const conversion = Array.isArray(value) ? { $map: { input: `$${$key}`, as: 'el', in: { $toString: '$$el' } } } : { $toString: `$${$key}` };
         Object.assign(prev.$addFields, { [$key]: conversion });
       }
       return prev;
     }, { $addFields: {} }), false);
+
+    // Convert sort
+    const $sort = Util.unflatten(Object.entries(Util.flatten(sort, false)).reduce((prev, [key, value]) => {
+      return Object.assign(prev, { [key]: value === 'asc' ? 1 : -1 });
+    }, {}), false);
 
     // Used for $regex matching
     if (Object.keys($addFields).length) $aggregate.unshift({ $addFields });
@@ -121,13 +125,13 @@ module.exports = class MongoDriver {
       // if (joins) $aggregate.push(...joins.map(({ to: from, by: foreignField, from: localField, as }) => ({ $lookup: { from, foreignField, localField, as } })));
 
       // Sort, Skip, Limit documents
-      // if (sort && Object.keys(sort).length) $aggregate.push({ $sort: toKeyObj(sort) });
+      if ($sort && Object.keys($sort).length) $aggregate.push({ $sort });
       if (skip) $aggregate.push({ $skip: skip });
       if (limit) $aggregate.push({ $limit: limit });
 
       // Pagination
-      // if (after) $aggregate.push({ $match: { $or: Object.entries(after).reduce((prev, [key, value]) => prev.concat({ [key]: { [sort[key] === 1 ? '$gte' : '$lte']: value } }), []) } });
-      // if (before) $aggregate.push({ $match: { $or: Object.entries(before).reduce((prev, [key, value]) => prev.concat({ [key]: { [sort[key] === 1 ? '$lte' : '$gte']: value } }), []) } });
+      if (after) $aggregate.push({ $match: { $or: Object.entries(after).reduce((prev, [key, value]) => prev.concat({ [key]: { [$sort[key] === 1 ? '$gte' : '$lte']: value } }), []) } });
+      if (before) $aggregate.push({ $match: { $or: Object.entries(before).reduce((prev, [key, value]) => prev.concat({ [key]: { [$sort[key] === 1 ? '$lte' : '$gte']: value } }), []) } });
       if (first) $aggregate.push({ $limit: first });
     }
 
