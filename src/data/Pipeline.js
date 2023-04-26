@@ -62,8 +62,7 @@ module.exports = class Pipeline {
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
     Pipeline.define('ensureArrayValue', ({ field, value }) => (field.isArray && !Array.isArray(value) ? [value] : value), { itemize: false });
     Pipeline.define('defaultValue', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
-    Pipeline.define('idField', ({ resolver, value }) => resolver.idValue(value.id || value));
-    // Pipeline.define('idKey', ({ resolver, value }) => resolver.idValue(value), { ignoreNull: false });
+    Pipeline.define('idField', ({ model, value }) => model.source.idValue(value.id || value));
 
     // Structures
     Pipeline.define('$instruct', params => Pipeline.#resolve(params, 'instruct'), { ignoreNull: false });

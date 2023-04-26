@@ -7,16 +7,10 @@ const { paginateResults } = require('../service/AppService');
 module.exports = class Resolver {
   #schema;
   #context;
-  #driver;
 
   constructor(config) {
-    this.#driver = config.driver;
     this.#schema = config.schema;
     this.#context = config.context;
-  }
-
-  idValue(value) {
-    return this.#driver.idValue(value);
   }
 
   getContext() {
@@ -41,7 +35,7 @@ module.exports = class Resolver {
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[query.crud] || [];
 
-    return this.#driver.resolve(query.$clone({
+    return model.source.driver.resolve(query.$clone({
       get before() {
         if (!query.isCursorPaging || !query.before) return undefined;
         return JSON.parse(Buffer.from(query.before, 'base64').toString('ascii'));

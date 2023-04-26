@@ -74,17 +74,6 @@ module.exports = class MongoDriver {
     return this.#connection.then(client => client.close());
   }
 
-  idValue(value) {
-    if (value instanceof ObjectId) return value;
-
-    try {
-      const id = new ObjectId(value);
-      return id;
-    } catch (e) {
-      return value;
-    }
-  }
-
   static aggregateQuery(query, count = false) {
     const { where, sort = {}, skip, limit, joins, after, before, first } = query;
     const $aggregate = [{ $match: where }];

@@ -1,3 +1,6 @@
+const { ObjectId } = require('mongodb');
+const Validator = require('validator');
+const MongoClient = require('./mongo/MongoClient');
 const Pipeline = require('../src/data/Pipeline');
 
 Pipeline.define('bookName', Pipeline.Deny('The Bible'));
@@ -6,8 +9,34 @@ Pipeline.define('artComment', Pipeline.Allow('yay', 'great', 'boo'));
 Pipeline.define('colors', Pipeline.Allow('blue', 'red', 'green', 'purple'));
 Pipeline.define('buildingType', Pipeline.Allow('home', 'office', 'business'));
 Pipeline.define('networkID', ({ context }) => context.network.id, { ignoreNull: false });
+Pipeline.define('email', ({ value }) => {
+  if (!Validator.isEmail(value)) throw new Error('Invalid email');
+});
 
 module.exports = {
+  dataSources: {
+    default: {
+      idValue: (value) => {
+        try {
+          const id = new ObjectId(value);
+          return id;
+        } catch (e) {
+          return value;
+        }
+      },
+      driver: new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' }),
+    },
+  },
+  decorations: {
+    default: `
+      id: ID! @field(key: "_id")
+      createdAt: String @field(construct: createdAt, gqlScope: r)
+      updatedAt: String @field(serialize: timestamp, gqlScope: r)
+    `,
+  },
+  // defaults: {
+
+  // },
   typeDefs: `
     input PersonInputMeta {
       notify: Boolean

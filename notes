@@ -5,8 +5,9 @@
 
 * Array Merge
 * Unflatten input?
-* Pagination
 * Schema Decoration
+* Transactions
+* onDeletes
 * Deep resolve where clause vs joins...
 
 ---------

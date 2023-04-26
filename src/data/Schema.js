@@ -1,19 +1,16 @@
-const FS = require('fs');
 const Util = require('@coderich/util');
-const { Kind, print, parse, visit, isSchema } = require('graphql');
+const { Kind, parse, visit } = require('graphql');
 
 module.exports = class Schema {
-  #gql;
+  #config;
 
-  constructor(mixed) {
-    try {
-      if (isSchema(mixed)) this.#gql = print(mixed);
-      else if (FS.statSync(mixed)) this.#gql = FS.readFileSync(mixed, 'utf8');
-      else this.#gql = mixed;
-    } catch (e) {
-      this.#gql = mixed;
-    }
+  constructor(config) {
+    this.#config = config;
   }
+
+  // decorate() {
+
+  // }
 
   parse() {
     let model, field, isField, isList;
@@ -24,13 +21,13 @@ module.exports = class Schema {
     const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
 
     // Parse AST
-    visit(parse(this.#gql), {
+    visit(parse(this.#config.typeDefs), {
       enter: (node) => {
         if (!allowedKinds.includes(node.kind)) return false;
 
         if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
           const name = node.name.value;
-          model = schema.models[name] = { key: name, name, idField: 'id', fields: {} };
+          model = schema.models[name] = { key: name, name, idField: 'id', fields: {}, source: this.#config.dataSources?.default };
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const name = node.name.value;
           field = model.fields[name] = { key: name, name, pipelines: { validate: [], serialize: [] } };
@@ -63,6 +60,10 @@ module.exports = class Schema {
               }
               case 'model-key': {
                 model.key = value;
+                break;
+              }
+              case 'model-source': {
+                model.source = this.#config.dataSources?.[value];
                 break;
               }
               case 'model-embed': {
@@ -102,9 +103,9 @@ module.exports = class Schema {
       },
       leave: (node) => {
         if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
-          const $model = model;
-          const idField = $model.fields[$model.idField];
-          $model.primaryKey = Util.nvl(idField?.key, idField?.name, 'id');
+          // const $model = model;
+          // const idField = $model.fields[$model.idField];
+          // $model.primaryKey = Util.nvl(idField?.key, idField?.name, 'id');
 
           // // Model resolution after field resolution (push)
           // thunks.push(() => {
