@@ -17,6 +17,8 @@ module.exports = {
   dataSources: {
     default: {
       idValue: (value) => {
+        if (value instanceof ObjectId) return value;
+
         try {
           const id = new ObjectId(value);
           return id;
@@ -27,17 +29,20 @@ module.exports = {
       driver: new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' }),
     },
   },
-  decorations: {
+  decorators: {
     default: `
       id: ID! @field(key: "_id")
       createdAt: String @field(construct: createdAt, gqlScope: r)
       updatedAt: String @field(serialize: timestamp, gqlScope: r)
     `,
   },
-  // defaults: {
-
-  // },
   typeDefs: `
+    directive @index(
+      name: String
+      on: [String!]!
+      type: String!
+    ) repeatable on OBJECT
+
     input PersonInputMeta {
       notify: Boolean
     }
@@ -46,7 +51,6 @@ module.exports = {
       @model(meta: "PersonInputMeta")
       @index(name: "uix_person_name", type: unique, on: [name])
     {
-      id: ID! @field(key: "_id")
       age: Int @field(key: "my_age")
       name: String! @field(deserialize: toTitleCase, serialize: toLowerCase)
       authored: [Book] @link(by: author) @field(connection: true)
@@ -66,7 +70,6 @@ module.exports = {
       @model
       @index(name: "uix_book", type: unique, on: [name, author])
     {
-      id: ID! @field(key: "_id")
       name: String! @field(transform: toTitleCase, validate: bookName)
       price: Float! @field(validate: bookPrice)
       author: Person! @field(validate: immutable, onDelete: cascade)
@@ -79,7 +82,6 @@ module.exports = {
       @model
       @index(name: "uix_chapter", type: unique, on: [name, book])
     {
-      id: ID! @field(key: "_id")
       name: String! @field(key: "chapter_name" transform: toTitleCase)
       book: Book! @field(onDelete: restrict)
       pages: [Page] @link(by: chapter)
@@ -89,7 +91,6 @@ module.exports = {
       @model
       @index(name: "uix_page", type: unique, on: [number, chapter])
     {
-      id: ID! @field(key: "_id")
       number: Int!
       verbage: String
       chapter: Chapter!
@@ -99,7 +100,6 @@ module.exports = {
       @model
       @index(name: "uix_bookstore", type: unique, on: [name])
     {
-      id: ID! @field(key: "_id")
       name: String! @field(transform: toTitleCase)
       location: String
       books: [Book] @field(onDelete: cascade)
@@ -111,7 +111,6 @@ module.exports = {
       @index(name: "uix_library", type: unique, on: [name])
       @index(name: "uix_library_bulding", type: unique, on: [building])
     {
-      id: ID! @field(key: "_id")
       name: String! @field(transform: toTitleCase)
       location: String,
       books: [Book] @field(onDelete: cascade)
@@ -123,7 +122,6 @@ module.exports = {
       @index(name: "uix_apartment", type: unique, on: [name])
       @index(name: "uix_apartment_bulding", type: unique, on: [building])
     {
-      id: ID! @field(key: "_id")
       name: String! @field(transform: toTitleCase)
       location: String
       building: Building!
@@ -131,7 +129,6 @@ module.exports = {
 
     type Building
     {
-      id: ID! @field(key: "_id")
       year: Int @field(key: "year_built")
       type: String! @field(validate: buildingType)
       tenants: [Person] @field(onDelete: cascade)
@@ -142,7 +139,6 @@ module.exports = {
     type Color
       @model
     {
-      id: ID! @field(key: "_id")
       type: String! @field(validate: colors)
       isDefault: Boolean
     }
@@ -150,7 +146,6 @@ module.exports = {
     type Art
       @model
     {
-      id: ID! @field(key: "_id")
       name: String! @field(transform: toTitleCase)
       bids: [Float]
       comments: [String] @field(validate: artComment)
@@ -158,7 +153,6 @@ module.exports = {
     }
 
     type Section @model(embed: true) {
-      id: ID! @field(key: "_id")
       name: String! @field(transform: toLowerCase)
       frozen: String! @field(default: "frozen", validate: immutable)
       description: String

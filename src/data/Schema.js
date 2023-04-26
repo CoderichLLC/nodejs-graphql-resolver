@@ -1,5 +1,10 @@
 const Util = require('@coderich/util');
-const { Kind, parse, visit } = require('graphql');
+const { Kind, parse, print, visit } = require('graphql');
+const { mergeGraphQLTypes } = require('@graphql-tools/merge');
+
+const operations = ['Query', 'Mutation', 'Subscription'];
+const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
+const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
 
 module.exports = class Schema {
   #config;
@@ -8,17 +13,41 @@ module.exports = class Schema {
     this.#config = config;
   }
 
-  // decorate() {
+  decorate() {
+    this.#config.typeDefs = print(visit(parse(this.#config.typeDefs), {
+      enter: (node) => {
+        if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
+          const directive = node.directives.find(({ name }) => name.value === 'model');
 
-  // }
+          if (directive) {
+            const arg = directive.arguments.find(({ name }) => name.value === 'decorate');
+            const value = arg?.value.value || 'default';
+            const decorator = this.#config.decorators?.[value];
+
+            if (decorator) {
+              const name = node.name.value;
+              const [merged] = mergeGraphQLTypes([`type ${name} { ${decorator} }`, print(node)], { noLocation: true });
+              node.fields = merged.fields;
+              return node;
+            }
+          }
+
+          return false;
+        }
+
+        return undefined;
+      },
+    }));
+
+    // console.log(this.#config.typeDefs);
+
+    return this;
+  }
 
   parse() {
     let model, field, isField, isList;
     const thunks = [];
     const schema = { models: {}, indexes: [] };
-    const operations = ['Query', 'Mutation', 'Subscription'];
-    const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
-    const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
 
     // Parse AST
     visit(parse(this.#config.typeDefs), {
@@ -30,7 +59,7 @@ module.exports = class Schema {
           model = schema.models[name] = { key: name, name, idField: 'id', fields: {}, source: this.#config.dataSources?.default };
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const name = node.name.value;
-          field = model.fields[name] = { key: name, name, pipelines: { validate: [], serialize: [] } };
+          field = model.fields[name] = { key: name, name, pipelines: { validate: [], serialize: [], construct: [] } };
           isField = true;
         } else if (node.kind === Kind.NON_NULL_TYPE) {
           field[isList ? 'isArrayRequired' : 'isRequired'] = true;
@@ -119,12 +148,12 @@ module.exports = class Schema {
           // Field resolution comes first (unshift)
           thunks.unshift(($schema) => {
             $field.model = $schema.models[$field.type];
-            $field.isFKReference = $field.model?.isMarkedModel && !$field.model?.isEmbedded;
-            $field.isIdField = Boolean($field.isPrimaryKey || $field.isFKReference);
-            if ($field.isIdField) $field.pipelines.serialize.unshift('idField');
+            $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
+
+            if ($field.isPrimaryKey) $field.pipelines.construct.unshift('$pk');
+            if ($field.isPrimaryKey || $field.isFKReference) $field.pipelines.serialize.unshift('$id');
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
             if ($field.isFKReference) $field.pipelines.validate.push('ensureId'); // Absolute Last
-            // if ($field.isPrimaryKey && $field.type === 'ID') $field.pipelines.serialize.unshift('idKey'); // Absolute first
           });
 
           isField = false;

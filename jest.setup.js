@@ -13,7 +13,7 @@ const createIndexes = (mongoClient, indexes) => {
 
 beforeAll(async () => {
   ({ driver } = config.dataSources.default);
-  const schema = new Schema(config).parse();
+  const schema = new Schema(config).decorate().parse();
   const context = { network: { id: 'networkId' } };
   await createIndexes(driver, schema.indexes);
   global.resolver = new Resolver({ schema, context });

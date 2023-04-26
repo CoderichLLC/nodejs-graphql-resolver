@@ -74,15 +74,14 @@ module.exports = class QueryResolver extends QueryBuilder {
   }
 
   async #normalize(query, target, model, data, transformers = [], paths = []) {
-    const defaultInput = Object.values(model.fields).filter(field => Object.prototype.hasOwnProperty.call(field, 'defaultValue')).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
-    const requiredInput = Object.values(model.fields).filter(field => field.isRequired && field.name !== 'id').reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
+    const allFields = Object.values(model.fields).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const instructFields = Object.values(model.fields).filter(field => field.pipelines?.instruct).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
 
     // Next we normalize the $data
     return Util.mapPromise(data, (doc, index) => {
       if (Array.isArray(data)) paths = paths.concat(index);
-      if (target === 'input') doc = merge(defaultInput, requiredInput, doc, instructFields);
-      else if (target === 'where') merge(doc, instructFields);
+      if (target === 'input') doc = merge(allFields, doc);
+      else if (target === 'where') doc = merge(instructFields, doc);
 
       return Util.pipeline(Object.entries(doc).map(([keyPath, startValue]) => async (prev) => {
         const path = paths.concat(keyPath);
@@ -98,7 +97,7 @@ module.exports = class QueryResolver extends QueryBuilder {
         }), startValue);
 
         // If it's embedded - delegate
-        if (field.model && !field.isFKReference) {
+        if (field.model && !field.isFKReference && !field.isPrimaryKey) {
           $value = await this.#normalize(query, target, field.model, $value, transformers, paths.concat(keyPath));
         }
 

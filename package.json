@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@coderich/util": "0.0.9",
+    "@graphql-tools/merge": "8.4.1",
     "@hapi/boom": "10.0.1",
     "deepmerge": "4.3.1",
     "fill-range": "7.0.1",

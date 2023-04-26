@@ -62,8 +62,8 @@ describe('TestSuite', () => {
       // expect(richard['multiLang.es']).toBe('es');
       expect(richard.strip).not.toBeDefined(); // DB key should be stripped
       expect(richard.network).toBe('networkId');
-      // expect(richard.createdAt).toBeTruthy();
-      // expect(richard.updatedAt).toBeTruthy();
+      expect(richard.createdAt).toBeTruthy();
+      expect(richard.updatedAt).toBeTruthy();
     });
 
     test('Book', async () => {
@@ -155,8 +155,8 @@ describe('TestSuite', () => {
         // id: expect.anything(),
         name: 'section1',
         frozen: 'frozen',
-        // createdAt: expect.anything(),
-        // updatedAt: expect.anything(),
+        createdAt: expect.anything(),
+        updatedAt: expect.anything(),
       }]);
     });
   });
@@ -535,8 +535,8 @@ describe('TestSuite', () => {
   describe('Update', () => {
     test('Person', async () => {
       const updated = await resolver.match('Person').id(richard.id).save({ name: 'Rich' });
-      // expect(updated.createdAt).toEqual(richard.createdAt);
-      // expect(updated.updatedAt).not.toEqual(richard.updatedAt);
+      expect(updated.createdAt).toEqual(richard.createdAt);
+      expect(updated.updatedAt).not.toEqual(richard.updatedAt);
       expect(updated).toMatchObject({ id: richard.id, name: 'Rich' });
       expect(await resolver.match('Person').id(richard.id).save({ name: 'richard' })).toMatchObject({ id: richard.id, name: 'Richard' });
       expect(await resolver.match('Person').id(richard.id).save({ status: 'active' })).toMatchObject({ id: richard.id, name: 'Richard', status: 'active' });

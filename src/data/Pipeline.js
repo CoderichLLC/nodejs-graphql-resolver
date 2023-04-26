@@ -54,7 +54,6 @@ module.exports = class Pipeline {
     // Additional Transformers
     Pipeline.define('toTitleCase', ({ value }) => value.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()));
     Pipeline.define('toSentenceCase', ({ value }) => value.charAt(0).toUpperCase() + value.slice(1));
-    // Pipeline.define('toId', ({ model, value }) => model.idValue(value));
     Pipeline.define('toArray', ({ value }) => (Array.isArray(value) ? value : [value]), { itemize: false });
     Pipeline.define('toDate', ({ value }) => new Date(value), { configurable: true });
     Pipeline.define('timestamp', ({ value }) => Date.now(), { ignoreNull: false });
@@ -62,7 +61,6 @@ module.exports = class Pipeline {
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
     Pipeline.define('ensureArrayValue', ({ field, value }) => (field.isArray && !Array.isArray(value) ? [value] : value), { itemize: false });
     Pipeline.define('defaultValue', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
-    Pipeline.define('idField', ({ model, value }) => model.source.idValue(value.id || value));
 
     // Structures
     Pipeline.define('$instruct', params => Pipeline.#resolve(params, 'instruct'), { ignoreNull: false });
@@ -76,10 +74,14 @@ module.exports = class Pipeline {
     Pipeline.define('$validate', params => Pipeline.#resolve(params, 'validate'), { ignoreNull: false });
 
     //
-    Pipeline.define('ensureId', ({ resolver, field, value }) => {
+    Pipeline.define('$pk', ({ model, value }) => model.source.idValue(value?.id || value), { ignoreNull: false });
+    Pipeline.define('$id', ({ model, value }) => model.source.idValue(value.id || value));
+
+    //
+    Pipeline.define('ensureId', ({ query, resolver, model, field, value }) => {
       const { type } = field;
       const ids = Util.filterBy(Util.ensureArray(value), (a, b) => `${a}` === `${b}`);
-      return resolver.match(type).where({ id: ids }).count().then((count) => {
+      return resolver.match(type).flags(query.flags).where({ id: ids }).count().then((count) => {
         if (count !== ids.length) throw Boom.notFound(`${type} Not Found`);
       });
     }, { itemize: false });
