@@ -39,8 +39,6 @@ module.exports = class Schema {
       },
     }));
 
-    // console.log(this.#config.typeDefs);
-
     return this;
   }
 

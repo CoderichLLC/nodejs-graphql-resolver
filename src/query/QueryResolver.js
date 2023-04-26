@@ -32,7 +32,7 @@ module.exports = class QueryResolver extends QueryBuilder {
 
     // Normalize
     [query.where, query.select] = await Promise.all([
-      this.#normalize(query, 'where', this.#model, Util.unflatten(where), ['castValue', 'ensureArrayValue', '$instruct', '$serialize'].map(el => Pipeline[el])).then(resolveWhereClause),
+      this.#normalize(query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])).then(res => resolveWhereClause(Util.flatten(res, false))),
       this.#normalize(query, 'select', this.#model, Util.unflatten(select.reduce((prev, field) => Object.assign(prev, { [field]: true }), {}))),
     ]);
 
@@ -102,6 +102,7 @@ module.exports = class QueryResolver extends QueryBuilder {
         }
 
         // Assign it back
+        if (target === 'input' && $value === undefined) return prev;
         return Object.assign(prev, { [field.key]: $value });
       }), {});
     });

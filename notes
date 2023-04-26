@@ -1,11 +1,10 @@
 * Maintainance for balcony
-* Mom bday gift
+* I don't FULLY understand why $pk needs to check value
 
 ---------
 
 * Array Merge
 * Unflatten input?
-* Schema Decoration
 * Transactions
 * onDeletes
 * Deep resolve where clause vs joins...

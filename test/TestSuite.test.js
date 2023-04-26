@@ -152,7 +152,7 @@ describe('TestSuite', () => {
       artsy = await resolver.match('Art').save({ name: 'My Find Art', sections: [{ name: 'Section1', person: richard.id }] });
       expect(artsy.id).toBeDefined();
       expect(artsy.sections).toMatchObject([{
-        // id: expect.anything(),
+        id: expect.anything(),
         name: 'section1',
         frozen: 'frozen',
         createdAt: expect.anything(),
@@ -302,26 +302,26 @@ describe('TestSuite', () => {
       expect((await resolver.match('Library').many()).length).toBe(1);
     });
 
-    // // TODO Embedded tests for non-document databases
-    // if (driver === 'mongo') {
-    //   test('BookStore', async () => {
-    //     expect((await resolver.match('BookStore').where({ building: bookBuilding }).many()).sort(sorter)).toMatchObject([
-    //       { id: bookstore1.id, name: 'Best Books Ever', building: expect.objectContaining(bookBuilding) },
-    //       { id: bookstore2.id, name: 'New Books', building: expect.objectContaining(bookBuilding) },
-    //     ].sort(sorter));
-    //   });
+    // TODO Embedded tests for non-document databases
+    if (driver === 'mongo') {
+      test('BookStore', async () => {
+        expect((await resolver.match('BookStore').where({ building: bookBuilding }).many()).sort(sorter)).toMatchObject([
+          { id: bookstore1.id, name: 'Best Books Ever', building: expect.objectContaining(bookBuilding) },
+          { id: bookstore2.id, name: 'New Books', building: expect.objectContaining(bookBuilding) },
+        ].sort(sorter));
+      });
 
-    //   test('Apartment', async () => {
-    //     expect((await resolver.match('Apartment').where({ 'building.tenants': 'nobody' }).many()).length).toBe(0);
-    //     expect((await resolver.match('Apartment').where({ 'building.year': 1980 }).many()).length).toBe(1);
-    //     expect((await resolver.match('Apartment').where({ 'building.tenants': richard.id }).many()).length).toBe(1);
-    //   });
+      test('Apartment', async () => {
+        expect((await resolver.match('Apartment').where({ 'building.tenants': 'nobody' }).many()).length).toBe(0);
+        expect((await resolver.match('Apartment').where({ 'building.year': 1980 }).many()).length).toBe(1);
+        expect((await resolver.match('Apartment').where({ 'building.tenants': richard.id }).many()).length).toBe(1);
+      });
 
-    //   test('Art', async () => {
-    //     expect(await resolver.match('Art').where({ sections: { id: artsy.sections[0].id } }).one()).toMatchObject(artsy);
-    //     expect(await resolver.match('Art').where({ 'sections.id': artsy.sections[0].id }).one()).toMatchObject(artsy);
-    //   });
-    // }
+      test('Art', async () => {
+        expect(await resolver.match('Art').where({ sections: { id: artsy.sections[0].id } }).one()).toMatchObject(artsy);
+        expect(await resolver.match('Art').where({ 'sections.id': artsy.sections[0].id }).one()).toMatchObject(artsy);
+      });
+    }
 
     test('Segmentation', async () => {
       expect((await resolver.match('Person').many()).length).toBe(2);

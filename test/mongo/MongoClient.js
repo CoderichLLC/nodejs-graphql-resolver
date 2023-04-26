@@ -1,6 +1,6 @@
 const { inspect } = require('util');
 const Util = require('@coderich/util');
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient } = require('mongodb');
 
 const queryOptions = { collation: { locale: 'en', strength: 2 } };
 
@@ -81,13 +81,18 @@ module.exports = class MongoDriver {
     // Inspect the query
     const { $addFields } = Util.unflatten(Object.entries(Util.flatten(where, false)).reduce((prev, [key, value]) => {
       const $key = key.split('.').reverse().find(k => !k.startsWith('$'));
+      const field = Object.values(query.$model.fields).find(el => el.key === $key);
 
       if (Util.ensureArray(value).some(el => el instanceof RegExp)) {
-        const conversion = Array.isArray(value) ? { $map: { input: `$${$key}`, as: 'el', in: { $toString: '$$el' } } } : { $toString: `$${$key}` };
+        const conversion = field.isArray ? { $map: { input: `$${$key}`, as: 'el', in: { $toString: '$$el' } } } : { $toString: `$${$key}` };
         Object.assign(prev.$addFields, { [$key]: conversion });
       }
+
       return prev;
     }, { $addFields: {} }), false);
+
+    //
+    // $aggregate.push({ $match });
 
     // Convert sort
     const $sort = Util.unflatten(Object.entries(Util.flatten(sort, false)).reduce((prev, [key, value]) => {

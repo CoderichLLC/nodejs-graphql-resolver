@@ -35,7 +35,7 @@ module.exports = class Resolver {
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[query.crud] || [];
 
-    return model.source.driver.resolve(query.$clone({
+    return model.source.driver.resolve(Object.defineProperties(query.$clone({
       get before() {
         if (!query.isCursorPaging || !query.before) return undefined;
         return JSON.parse(Buffer.from(query.before, 'base64').toString('ascii'));
@@ -44,16 +44,19 @@ module.exports = class Resolver {
         if (!query.isCursorPaging || !query.after) return undefined;
         return JSON.parse(Buffer.from(query.after, 'base64').toString('ascii'));
       },
+    }), {
+      $model: { value: model },
     })).then((data) => {
       const { flags } = query;
       if (data == null && flags.required) throw Boom.notFound();
+      if (data == null) return null; // Explicit return null;
       if (query.isCursorPaging) data = paginateResults(data, query);
       return this.#normalize(query, model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
     });
   }
 
   async #normalize(query, model, data, transformers = [], paths = []) {
-    if (data == null) return null;
+    if (data == null) return data;
     if (typeof data !== 'object') return data;
 
     return Util.mapPromise(data, (doc) => {
