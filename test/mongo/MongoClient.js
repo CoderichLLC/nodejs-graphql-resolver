@@ -74,6 +74,10 @@ module.exports = class MongoDriver {
     return this.#connection.then(client => client.close());
   }
 
+  driver(name) {
+    return this.collection(name);
+  }
+
   static aggregateQuery(query, count = false) {
     const { where, sort = {}, skip, limit, joins, after, before, first } = query;
     const $aggregate = [{ $match: where }];

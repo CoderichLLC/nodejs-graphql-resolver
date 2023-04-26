@@ -26,7 +26,7 @@ module.exports = {
           return value;
         }
       },
-      driver: new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' }),
+      client: new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' }),
     },
   },
   decorators: {
@@ -37,12 +37,6 @@ module.exports = {
     `,
   },
   typeDefs: `
-    directive @index(
-      name: String
-      on: [String!]!
-      type: String!
-    ) repeatable on OBJECT
-
     input PersonInputMeta {
       notify: Boolean
     }

@@ -11,10 +11,15 @@ module.exports = class Resolver {
   constructor(config) {
     this.#schema = config.schema;
     this.#context = config.context;
+    this.driver = this.raw; // Alias
   }
 
   getContext() {
     return this.#context;
+  }
+
+  raw(model) {
+    return this.#schema.models[model]?.source?.client?.driver(model);
   }
 
   match(model) {
@@ -26,16 +31,21 @@ module.exports = class Resolver {
     });
   }
 
-  query(query) {
-    return this.resolve(query.resolve());
+  toResultSet(model, data) {
+    const query = this.match(model);
+    const $model = this.#schema.models[model];
+    return this.#normalize(query, $model, data);
+    // model = this.toModel(model);
+    // const query = new Query({ model, resolver: this, context: this.context, method });
+    // const result = model.deserialize(data, query);
+    // const event = { result, query, ...query.doc(result).merged(result).toObject() };
+    // return createSystemEvent('Response', event, () => result);
   }
 
-  async resolve(query) {
+  resolve(query) {
     const model = this.#schema.models[query.model];
-    const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
-    const crudLines = crudMap[query.crud] || [];
 
-    return model.source.driver.resolve(Object.defineProperties(query.$clone({
+    return model.source.client.resolve(Object.defineProperties(query.$clone({
       get before() {
         if (!query.isCursorPaging || !query.before) return undefined;
         return JSON.parse(Buffer.from(query.before, 'base64').toString('ascii'));
@@ -46,16 +56,21 @@ module.exports = class Resolver {
       },
     }), {
       $model: { value: model },
-    })).then((data) => {
-      const { flags } = query;
-      if (data == null && flags.required) throw Boom.notFound();
-      if (data == null) return null; // Explicit return null;
-      if (query.isCursorPaging) data = paginateResults(data, query);
-      return this.#normalize(query, model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
-    });
+    })).then(data => this.#normalize(query, model, data));
   }
 
-  async #normalize(query, model, data, transformers = [], paths = []) {
+  #normalize(query, model, data) {
+    const { flags, crud, isCursorPaging } = query;
+    const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
+    const crudLines = crudMap[crud] || [];
+
+    if (data == null && flags.required) throw Boom.notFound();
+    if (data == null) return null; // Explicit return null;
+    if (isCursorPaging) data = paginateResults(data, query);
+    return this.#finalize(query, model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
+  }
+
+  async #finalize(query, model, data, transformers = [], paths = []) {
     if (data == null) return data;
     if (typeof data !== 'object') return data;
 
@@ -76,7 +91,7 @@ module.exports = class Resolver {
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference) {
-          $value = await this.#normalize(query, field.model, $value, transformers, paths.concat($key));
+          $value = await this.#finalize(query, field.model, $value, transformers, paths.concat($key));
         }
 
         return Object.assign(prev, { [$key]: $value });
