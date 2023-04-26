@@ -812,6 +812,7 @@ describe('TestSuite', () => {
       // expect(await resolver.raw('Person').findOne({ name: 'richard' })).toBeNull(); // deleted
       expect(await resolver.raw('Person').findOne({ name: 'Christie' })).toBeNull(); // case
       expect(await resolver.raw('Person').findOne({ name: 'christie' })).toMatchObject({ name: 'christie', email_address: 'christie@gmail.com' });
+      expect(await resolver.driver('Person').findOne({ name: 'christie' })).toMatchObject({ name: 'christie', email_address: 'christie@gmail.com' }); // Alias
 
       // Raw -> Match counterparts
       const matchPerson = await resolver.match('Person').where({ name: 'christie' }).one();

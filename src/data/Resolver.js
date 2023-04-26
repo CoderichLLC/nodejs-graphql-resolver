@@ -19,7 +19,7 @@ module.exports = class Resolver {
   }
 
   raw(model) {
-    return this.#schema.models[model]?.source?.client?.driver(model);
+    return this.#schema.models[model]?.source?.driver?.driver(model);
   }
 
   match(model) {
@@ -35,17 +35,12 @@ module.exports = class Resolver {
     const query = this.match(model);
     const $model = this.#schema.models[model];
     return this.#normalize(query, $model, data);
-    // model = this.toModel(model);
-    // const query = new Query({ model, resolver: this, context: this.context, method });
-    // const result = model.deserialize(data, query);
-    // const event = { result, query, ...query.doc(result).merged(result).toObject() };
-    // return createSystemEvent('Response', event, () => result);
   }
 
   resolve(query) {
     const model = this.#schema.models[query.model];
 
-    return model.source.client.resolve(Object.defineProperties(query.$clone({
+    return model.source.driver.resolve(Object.defineProperties(query.$clone({
       get before() {
         if (!query.isCursorPaging || !query.before) return undefined;
         return JSON.parse(Buffer.from(query.before, 'base64').toString('ascii'));

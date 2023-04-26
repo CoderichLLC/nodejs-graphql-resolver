@@ -26,7 +26,7 @@ module.exports = {
           return value;
         }
       },
-      client: new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' }),
+      driver: new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' }),
     },
   },
   decorators: {
