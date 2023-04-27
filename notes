@@ -1,14 +1,13 @@
 * Maintainance for balcony
-* I don't FULLY understand why $pk needs to check value
-* Push, Pull, Splice not fully correct
+* Push, Pull, Splice not fully correct (need to pass input through transforms before modification)
+* Consider passing input without merging doc (a lot of transformations happen) and then combining result in QueryResolver
 
 ---------
 
-* Splice
-* Unflatten input?
+* Deep resolve where clause vs joins...
 * Transactions
 * onDeletes
-* Deep resolve where clause vs joins...
+* Splice
 
 ---------
 

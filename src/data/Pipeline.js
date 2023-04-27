@@ -17,8 +17,6 @@ module.exports = class Pipeline {
     const { ignoreNull = true, itemize = true, configurable = false } = { ...factory.options, ...options };
 
     const wrapper = Object.defineProperty((args) => {
-      // if (name === 'immutable') console.log(name, args);
-
       if (ignoreNull && args.value == null) return args.value;
 
       if (ignoreNull && itemize) {

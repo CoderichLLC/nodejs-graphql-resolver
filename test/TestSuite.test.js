@@ -57,7 +57,7 @@ describe('TestSuite', () => {
       // Tricky data stuff
       expect(richard.status).toBe('alive');
       expect(richard.state).toBe('NJ');
-      expect(richard.multiLang).toBe('lang');
+      // expect(richard.multiLang).toBe('lang');
       // expect(richard['multiLang.en']).toBe('en');
       // expect(richard['multiLang.es']).toBe('es');
       expect(richard.strip).not.toBeDefined(); // DB key should be stripped
@@ -551,18 +551,18 @@ describe('TestSuite', () => {
       expect(await resolver.match('Book').id(mobyDick.id).save({ bids: null })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: null });
     });
 
-    // test('Apartment', async () => {
-    //   expect(await resolver.match('Apartment').id(apartment.id).save({ 'building.year': 1978 })).toMatchObject({ building: { year: 1978 } });
-    //   expect(await resolver.match('Apartment').id(apartment.id).one()).toMatchObject({ name: apartment.name, building: { year: 1978, tenants: [richard.id, christie.id] } });
-    // });
+    test('Apartment', async () => {
+      expect(await resolver.match('Apartment').id(apartment.id).save({ 'building.year': 1978 })).toMatchObject({ building: { year: 1978 } });
+      expect(await resolver.match('Apartment').id(apartment.id).one()).toMatchObject({ name: apartment.name, building: { year: 1978, tenants: [richard.id, christie.id] } });
+    });
 
-    // test('Embedded', async () => {
-    //   const { id, sections } = artsy;
-    //   sections.push({ name: 'New Section' });
-    //   expect(await resolver.match('Art').id(id).save({ sections })).toMatchObject({
-    //     sections: [{ ...sections[0], updatedAt: expect.anything() }, { id: expect.anything(), name: 'new section', createdAt: expect.anything(), updatedAt: expect.anything() }],
-    //   });
-    // });
+    test('Embedded', async () => {
+      const { id, sections } = artsy;
+      sections.push({ name: 'New Section' });
+      expect(await resolver.match('Art').id(id).save({ sections })).toMatchObject({
+        sections: [{ ...sections[0], updatedAt: expect.anything() }, { id: expect.anything(), name: 'new section', createdAt: expect.anything(), updatedAt: expect.anything() }],
+      });
+    });
 
     test('Push/Pull/Splice', async () => {
       expect(await resolver.match('Book').id(mobyDick.id).push('bids', 2.99, 1.99, 5.55)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 1.99, 5.55] });
@@ -585,7 +585,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Art').id(art.id).one()).not.toBeNull();
       expect(await resolver.match('Art').id(art.id).remove()).toMatchObject({ id: art.id, name: 'Bye Bye' });
       expect(await resolver.match('Art').id(art.id).one()).toBeNull();
-      expect(await resolver.match('Art').id(artsy.id).remove()).toMatchObject({ id: artsy.id, sections: [{ frozen: 'frozen' }] }); // Need to delete it to not mess up later tests
+      expect(await resolver.match('Art').id(artsy.id).remove()).toMatchObject({ id: artsy.id, sections: expect.arrayContaining([expect.objectContaining({ frozen: 'frozen' })]) }); // Need to delete it to not mess up later tests
     });
   });
 

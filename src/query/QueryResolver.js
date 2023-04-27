@@ -5,8 +5,6 @@ const QueryBuilder = require('./QueryBuilder');
 const Pipeline = require('../data/Pipeline');
 const { resolveWhereClause, mergeDeep: merge } = require('../service/AppService');
 
-// const crudLines = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] }[crud] || [];
-
 module.exports = class QueryResolver extends QueryBuilder {
   #model;
   #schema;
@@ -26,9 +24,11 @@ module.exports = class QueryResolver extends QueryBuilder {
     const q = super.resolve();
     const query = q.$clone();
     const { where, select = Object.values(this.#model.fields).map(field => field.name) } = query;
+    // const crudLines = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] }[crud] || [];
 
     // Normalize
-    [query.where, query.select] = await Promise.all([
+    [query.input, query.where, query.select] = await Promise.all([
+      Promise.resolve(Util.unflatten(query.input)),
       this.#normalize(query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])).then(res => resolveWhereClause(Util.flatten(res, false))),
       this.#normalize(query, 'select', this.#model, Util.unflatten(select.reduce((prev, field) => Object.assign(prev, { [field]: true }), {}))),
     ]);
@@ -45,6 +45,7 @@ module.exports = class QueryResolver extends QueryBuilder {
       case 'updateOne': case 'updateMany': {
         return this.#get(query).then(async (doc) => {
           query.doc = doc;
+          query.merged = query.input;
           query.input = query.merged = await this.#normalize(query, 'input', this.#model, merge({}, doc, query.input), ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', '$restruct', '$serialize', '$transform', '$validate'].map(el => Pipeline[el]));
           return this.#resolver.resolve(query);
         });
