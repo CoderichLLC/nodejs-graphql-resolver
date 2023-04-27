@@ -148,7 +148,7 @@ module.exports = class Schema {
             $field.model = $schema.models[$field.type];
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
 
-            if ($field.isPrimaryKey) $field.pipelines.construct.unshift('$pk');
+            // if ($field.isPrimaryKey) $field.pipelines.construct.unshift('$pk');
             if ($field.isPrimaryKey || $field.isFKReference) $field.pipelines.serialize.unshift('$id');
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
             if ($field.isFKReference) $field.pipelines.validate.push('ensureId'); // Absolute Last
@@ -173,6 +173,7 @@ module.exports = class Schema {
     });
 
     // Return schema
+    // console.log(schema.models.Person.fields.friends);
     return schema;
   }
 };

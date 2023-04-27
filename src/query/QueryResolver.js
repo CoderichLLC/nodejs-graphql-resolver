@@ -1,8 +1,9 @@
-const merge = require('lodash.merge');
+const get = require('lodash.get');
+// const merge = require('lodash.merge');
 const Util = require('@coderich/util');
 const QueryBuilder = require('./QueryBuilder');
 const Pipeline = require('../data/Pipeline');
-const { resolveWhereClause } = require('../service/AppService');
+const { resolveWhereClause, mergeDeep: merge } = require('../service/AppService');
 
 // const crudLines = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] }[crud] || [];
 
@@ -21,13 +22,9 @@ module.exports = class QueryResolver extends QueryBuilder {
     this.#model = schema.models[query.model];
   }
 
-  clone(q) {
-    const query = super.clone(q).resolve();
-    return new QueryResolver({ schema: this.#schema, resolver: this.#resolver, query });
-  }
-
   async resolve() {
-    const query = super.resolve();
+    const q = super.resolve();
+    const query = q.$clone();
     const { where, select = Object.values(this.#model.fields).map(field => field.name) } = query;
 
     // Normalize
@@ -52,6 +49,20 @@ module.exports = class QueryResolver extends QueryBuilder {
           return this.#resolver.resolve(query);
         });
       }
+      case 'pushOne': {
+        return this.#get(query).then(async (doc) => {
+          const [[key, values]] = Object.entries(query.input);
+          const input = { [key]: (get(doc, key) || []).concat(...values) };
+          return this.#resolver.match(q.model).id(q.id).save(input);
+        });
+      }
+      case 'pullOne': {
+        return this.#get(query).then(async (doc) => {
+          const [[key, values]] = Object.entries(query.input);
+          const input = { [key]: (get(doc, key) || []).filter(el => values.every(v => `${v}` !== `${el}`)) };
+          return this.#resolver.match(q.model).id(q.id).save(input);
+        });
+      }
       case 'deleteOne': {
         return this.#get(query).then((doc) => {
           query.doc = doc;
@@ -60,7 +71,7 @@ module.exports = class QueryResolver extends QueryBuilder {
       }
       case 'deleteMany': {
         return this.#resolver.resolve(query.$clone({ op: 'findMany' })).then((docs) => {
-          return Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).delete()));
+          return Promise.all(docs.map(doc => this.#resolver.match(q.model).id(doc.id).delete()));
         });
       }
       default: {

@@ -1,13 +1,14 @@
 module.exports = class QueryBuilder {
-  #query = Object.defineProperties({
-    flags: {},
-  }, {
-    id: { writable: true, enumerable: false },
-    $clone: { writable: false, enumerable: false, value: (...args) => this.clone(...args).#query },
-  });
+  #query;
 
   constructor(query = {}) {
-    Object.assign(this.#query, query);
+    this.#query = Object.defineProperties(query, {
+      id: { writable: true, enumerable: false, value: query.id },
+      flags: { writable: true, enumerable: true, value: query.flags || {} },
+      $clone: { writable: true, enumerable: false, value: (...args) => this.clone(...args).#query },
+    });
+
+    // Aliases
     this.opts = this.options;
     this.sortBy = this.sort;
     this.remove = this.delete;
@@ -102,6 +103,22 @@ module.exports = class QueryBuilder {
     const crud = (id || where ? (args[1] ? 'upsert' : 'update') : 'create'); // eslint-disable-line
     return this.#mutation(crud, ...args);
   }
+
+  push(path, ...values) {
+    values = values.flat();
+    return this.#mutation('push', { [path]: values });
+  }
+
+  pull(path, ...values) {
+    values = values.flat();
+    return this.#mutation('pull', { [path]: values });
+  }
+
+  // splice() {
+  //   const { id, where } = this.#query;
+  //   const crud = (id || where ? 'update' : 'create'); // eslint-disable-line
+  //   return this.#mutation(crud, ...args);
+  // }
 
   delete(...args) {
     const { id, where } = this.#query;

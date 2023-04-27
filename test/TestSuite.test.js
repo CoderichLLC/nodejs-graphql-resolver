@@ -547,7 +547,7 @@ describe('TestSuite', () => {
     test('Book', async () => {
       expect(await resolver.match('Book').id(mobyDick.id).save({ name: 'mopey dick' })).toMatchObject({ id: mobyDick.id, name: 'Mopey Dick' });
       expect(await resolver.match('Book').id(mobyDick.id).save({ name: 'moby dick' })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick' });
-      // expect(await resolver.match('Book').id(mobyDick.id).save({ bids: [] })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [] });
+      expect(await resolver.match('Book').id(mobyDick.id).save({ bids: [] })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [] });
       expect(await resolver.match('Book').id(mobyDick.id).save({ bids: null })).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: null });
     });
 
@@ -564,13 +564,13 @@ describe('TestSuite', () => {
     //   });
     // });
 
-    // test('Push/Pull/Splice', async () => {
-    //   expect(await resolver.match('Book').id(mobyDick.id).push('bids', 2.99, 1.99, 5.55)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 1.99, 5.55] });
-    //   expect(await resolver.match('Book').id(mobyDick.id).pull('bids', 1.99)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 5.55] });
-    //   expect(await resolver.match('Book').id(healthBook.id).push('bids', 0.25, 0.25, 11.00, 0.25, 5.00)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 9.00, 12.50, 0.25, 0.25, 11.00, 0.25, 5.00] });
-    //   expect(await resolver.match('Book').id(healthBook.id).pull('bids', 0.25, '9.00')).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 12.50, 11.00, 5.00] });
-    //   expect(await resolver.match('Book').id(healthBook.id).splice('bids', 5.00, 4.99)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [4.99, 12.50, 11.00, 4.99] });
-    // });
+    test('Push/Pull/Splice', async () => {
+      expect(await resolver.match('Book').id(mobyDick.id).push('bids', 2.99, 1.99, 5.55)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 1.99, 5.55] });
+      expect(await resolver.match('Book').id(mobyDick.id).pull('bids', 1.99)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 5.55] });
+      expect(await resolver.match('Book').id(healthBook.id).push('bids', 0.25, 0.25, 11.00, 0.25, 5.00)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 9.00, 12.50, 0.25, 0.25, 11.00, 0.25, 5.00] });
+      // expect(await resolver.match('Book').id(healthBook.id).pull('bids', 0.25, '9.00')).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 12.50, 11.00, 5.00] });
+      // expect(await resolver.match('Book').id(healthBook.id).splice('bids', 5.00, 4.99)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [4.99, 12.50, 11.00, 4.99] });
+    });
   });
 
   describe('Remove', () => {

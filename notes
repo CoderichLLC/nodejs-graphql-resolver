@@ -1,9 +1,10 @@
 * Maintainance for balcony
 * I don't FULLY understand why $pk needs to check value
+* Push, Pull, Splice not fully correct
 
 ---------
 
-* Array Merge
+* Splice
 * Unflatten input?
 * Transactions
 * onDeletes

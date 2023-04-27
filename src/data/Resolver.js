@@ -58,7 +58,6 @@ module.exports = class Resolver {
     const { flags, crud, isCursorPaging } = query;
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[crud] || [];
-
     if (data == null && flags.required) throw Boom.notFound();
     if (data == null) return null; // Explicit return null;
     if (isCursorPaging) data = paginateResults(data, query);
