@@ -3,7 +3,7 @@ const get = require('lodash.get');
 const Util = require('@coderich/util');
 const QueryBuilder = require('./QueryBuilder');
 const Pipeline = require('../data/Pipeline');
-const { resolveWhereClause, mergeDeep: merge } = require('../service/AppService');
+const { isPlainObject, isGlob, globToRegex, mergeDeep: merge } = require('../service/AppService');
 
 module.exports = class QueryResolver extends QueryBuilder {
   #model;
@@ -20,6 +20,10 @@ module.exports = class QueryResolver extends QueryBuilder {
     this.#model = schema.models[query.model];
   }
 
+  #get(query) {
+    return this.#resolver.match(this.#model.name).where(query.where).one({ required: true });
+  }
+
   async resolve() {
     const q = super.resolve();
     const query = q.$clone();
@@ -29,9 +33,12 @@ module.exports = class QueryResolver extends QueryBuilder {
     // Normalize
     [query.input, query.where, query.select] = await Promise.all([
       Promise.resolve(Util.unflatten(query.input)),
-      this.#normalize(query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])).then(res => resolveWhereClause(Util.flatten(res, false))),
+      this.#normalize(query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])),
       this.#normalize(query, 'select', this.#model, Util.unflatten(select.reduce((prev, field) => Object.assign(prev, { [field]: true }), {}))),
     ]);
+
+    // Finalize query
+    this.#finalize(query);
 
     // Resolve
     switch (query.op) {
@@ -81,10 +88,6 @@ module.exports = class QueryResolver extends QueryBuilder {
     }
   }
 
-  #get(query) {
-    return this.#resolver.match(this.#model.name).where(query.where).one({ required: true });
-  }
-
   async #normalize(query, target, model, data, transformers = [], paths = []) {
     const allFields = Object.values(model.fields).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const instructFields = Object.values(model.fields).filter(field => field.pipelines?.instruct).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
@@ -118,5 +121,33 @@ module.exports = class QueryResolver extends QueryBuilder {
         return Object.assign(prev, { [field.key]: $value });
       }), {});
     });
+  }
+
+  #finalize(query, arrayOp = '$in') {
+    const self = this;
+    const { model, where = {} } = query;
+
+    [query.joins, query.where] = (function traverse($model, target, joins, clause) {
+      Object.entries(target).forEach(([key, value]) => {
+        const $field = $model.fields[key];
+
+        if ($field?.join && isPlainObject(value)) {
+          joins.push($field.join);
+          traverse($field.model, value, joins, $field.join.where);
+        } else {
+          clause[key] = value;
+        }
+      });
+
+      return [joins, clause];
+    }(self.#schema.models[model], where, [], {}));
+
+    query.where = Object.entries(Util.flatten(query.where, false)).reduce((prev, [key, value]) => {
+      value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
+      if (Array.isArray(value)) return Object.assign(prev, { [key]: { [arrayOp]: value } });
+      return Object.assign(prev, { [key]: value });
+    }, {});
+
+    return query;
   }
 };

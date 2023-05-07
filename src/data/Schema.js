@@ -112,6 +112,7 @@ module.exports = class Schema {
                 break;
               }
               case 'link-by': {
+                field.fkField = value;
                 field.isVirtual = true;
                 break;
               }
@@ -139,7 +140,8 @@ module.exports = class Schema {
           // });
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const $field = field;
-          // const $model = model;
+          const $model = model;
+
           $field.isPrimaryKey = Boolean($field.name === model.idField);
           $field.isPersistable = Util.uvl($field.isPersistable, model.isPersistable, true);
 
@@ -149,7 +151,14 @@ module.exports = class Schema {
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             if ($field.isPrimaryKey || $field.isFKReference) $field.pipelines.serialize.unshift('$id');
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
-            if ($field.isFKReference) $field.pipelines.validate.push('ensureId'); // Absolute Last
+            if ($field.isFKReference) {
+              const fkModel = $field.model;
+              const to = fkModel.key;
+              const on = fkModel.fields[$field.fkField || fkModel.idField].key;
+              const from = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
+              $field.join = { to, on, from, where: {} };
+              $field.pipelines.validate.push('ensureId'); // Absolute Last
+            }
           });
 
           isField = false;

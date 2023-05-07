@@ -1,8 +1,8 @@
+const get = require('lodash.get');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const Pipeline = require('./Pipeline');
 const QueryResolver = require('../query/QueryResolver');
-const { paginateResults } = require('../service/AppService');
 
 module.exports = class Resolver {
   #schema;
@@ -60,7 +60,7 @@ module.exports = class Resolver {
     const crudLines = crudMap[crud] || [];
     if (data == null && flags.required) throw Boom.notFound();
     if (data == null) return null; // Explicit return null;
-    if (isCursorPaging) data = paginateResults(data, query);
+    if (isCursorPaging) data = Resolver.#paginateResults(data, query);
     return this.#finalize(query, model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
   }
 
@@ -93,6 +93,61 @@ module.exports = class Resolver {
         $pageInfo: { value: doc.$pageInfo },
         $cursor: { value: doc.$cursor },
       }));
+    });
+  }
+
+  static #paginateResults(rs, query) {
+    let hasNextPage = false;
+    let hasPreviousPage = false;
+    const { first, after, last, before, sort = {} } = query;
+    const limiter = first || last;
+    const sortPaths = Object.keys(Util.flatten(sort, false));
+
+    // Add $cursor data
+    Util.map(rs, (doc) => {
+      const sortValues = sortPaths.reduce((prev, path) => Object.assign(prev, { [path]: get(doc, path) }), {});
+      Object.defineProperty(doc, '$cursor', { value: Buffer.from(JSON.stringify(sortValues)).toString('base64') });
+    });
+
+    // First try to take off the "bookends" ($gte | $lte)
+    if (rs.length && rs[0].$cursor === after) {
+      rs.shift();
+      hasPreviousPage = true;
+    }
+
+    if (rs.length && rs[rs.length - 1].$cursor === before) {
+      rs.pop();
+      hasNextPage = true;
+    }
+
+    // Next, remove any overage
+    const overage = rs.length - (limiter - 2);
+
+    if (overage > 0) {
+      if (first) {
+        rs.splice(-overage);
+        hasNextPage = true;
+      } else if (last) {
+        rs.splice(0, overage);
+        hasPreviousPage = true;
+      } else {
+        rs.splice(-overage);
+        hasNextPage = true;
+      }
+    }
+
+    // Add $pageInfo
+    return Object.defineProperties(rs, {
+      $pageInfo: {
+        get() {
+          return {
+            startCursor: get(rs, '0.$cursor', ''),
+            endCursor: get(rs, `${rs.length - 1}.$cursor`, ''),
+            hasPreviousPage,
+            hasNextPage,
+          };
+        },
+      },
     });
   }
 };

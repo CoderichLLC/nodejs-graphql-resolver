@@ -1,6 +1,10 @@
 * Maintainance for balcony
 * Push, Pull, Splice not fully correct (need to pass input through transforms before modification)
-* Consider passing input without merging doc (a lot of transformations happen) and then combining result in QueryResolver
+* Consider passing input to driver without merging doc (a lot of transformations happen) and then combining result in QueryResolver
+* Need to consider if mutationMany really needs to be spread into individual mutationOnes
+  - Validation performed on each doc post mutation
+  - Audit trail per record
+  - Inherit address currently implemented as cascade logic
 
 ---------
 
@@ -17,12 +21,16 @@
 
 ---------
 
-* select('author.*') // populate/hydrate
-* where('author.name') // left join
-* where('authored.author.name') === where('name')
+* select('author.*') // populate/hydrate (left join)
+* where('author.name') // join
 * Things like "ensureId" are driver-specific? (eg. A SQL driver would have a FK relationship defined)
 
 ---------
+
+* config.dataSources to determine if supports
+  - Joins
+  - Transactions
+  - Batches
 
 // Rename key
 // const $key = Object.entries(this.#model.keyMap || {}).reduce((p, [k, v]) => {
