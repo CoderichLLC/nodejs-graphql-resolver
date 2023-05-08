@@ -15,10 +15,6 @@ module.exports = class MongoDriver {
     this.#connection = this.#mongoClient.connect();
   }
 
-  // query(collection, method, ...args) {
-  //   return this.collection(collection)[method](...args);
-  // }
-
   resolve(query) {
     if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
     if (!this[query.op]) console.log(query);
@@ -78,20 +74,66 @@ module.exports = class MongoDriver {
     return this.collection(name);
   }
 
-  static aggregateJoins(query, joins = []) {
-    return joins.map((join, i) => {
-      const result = [];
-      const as = `join${i}`;
-      const { to: from, on: foreignField, from: localField, where: match } = join;
-      const $match = Object.entries(Util.flatten(match)).reduce((prev, [key, value]) => Object.assign(prev, { [`${as}.${key}`]: value }), {});
-      const $addJoinFields = MongoDriver.convertFieldsForRegex(query.$schema, from, $match, true);
-      result.push({ $lookup: { from, foreignField, localField, as } });
-      if (Object.keys($addJoinFields).length) result.push({ $addFields: $addJoinFields });
-      if (Object.keys($match).length) result.push({ $match });
-      result.push({ $unwind: `$${as}` });
-      return result;
-    }).flat();
+  static aggregateJoin(query, join, id) {
+    const as = `join${id}`;
+    const { to: from, on: foreignField, from: localField, where: $match } = join;
+    const $let = { [`${as}_${localField}`]: `$${localField}` };
+    const $field = query.$schema(`${from}.${localField}`);
+    const op = $field.isArray ? '$in' : '$eq';
+    $match.$expr = { [op]: [`$${foreignField}`, `$$${as}_${localField}`] };
+    const pipeline = [{ $match }];
+    // const $addFields = MongoDriver.convertFieldsForRegex(query.$schema, from, $match, true);
+    // if (Object.keys($addFields).length) pipeline.unshift({ $addFields });
+    return [
+      {
+        $lookup: {
+          from,
+          let: $let,
+          pipeline,
+          as,
+        },
+      },
+      {
+        $unwind: `$${as}`,
+      },
+    ];
   }
+
+  static aggregateJoins(query, joins = []) {
+    const [join, ...pipeline] = joins;
+    const $aggregate = MongoDriver.aggregateJoin(query, join, 0);
+    let pointer = $aggregate[0].$lookup.pipeline;
+
+    pipeline.forEach((j, i) => {
+      const $agg = MongoDriver.aggregateJoin(query, j, i);
+      pointer.push(...$agg);
+      pointer = $agg[0].$lookup.pipeline;
+    });
+
+    return $aggregate;
+
+    // return pipeline.reduce((prev, curr, i) => {
+    //   const $aggregate = MongoDriver.aggregateJoin(query, curr, i + 1);
+    //   prev[0].$lookup.pipeline.push(...$aggregate);
+    //   return prev;
+    // }, MongoDriver.aggregateJoin(query, join, 0));
+  }
+
+  // static aggregateJoins(query, joins = []) {
+  //   return joins.map((join, i) => {
+  //     return MongoDriver.aggregateJoin(query, join, i);
+  //     // const result = [];
+  //     // const as = `join${i}`;
+  //     // const { to: from, on: foreignField, from: localField, where: match } = join;
+  //     // const $match = Object.entries(Util.flatten(match)).reduce((prev, [key, value]) => Object.assign(prev, { [`${as}.${key}`]: value }), {});
+  //     // const $addJoinFields = MongoDriver.convertFieldsForRegex(query.$schema, from, $match, true);
+  //     // result.push({ $lookup: { from, foreignField, localField, as } });
+  //     // if (Object.keys($addJoinFields).length) result.push({ $addFields: $addJoinFields });
+  //     // if (Object.keys($match).length) result.push({ $match });
+  //     // result.push({ $unwind: `$${as}` });
+  //     // return result;
+  //   }).flat();
+  // }
 
   static convertFieldsForSort(sort) {
     return Util.unflatten(Object.entries(Util.flatten(sort, false)).reduce((prev, [key, value]) => {

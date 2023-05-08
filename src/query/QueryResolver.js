@@ -130,9 +130,9 @@ module.exports = class QueryResolver extends QueryBuilder {
     [query.joins, query.where] = (function traverse($model, target, joins, clause) {
       Object.entries(target).forEach(([key, value]) => {
         const $field = $model.fields[key];
-        const isSelfReference = $field?.model?.name === model && $model.name !== model;
-        const from = isSelfReference ? $model.fields[$model.idField].key : $field?.join?.from;
-        const join = { ...$field?.join, from, where: {} };
+        // const isSelfReference = $field?.model?.name === model && $model.name !== model;
+        // const from = isSelfReference ? $model.fields[$model.idField].key : $field?.join?.from;
+        const join = { ...$field?.join, where: {} };
 
         if ($field?.join && isPlainObject(value)) {
           joins.push(join);
