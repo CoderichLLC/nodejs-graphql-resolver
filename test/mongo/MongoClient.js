@@ -78,32 +78,60 @@ module.exports = class MongoDriver {
     return this.collection(name);
   }
 
-  static aggregateQuery(query, count = false) {
-    const { where, sort = {}, skip, limit, joins, after, before, first } = query;
-    const $aggregate = [{ $match: where }];
+  static aggregateJoins(query, joins = []) {
+    return joins.map((join, i) => {
+      const result = [];
+      const as = `join${i}`;
+      const { to: from, on: foreignField, from: localField, where: match } = join;
+      const $match = Object.entries(Util.flatten(match)).reduce((prev, [key, value]) => Object.assign(prev, { [`${as}.${key}`]: value }), {});
+      const $addJoinFields = MongoDriver.convertFieldsForRegex(query.$schema, from, $match, true);
+      result.push({ $lookup: { from, foreignField, localField, as } });
+      if (Object.keys($addJoinFields).length) result.push({ $addFields: $addJoinFields });
+      if (Object.keys($match).length) result.push({ $match });
+      result.push({ $unwind: `$${as}` });
+      return result;
+    }).flat();
+  }
 
-    // Inspect the query
-    const { $addFields } = Util.unflatten(Object.entries(Util.flatten(where, false)).reduce((prev, [key, value]) => {
-      const $key = key.split('.').reverse().find(k => !k.startsWith('$'));
-      const field = Object.values(query.$model.fields).find(el => el.key === $key);
+  static convertFieldsForSort(sort) {
+    return Util.unflatten(Object.entries(Util.flatten(sort, false)).reduce((prev, [key, value]) => {
+      return Object.assign(prev, { [key]: value === 'asc' ? 1 : -1 });
+    }, {}), false);
+  }
+
+  static convertFieldsForRegex($schema, model, where, forceArray) {
+    return Object.entries(where).reduce((prev, [key, value]) => {
+      const field = $schema(`${model}.${key}`);
 
       if (Util.ensureArray(value).some(el => el instanceof RegExp)) {
-        const conversion = field.isArray ? { $map: { input: `$${$key}`, as: 'el', in: { $toString: '$$el' } } } : { $toString: `$${$key}` };
-        Object.assign(prev.$addFields, { [$key]: conversion });
+        const conversion = forceArray || field.isArray ? { $map: { input: `$${key}`, as: 'el', in: { $toString: '$$el' } } } : { $toString: `$${key}` };
+        Object.assign(prev, { [key]: conversion });
       }
 
       return prev;
-    }, { $addFields: {} }), false);
+    }, {});
 
-    //
-    // $aggregate.push({ $match });
+    // return Util.unflatten(Object.entries(Util.flatten(where, false)).reduce((prev, [key, value]) => {
+    //   const $key = key.split('.').reverse().find(k => !k.startsWith('$')).replace(/[[\]']/g, '');
+    //   const field = Object.values(model.fields).find(el => el.key === $key);
 
-    // Convert sort
-    const $sort = Util.unflatten(Object.entries(Util.flatten(sort, false)).reduce((prev, [key, value]) => {
-      return Object.assign(prev, { [key]: value === 'asc' ? 1 : -1 });
-    }, {}), false);
+    //   if (!field) console.log($key, value);
 
-    // Used for $regex matching
+    //   if (Util.ensureArray(value).some(el => el instanceof RegExp)) {
+    //     const conversion = field.isArray ? { $map: { input: `$${$key}`, as: 'el', in: { $toString: '$$el' } } } : { $toString: `$${$key}` };
+    //     Object.assign(prev, { [$key]: conversion });
+    //   }
+
+    //   return prev;
+    // }, {}), false);
+  }
+
+  static aggregateQuery(query, count = false) {
+    const { model, where, sort = {}, skip, limit, joins, after, before, first } = query;
+    const $aggregate = [{ $match: where }];
+    const $addFields = MongoDriver.convertFieldsForRegex(query.$schema, model, where);
+    const $sort = MongoDriver.convertFieldsForSort(sort);
+
     if (Object.keys($addFields).length) $aggregate.unshift({ $addFields });
 
     if (count) {
@@ -119,8 +147,8 @@ module.exports = class MongoDriver {
       //   $aggregate.push({ $sort: { __order: 1 } });
       // }
 
-      // // Joins
-      // if (joins) $aggregate.push(...joins.map(({ to: from, by: foreignField, from: localField, as }) => ({ $lookup: { from, foreignField, localField, as } })));
+      // Joins
+      if (joins?.length) $aggregate.push(...MongoDriver.aggregateJoins(query, joins));
 
       // Sort, Skip, Limit documents
       if ($sort && Object.keys($sort).length) $aggregate.push({ $sort });

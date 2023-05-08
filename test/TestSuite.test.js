@@ -473,10 +473,10 @@ describe('TestSuite', () => {
 
   describe('Find (Deep)', () => {
     test('Person', async () => {
-      // expect(await resolver.match('Person').flags({ debug: true }).where({ authored: { name: 'Moby Dick' } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      // expect(await resolver.match('Person').where({ authored: { author: { name: 'ChRist??' } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      // expect(await resolver.match('Person').where({ friends: { name: 'Christie' } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      // expect(await resolver.match('Person').where({ friends: { authored: { name: 'Health*' } } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
+      expect(await resolver.match('Person').where({ authored: { name: 'Moby Dick' } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
+      expect(await resolver.match('Person').flags({ debug: true }).where({ authored: { author: { name: 'ChRist??' } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
+      expect(await resolver.match('Person').flags({ debug: true }).where({ friends: { name: 'Christie' } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
+      // expect(await resolver.match('Person').flags({ debug: true }).where({ friends: { authored: { name: 'Health*' } } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
       // expect(await resolver.match('Person').where({ friends: { authored: { name: 'Cray Cray*' } } }).many()).toMatchObject([]);
       // expect(await resolver.match('Person').where({ authored: { chapters: { pages: { verbage: 'city lust' } } } }).many()).toMatchObject([]);
       // expect(await resolver.match('Person').where({ authored: { chapters: { pages: { verbage: 'the end.' } } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);

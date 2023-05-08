@@ -38,7 +38,7 @@ module.exports = class QueryResolver extends QueryBuilder {
     ]);
 
     // Finalize query
-    this.#finalize(query);
+    this.prepare(query);
 
     // Resolve
     switch (query.op) {
@@ -123,31 +123,37 @@ module.exports = class QueryResolver extends QueryBuilder {
     });
   }
 
-  #finalize(query, arrayOp = '$in') {
+  prepare(query) {
     const self = this;
     const { model, where = {} } = query;
 
     [query.joins, query.where] = (function traverse($model, target, joins, clause) {
       Object.entries(target).forEach(([key, value]) => {
         const $field = $model.fields[key];
+        const isSelfReference = $field?.model?.name === model && $model.name !== model;
+        const from = isSelfReference ? $model.fields[$model.idField].key : $field?.join?.from;
+        const join = { ...$field?.join, from, where: {} };
 
         if ($field?.join && isPlainObject(value)) {
-          joins.push($field.join);
-          traverse($field.model, value, joins, $field.join.where);
+          joins.push(join);
+          traverse($field.model, value, joins, join.where);
         } else {
+          value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
           clause[key] = value;
         }
       });
 
-      return [joins, clause];
+      return [joins, QueryResolver.globToRegex(clause)];
     }(self.#schema.models[model], where, [], {}));
 
-    query.where = Object.entries(Util.flatten(query.where, false)).reduce((prev, [key, value]) => {
-      value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
+    return query;
+  }
+
+  static globToRegex(obj, arrayOp = '$in') {
+    return Object.entries(Util.flatten(obj, false)).reduce((prev, [key, value]) => {
+      // value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
       if (Array.isArray(value)) return Object.assign(prev, { [key]: { [arrayOp]: value } });
       return Object.assign(prev, { [key]: value });
     }, {});
-
-    return query;
   }
 };

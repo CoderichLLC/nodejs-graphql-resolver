@@ -50,7 +50,14 @@ module.exports = class Resolver {
         return JSON.parse(Buffer.from(query.after, 'base64').toString('ascii'));
       },
     }), {
-      $model: { value: model },
+      $schema: {
+        value: (path) => {
+          const [modelKey, ...fieldKeys] = path.split('.');
+          const $model = Object.values(this.#schema.models).find(el => el.key === modelKey);
+          if (!$model || !fieldKeys.length) return $model;
+          return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el.key === key) || parent, $model);
+        },
+      },
     })).then(data => this.#normalize(query, model, data));
   }
 

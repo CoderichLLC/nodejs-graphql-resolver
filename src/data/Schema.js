@@ -156,7 +156,7 @@ module.exports = class Schema {
               const to = fkModel.key;
               const on = fkModel.fields[$field.fkField || fkModel.idField].key;
               const from = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
-              $field.join = { to, on, from, where: {} };
+              $field.join = { to, on, from };
               $field.pipelines.validate.push('ensureId'); // Absolute Last
             }
           });
@@ -178,6 +178,12 @@ module.exports = class Schema {
       const on = index.on.map(f => index.model.fields[f].key);
       return { key, name, type, on };
     });
+
+    // // Helper methods
+    // schema.resolvePath = (path) => {
+    //   const [modelName, ...fieldNames] = path.split('.');
+    //   return fieldNames.reduce((parent, fieldName) => parent.fields[fieldName] || parent, schema.models[modelName]);
+    // };
 
     // Return schema
     // console.log(schema.models.Person.fields.friends);
