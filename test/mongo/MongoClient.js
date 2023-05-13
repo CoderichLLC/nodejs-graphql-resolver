@@ -17,7 +17,7 @@ module.exports = class MongoDriver {
 
   resolve(query) {
     if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
-    if (!this[query.op]) console.log(query);
+    if (!this[query.op]) console.log('what', query);
     return this[query.op](query);
   }
 
@@ -75,8 +75,8 @@ module.exports = class MongoDriver {
   }
 
   static aggregateJoin(query, join, id) {
-    const as = `join${id}`;
     const { to: from, on: foreignField, from: localField, where: $match } = join;
+    const as = `parent${id}`;
     const $let = { [`${as}_${localField}`]: `$${localField}` };
     const $field = query.$schema(`${from}.${localField}`);
     const op = $field.isArray ? '$in' : '$eq';
@@ -105,7 +105,7 @@ module.exports = class MongoDriver {
     let pointer = $aggregate[0].$lookup.pipeline;
 
     pipeline.forEach((j, i) => {
-      const $agg = MongoDriver.aggregateJoin(query, j, i);
+      const $agg = MongoDriver.aggregateJoin(query, j, i + 1);
       pointer.push(...$agg);
       pointer = $agg[0].$lookup.pipeline;
     });

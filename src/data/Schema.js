@@ -179,14 +179,15 @@ module.exports = class Schema {
       return { key, name, type, on };
     });
 
-    // // Helper methods
-    // schema.resolvePath = (path) => {
-    //   const [modelName, ...fieldNames] = path.split('.');
-    //   return fieldNames.reduce((parent, fieldName) => parent.fields[fieldName] || parent, schema.models[modelName]);
-    // };
+    // Helper methods
+    schema.resolvePath = (path, prop = 'key') => {
+      const [modelKey, ...fieldKeys] = path.split('.');
+      const $model = Object.values(schema.models).find(el => el[prop] === modelKey);
+      if (!$model || !fieldKeys.length) return $model;
+      return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
+    };
 
     // Return schema
-    // console.log(schema.models.Person.fields.friends);
     return schema;
   }
 };

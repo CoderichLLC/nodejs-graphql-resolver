@@ -1,11 +1,19 @@
+const Query = require('./Query');
+
 module.exports = class QueryBuilder {
+  #config;
+  #schema;
   #query;
 
-  constructor(query = {}) {
+  constructor(config) {
+    const { query, schema } = config;
+
+    this.#config = config;
+    this.#schema = schema;
+
     this.#query = Object.defineProperties(query, {
       id: { writable: true, enumerable: false, value: query.id },
       flags: { writable: true, enumerable: true, value: query.flags || {} },
-      $clone: { writable: true, enumerable: false, value: (...args) => this.clone(...args).#query },
     });
 
     // Aliases
@@ -126,12 +134,8 @@ module.exports = class QueryBuilder {
     return this.#mutation('delete', ...args);
   }
 
-  clone(query = {}) {
-    return new QueryBuilder({ ...this.#query, ...query });
-  }
-
   resolve() {
-    return this.#query;
+    return new Query(this.#config);
   }
 
   #mutation(crud, ...args) {

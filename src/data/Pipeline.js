@@ -117,8 +117,9 @@ module.exports = class Pipeline {
     });
 
     // Required fields
-    Pipeline.define('required', ({ model, field, value }) => {
-      if (value == null) throw Boom.badRequest(`${model.name}.${field.name} is required`);
+    Pipeline.define('required', ({ query, model, field, value }) => {
+      if ((query.crud === 'create' && value == null) || (query.crud === 'update' && value === null)) throw Boom.badRequest(`${model.name}.${field.name} is required`);
+      // if (value === null) throw Boom.badRequest(`${model.name}.${field.name} is required`);
     }, { ignoreNull: false });
 
     // A field cannot hold a reference to itself

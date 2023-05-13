@@ -32,33 +32,14 @@ module.exports = class Resolver {
   }
 
   toResultSet(model, data) {
-    const query = this.match(model);
+    // const query = this.match(model);
     const $model = this.#schema.models[model];
-    return this.#normalize(query, $model, data);
+    return this.#normalize({}, $model, data);
   }
 
   resolve(query) {
     const model = this.#schema.models[query.model];
-
-    return model.source.driver.resolve(Object.defineProperties(query.$clone({
-      get before() {
-        if (!query.isCursorPaging || !query.before) return undefined;
-        return JSON.parse(Buffer.from(query.before, 'base64').toString('ascii'));
-      },
-      get after() {
-        if (!query.isCursorPaging || !query.after) return undefined;
-        return JSON.parse(Buffer.from(query.after, 'base64').toString('ascii'));
-      },
-    }), {
-      $schema: {
-        value: (path) => {
-          const [modelKey, ...fieldKeys] = path.split('.');
-          const $model = Object.values(this.#schema.models).find(el => el.key === modelKey);
-          if (!$model || !fieldKeys.length) return $model;
-          return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el.key === key) || parent, $model);
-        },
-      },
-    })).then(data => this.#normalize(query, model, data));
+    return model.source.driver.resolve(query.$toDriver(query)).then(data => this.#normalize(query, model, data));
   }
 
   #normalize(query, model, data) {
