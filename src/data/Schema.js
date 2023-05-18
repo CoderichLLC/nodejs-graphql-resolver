@@ -99,8 +99,6 @@ module.exports = class Schema {
               }
               case 'field-key': {
                 field.key = value;
-                model.keyMap = model.keyMap || {};
-                model.keyMap[field.name] = value;
                 break;
               }
               case 'field-default': {

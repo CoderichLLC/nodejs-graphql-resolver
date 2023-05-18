@@ -58,25 +58,21 @@ module.exports = class Resolver {
 
     return Util.mapPromise(data, (doc) => {
       return Util.pipeline(Object.entries(doc).map(([key, startValue]) => async (prev) => {
-        const [$key] = Object.entries(model.keyMap || {}).find(([k, v]) => v === key) || [key];
-        const field = model.fields[$key];
-        const path = paths.concat($key);
-
-        // Remove fields not defined in schema
-        if (!field) return prev;
+        const field = Object.values(model.fields).find(el => el.key === key);
+        if (!field) return prev; // Remove fields not defined in schema
 
         // Transform value
         let $value = await Util.pipeline(transformers.map(t => async (value) => {
-          const v = await t({ query, model, field, value, path, startValue, resolver: this, context: this.#context });
+          const v = await t({ query, model, field, value, path: paths.concat(field.name), startValue, resolver: this, context: this.#context });
           return v === undefined ? value : v;
         }), startValue);
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference) {
-          $value = await this.#finalize(query, field.model, $value, transformers, paths.concat($key));
+          $value = await this.#finalize(query, field.model, $value, transformers, paths.concat(field.name));
         }
 
-        return Object.assign(prev, { [$key]: $value });
+        return Object.assign(prev, { [field.name]: $value });
       }), Object.defineProperties({}, {
         $pageInfo: { value: doc.$pageInfo },
         $cursor: { value: doc.$cursor },

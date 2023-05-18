@@ -18,8 +18,8 @@ exports.isBasicObject = obj => obj != null && typeof obj === 'object' && !(Objec
 exports.isPlainObject = obj => exports.isBasicObject(obj) && !Array.isArray(obj);
 exports.mergeDeep = (...args) => DeepMerge.all(args, { isMergeableObject: obj => (exports.isPlainObject(obj) || Array.isArray(obj)), arrayMerge: smartMerge });
 
-exports.reduceModel = (model, fieldMap, fn, prop = 'name') => {
-  if (!exports.isPlainObject(fieldMap)) return fieldMap;
+exports.shapeModel = (model, fieldMap, fn, prop = 'name', paths = []) => {
+  if (fieldMap == null || !exports.isPlainObject(fieldMap)) return fieldMap;
 
   return Object.entries(fieldMap).reduce((prev, [key, value]) => {
     // Find the field; remove it if not found
@@ -30,7 +30,7 @@ exports.reduceModel = (model, fieldMap, fn, prop = 'name') => {
     const data = fn({ model, field, key, value });
     if (!data) return prev;
 
-    const $value = field.model && exports.isBasicObject(data.value) ? Util.map(data.value, el => exports.reduceModel(field.model, el, fn, prop)) : data.value;
+    const $value = field.model && exports.isBasicObject(data.value) ? Util.map(data.value, el => exports.shapeModel(field.model, el, fn, prop)) : data.value;
     return Object.assign(prev, { [data.key]: $value });
   }, {});
 };

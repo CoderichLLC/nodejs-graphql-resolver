@@ -2,7 +2,7 @@ const get = require('lodash.get');
 const merge = require('lodash.merge');
 const Util = require('@coderich/util');
 const Pipeline = require('../data/Pipeline');
-const { isPlainObject, isGlob, globToRegex, mergeDeep, reduceModel } = require('../service/AppService');
+const { isPlainObject, isGlob, globToRegex, mergeDeep, shapeModel } = require('../service/AppService');
 
 module.exports = class Query {
   #config;
@@ -55,10 +55,10 @@ module.exports = class Query {
         value: Object.values(this.#model.fields).map(field => field.name),
       },
       input: {
-        value: reduceModel(this.#model, query.input, data => Object.assign(data, { key: data.field.key })),
+        value: shapeModel(this.#model, query.input, data => Object.assign(data, { key: data.field.key })),
       },
       where: {
-        value: reduceModel(this.#model, query.where, data => Object.assign(data, { key: data.field.key })),
+        value: shapeModel(this.#model, query.where, data => Object.assign(data, { key: data.field.key })),
       },
       before: {
         get: () => {
@@ -88,22 +88,19 @@ module.exports = class Query {
       if (target === 'input') doc = mergeDeep(allFields, doc);
       else if (target === 'where') doc = mergeDeep(instructFields, doc);
 
-      return Util.pipeline(Object.entries(doc).map(([keyPath, startValue]) => async (prev) => {
-        const path = paths.concat(keyPath);
-        const [name] = target === 'input' ? [keyPath] : keyPath.split('.'); // Input is the only thing that can have key.path.keys
-        const field = model.fields[name];
-
-        if (!field) return Object.assign(prev, { [keyPath]: startValue }); // "keyPath" is correct here to preserve namespace
+      return Util.pipeline(Object.entries(doc).map(([key, startValue]) => async (prev) => {
+        const field = model.fields[key];
+        if (!field) return prev;
 
         // Transform value
         let $value = await Util.pipeline(transformers.map(t => async (value) => {
-          const v = await t({ query, path, model, field, value, startValue, resolver: this.#resolver, context: this.#context });
+          const v = await t({ query, path: paths.concat(key), model, field, value, startValue, resolver: this.#resolver, context: this.#context });
           return v === undefined ? value : v;
         }), startValue);
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference && !field.isPrimaryKey) {
-          $value = await this.transform(query, target, field.model, $value, transformers, paths.concat(keyPath));
+          $value = await this.transform(query, target, field.model, $value, transformers, paths.concat(key));
         }
 
         // Assign it back
@@ -118,7 +115,7 @@ module.exports = class Query {
     const { where = {} } = query;
 
     [query.joins, query.where] = (function traverse($model, target, joins, clause) {
-      reduceModel($model, target, ({ field, key, value }) => {
+      shapeModel($model, target, ({ field, key, value }) => {
         const join = { ...field.join, where: {} };
 
         if (field.isVirtual || (field.join && isPlainObject(value))) {
