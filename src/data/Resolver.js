@@ -46,7 +46,7 @@ module.exports = class Resolver {
     const { flags, crud, isCursorPaging } = query;
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[crud] || [];
-    if (data == null && flags.required) throw Boom.notFound();
+    if (flags?.required && (data == null || data?.length === 0)) throw Boom.notFound();
     if (data == null) return null; // Explicit return null;
     if (isCursorPaging) data = Resolver.#paginateResults(data, query);
     return this.#finalize(query, model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
@@ -89,7 +89,7 @@ module.exports = class Resolver {
     let hasPreviousPage = false;
     const { first, after, last, before, sort = {} } = query;
     const limiter = first || last;
-    const sortPaths = Object.keys(Util.flatten(sort, false));
+    const sortPaths = Object.keys(Util.flatten(sort, { safe: true }));
 
     // Add $cursor data
     Util.map(rs, (doc) => {

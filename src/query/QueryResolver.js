@@ -57,6 +57,14 @@ module.exports = class QueryResolver extends QueryBuilder {
           return this.#resolver.match(query.model).id(doc.id).save(input);
         });
       }
+      case 'spliceOne': {
+        return this.#get(query).then(async (doc) => {
+          const [key] = Object.keys(q.get('input'));
+          const [find, replace] = get(query.input, key);
+          const input = { [key]: (get(doc, key) || []).map(el => (`${el}` === `${find}` ? replace : el)) };
+          return this.#resolver.match(query.model).id(doc.id).save(input);
+        });
+      }
       case 'deleteOne': {
         return this.#get(query).then((doc) => {
           query.doc = doc;

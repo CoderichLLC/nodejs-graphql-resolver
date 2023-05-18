@@ -84,8 +84,8 @@ module.exports = class QueryBuilder {
     return this.flags(flags).resolve(Object.assign(this.#query, { op: 'findOne', crud: 'read' }));
   }
 
-  many() {
-    return this.resolve(Object.assign(this.#query, { op: 'findMany', crud: 'read' }));
+  many(flags) {
+    return this.flags(flags).resolve(Object.assign(this.#query, { op: 'findMany', crud: 'read' }));
   }
 
   count() {
@@ -122,11 +122,10 @@ module.exports = class QueryBuilder {
     return this.#mutation('pull', { [path]: values });
   }
 
-  // splice() {
-  //   const { id, where } = this.#query;
-  //   const crud = (id || where ? 'update' : 'create'); // eslint-disable-line
-  //   return this.#mutation(crud, ...args);
-  // }
+  splice(path, ...values) {
+    values = values.flat();
+    return this.#mutation('splice', { [path]: values });
+  }
 
   delete(...args) {
     const { id, where } = this.#query;

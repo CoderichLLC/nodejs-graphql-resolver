@@ -21,9 +21,6 @@ let library;
 let apartment;
 let artsy;
 
-const driver = 'mongo';
-const options = { transactions: false };
-
 const sorter = (a, b) => {
   const idA = `${a.id}`;
   const idB = `${b.id}`;
@@ -222,7 +219,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ emailAddress: 'Rich@CodeRich.com' }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
       expect((await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'Christie' }, { id: richard.id, name: 'Richard' }].sort(sorter));
       expect((await resolver.match('Person').where({ name: '*' }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'Christie' }, { id: richard.id, name: 'Richard' }].sort(sorter));
-      // expect(await resolver.match('Person').where({ authored: mobyDick.id }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
+      // expect(await resolver.match('Person').flags({ debug: true }).where({ authored: mobyDick.id }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
       expect(await resolver.match('Person').where({ id: richard.id }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
       expect(await resolver.match('Person').where({ id: richard.id }).one()).toMatchObject({ id: richard.id, name: 'Richard' });
       expect(await resolver.match('Person').where({ id: `${richard.id}` }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
@@ -302,26 +299,23 @@ describe('TestSuite', () => {
       expect((await resolver.match('Library').many()).length).toBe(1);
     });
 
-    // TODO Embedded tests for non-document databases
-    if (driver === 'mongo') {
-      test('BookStore', async () => {
-        expect((await resolver.match('BookStore').where({ building: bookBuilding }).many()).sort(sorter)).toMatchObject([
-          { id: bookstore1.id, name: 'Best Books Ever', building: expect.objectContaining(bookBuilding) },
-          { id: bookstore2.id, name: 'New Books', building: expect.objectContaining(bookBuilding) },
-        ].sort(sorter));
-      });
+    test('BookStore', async () => {
+      expect((await resolver.match('BookStore').where({ building: bookBuilding }).many()).sort(sorter)).toMatchObject([
+        { id: bookstore1.id, name: 'Best Books Ever', building: expect.objectContaining(bookBuilding) },
+        { id: bookstore2.id, name: 'New Books', building: expect.objectContaining(bookBuilding) },
+      ].sort(sorter));
+    });
 
-      test('Apartment', async () => {
-        expect((await resolver.match('Apartment').where({ 'building.tenants': 'nobody' }).many()).length).toBe(0);
-        expect((await resolver.match('Apartment').where({ 'building.year': 1980 }).many()).length).toBe(1);
-        expect((await resolver.match('Apartment').where({ 'building.tenants': richard.id }).many()).length).toBe(1);
-      });
+    test('Apartment', async () => {
+      expect((await resolver.match('Apartment').where({ 'building.tenants': 'nobody' }).many()).length).toBe(0);
+      expect((await resolver.match('Apartment').where({ 'building.year': 1980 }).many()).length).toBe(1);
+      expect((await resolver.match('Apartment').where({ 'building.tenants': richard.id }).many()).length).toBe(1);
+    });
 
-      test('Art', async () => {
-        expect(await resolver.match('Art').where({ sections: { id: artsy.sections[0].id } }).one()).toMatchObject(artsy);
-        expect(await resolver.match('Art').where({ 'sections.id': artsy.sections[0].id }).one()).toMatchObject(artsy);
-      });
-    }
+    test('Art', async () => {
+      expect(await resolver.match('Art').where({ sections: { id: artsy.sections[0].id } }).one()).toMatchObject(artsy);
+      expect(await resolver.match('Art').where({ 'sections.id': artsy.sections[0].id }).one()).toMatchObject(artsy);
+    });
 
     test('Segmentation', async () => {
       expect((await resolver.match('Person').many()).length).toBe(2);
@@ -410,32 +404,20 @@ describe('TestSuite', () => {
       await expect(resolver.match('Chapter').save({ name: 'chapter2' })).rejects.toThrow(/required/gi);
       await expect(resolver.match('Chapter').save({ name: 'chapter3' })).rejects.toThrow(/required/gi);
 
-      // Composite key
-      switch (driver) {
-        case 'mongo': {
-          await expect(resolver.match('Chapter').save({ name: 'chapter1', book: healthBook.id })).rejects.toThrow(/duplicate/gi);
-          await expect(resolver.match('Chapter').save({ name: 'chapter3', book: christie.id })).rejects.toThrow(/not found/gi);
-          break;
-        }
-        default: break;
-      }
+      // Composite keys (limited driver support)
+      await expect(resolver.match('Chapter').save({ name: 'chapter1', book: healthBook.id })).rejects.toThrow(/duplicate/gi);
+      await expect(resolver.match('Chapter').save({ name: 'chapter3', book: christie.id })).rejects.toThrow(/not found/gi);
     });
 
     test('Page', async () => {
       await expect(resolver.match('Page').save()).rejects.toThrow(/required/gi);
       await expect(resolver.match('Page').save({ number: 3 })).rejects.toThrow(/required/gi);
 
-      // Composite key
-      switch (driver) {
-        case 'mongo': {
-          await expect(resolver.match('Page').save({ number: 1, chapter: chapter1 })).rejects.toThrow(/duplicate/gi);
-          await expect(resolver.match('Page').save({ number: 1, chapter: chapter1.id })).rejects.toThrow(/duplicate/gi);
-          await expect(resolver.match('Page').save({ number: 1, chapter: page4.id })).rejects.toThrow(/not found/gi);
-          await expect(resolver.match('Page').id(page1.id).save({ number: 2 })).rejects.toThrow(/duplicate/gi);
-          break;
-        }
-        default: break;
-      }
+      // Composite keys (limited driver support)
+      await expect(resolver.match('Page').save({ number: 1, chapter: chapter1 })).rejects.toThrow(/duplicate/gi);
+      await expect(resolver.match('Page').save({ number: 1, chapter: chapter1.id })).rejects.toThrow(/duplicate/gi);
+      await expect(resolver.match('Page').save({ number: 1, chapter: page4.id })).rejects.toThrow(/not found/gi);
+      await expect(resolver.match('Page').id(page1.id).save({ number: 2 })).rejects.toThrow(/duplicate/gi);
     });
 
     test('BookStore', async () => {
@@ -569,7 +551,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Book').id(mobyDick.id).pull('bids', 1.99)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 5.55] });
       expect(await resolver.match('Book').id(healthBook.id).push('bids', 0.25, 0.25, 11.00, 0.25, 5.00)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 9.00, 12.50, 0.25, 0.25, 11.00, 0.25, 5.00] });
       expect(await resolver.match('Book').id(healthBook.id).pull('bids', 0.25, '9.00')).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 12.50, 11.00, 5.00] });
-      // expect(await resolver.match('Book').id(healthBook.id).splice('bids', 5.00, 4.99)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [4.99, 12.50, 11.00, 4.99] });
+      expect(await resolver.match('Book').id(healthBook.id).splice('bids', 5.00, 4.99)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [4.99, 12.50, 11.00, 4.99] });
     });
   });
 
@@ -828,83 +810,73 @@ describe('TestSuite', () => {
     });
   });
 
-  // describe('Bug Fixes', () => {
-  //   test('embedded arrays', async () => {
-  //     const art = await resolver.match('Art').save({ name: 'Piedmont Beauty', sections: [{ name: 'Section1' }] });
-  //     expect(art.id).toBeDefined();
-  //     expect(art.sections).toMatchObject([{ name: 'section1' }]); // toLowerCase
-  //     expect(art.sections[0].id).toBeDefined();
-  //     expect(art.sections[0].name).toBeDefined();
-  //   });
+  describe('Bug Fixes', () => {
+    test('embedded arrays', async () => {
+      const art = await resolver.match('Art').save({ name: 'Piedmont Beauty', sections: [{ name: 'Section1' }] });
+      expect(art.id).toBeDefined();
+      expect(art.sections).toMatchObject([{ name: 'section1' }]); // toLowerCase
+      expect(art.sections[0].id).toBeDefined();
+      expect(art.sections[0].name).toBeDefined();
+    });
 
-  //   test('push/pull embedded arrays', async () => {
-  //     const art = await resolver.match('Art').save({ name: 'Piedmont Beauty' });
+    test('push/pull embedded arrays', async () => {
+      const art = await resolver.match('Art').save({ name: 'Piedmont Beauty' });
 
-  //     // Push
-  //     const push = await resolver.match('Art').id(art.id).push('sections', { name: 'Pushed Section' });
-  //     expect(push.sections.length).toBe(1);
-  //     expect(push.sections[0].id).toBeDefined();
-  //     expect(push.sections[0].name).toEqual('pushed section'); // toLowerCase
+      // Push
+      const push = await resolver.match('Art').id(art.id).push('sections', { name: 'Pushed Section' });
+      expect(push.sections.length).toBe(1);
+      expect(push.sections[0].id).toBeDefined();
+      expect(push.sections[0].name).toEqual('pushed section'); // toLowerCase
 
-  //     // Pull
-  //     const pull = await resolver.match('Art').id(art.id).pull('sections', { name: 'pushed section' });
-  //     expect(pull.sections.length).toBe(0);
-  //   });
+      // Pull
+      const pull = await resolver.match('Art').id(art.id).pull('sections', { name: 'pushed section' });
+      expect(pull.sections.length).toBe(0);
+    });
 
-  //   test('embedded array with modelRef', async () => {
-  //     // Create section
-  //     await expect(resolver.match('Art').save({ name: 'Piedmont Beauty', sections: [{ name: 'Section1', person: richard.id }] })).rejects.toThrow(/not found/gi);
-  //     const art = await resolver.match('Art').save({ name: 'Piedmont Beauty', sections: [{ name: 'Section1', person: christie.id }] });
-  //     expect(art).toBeDefined();
-  //     expect(art.sections[0].id).toBeDefined();
-  //     expect(art.sections[0].person).toEqual(christie.id);
-  //   });
+    // test('embedded array with modelRef', async () => {
+    //   // Create section
+    //   await expect(resolver.match('Art').save({ name: 'Piedmont Beauty', sections: [{ name: 'Section1', person: richard.id }] })).rejects.toThrow(/not found/gi);
+    //   const art = await resolver.match('Art').save({ name: 'Piedmont Beauty', sections: [{ name: 'Section1', person: christie.id }] });
+    //   expect(art).toBeDefined();
+    //   expect(art.sections[0].id).toBeDefined();
+    //   expect(art.sections[0].person).toEqual(christie.id);
+    // });
 
-  //   test('update should not clobber unknown attributes', async () => {
-  //     switch (driver) {
-  //       case 'mongo': {
-  //         await resolver.raw('Person').findOneAndUpdate({ _id: christie.id }, { $set: { section: { name: 'sec', unknown: 'unknown' } } });
-  //         const person = await resolver.match('Person').id(christie.id).save({ section: { name: 'section' } });
-  //         expect(person.section).toEqual(expect.objectContaining({ id: expect.anything(), name: 'section', frozen: 'frozen' }));
-  //         const dbPerson = await resolver.raw('Person').findOne({ _id: christie.id });
-  //         expect(dbPerson.section).toEqual(expect.objectContaining({ name: 'section', unknown: 'unknown' }));
-  //         break;
-  //       }
-  //       default: break;
-  //     }
-  //   });
+    test('update should not clobber unknown attributes', async () => {
+      await resolver.raw('Person').findOneAndUpdate({ _id: christie.id }, { $set: { section: { name: 'sec', unknown: 'unknown' } } });
+      const person = await resolver.match('Person').id(christie.id).save({ section: { name: 'section' } });
+      expect(person.section).toEqual(expect.objectContaining({ id: expect.anything(), name: 'section', frozen: 'frozen' }));
+      const dbPerson = await resolver.raw('Person').findOne({ _id: christie.id });
+      expect(dbPerson.section).toEqual(expect.objectContaining({ name: 'section', unknown: 'unknown' }));
+    });
 
-  //   test('where clause with one(required) should throw', async () => {
-  //     await expect(resolver.match('Person').where({ age: 400 }).one({ required: true })).rejects.toThrow(/not found/gi);
-  //     await expect(resolver.match('Person').where({ age: 400 }).many({ required: true })).rejects.toThrow(/not found/gi);
-  //   });
+    test('update with brand new embedded attributes are correct', async () => {
+      const person = await resolver.match('Person').save({ name: 'new', emailAddress: 'new@new.com' });
+      const updated = await resolver.match('Person').id(person.id).save({ section: { name: 'section1' } });
+      expect(updated.section).toMatchObject({ id: expect.anything(), name: 'section1' });
+      const sanity = await resolver.match('Person').id(person.id).one();
+      expect(sanity.section).toMatchObject({ id: expect.anything(), name: 'section1' });
+    });
 
-  //   test('multiple updates in Promise.all()', async () => {
-  //     const people = await resolver.match('Person').many();
-  //     const updated = await Promise.all(people.map((person, i) => resolver.match('Person').id(person.id).save({ age: 20 + i })));
-  //     expect(updated.map(up => up.age)).toEqual(people.map((p, i) => 20 + i));
-  //   });
-  // });
+    test('where clause with one(required) should throw', async () => {
+      await expect(resolver.match('Person').where({ age: 400 }).one({ required: true })).rejects.toThrow(/not found/gi);
+      await expect(resolver.match('Person').where({ age: 400 }).many({ required: true })).rejects.toThrow(/not found/gi);
+    });
 
-  // describe('Case [In]sensitive Sort', () => {
-  //   test('get', async () => {
-  //     // Create documents for sorting purpose (no transformation on name)
-  //     await Promise.all([
-  //       resolver.match('PlainJane').save({ name: 'boolander' }),
-  //       resolver.match('PlainJane').save({ name: 'Zoolander' }),
-  //     ]);
+    test('multiple updates in Promise.all()', async () => {
+      const people = await resolver.match('Person').many();
+      const updated = await Promise.all(people.map((person, i) => resolver.match('Person').id(person.id).save({ age: 20 + i })));
+      expect(updated.map(up => up.age)).toEqual(people.map((p, i) => 20 + i));
+    });
+  });
 
-  //     switch (driver) {
-  //       case 'mongo': {
-  //         expect(await resolver.match('PlainJane').where({ name: '*lander' }).sortBy({ name: 'desc' }).many()).toMatchObject([{ name: 'Zoolander' }, { name: 'boolander' }]);
-  //         break;
-  //       }
-  //       default: {
-  //         break;
-  //       }
-  //     }
-  //   });
-  // });
+  describe('Case [In]sensitive Sort', () => {
+    test('get', async () => {
+      // Create documents for sorting purpose (no transformation on name)
+      await Promise.all([resolver.match('PlainJane').save({ name: 'boolander' }), resolver.match('PlainJane').save({ name: 'Zoolander' })]);
+      expect(await resolver.match('PlainJane').where({ name: '*lander' }).sortBy({ name: 'desc' }).many()).toMatchObject([{ name: 'Zoolander' }, { name: 'boolander' }]);
+    });
+  });
 
   // describe('$magic methods', () => {
   //   test('$lookup', async () => {

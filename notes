@@ -1,5 +1,4 @@
 * Resolver.toResultSet does not make any sense
-* Push, Pull, Splice not fully correct (need to pass input through transforms before modification)
 * Consider passing input to driver without merging doc (a lot of transformations happen) and then combining result in QueryResolver
 * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
 * Need to consider if mutationMany really needs to be spread into individual mutationOnes
@@ -10,6 +9,7 @@
   - Joins
   - Transactions
   - Batches
+  - Composite index keys (probably need to move these tests elsewhere)
 
 ---------
 

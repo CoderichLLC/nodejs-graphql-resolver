@@ -38,12 +38,11 @@ module.exports = class Query {
   async toObject() {
     const query = this.#query;
     const clone = this.clone().#query;
-    const { crud, input, where, select = Object.values(this.#model.fields).map(field => field.name) } = query;
+    const { crud, input, where } = query;
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[crud] || [];
 
     [clone.input, clone.where] = await Promise.all([
-      // Promise.resolve(input),
       this.transform(query, 'input', this.#model, Util.unflatten(input), ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el])),
       this.transform(query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])),
     ]);
@@ -55,12 +54,25 @@ module.exports = class Query {
     const clone = query.$clone();
 
     return this.prepare(Object.defineProperties(clone, {
+      select: {
+        value: Object.values(this.#model.fields).map(field => field.name),
+      },
       input: {
-        value: this.renameModelFields(this.#model, query.input),
+        value: this.finalize(this.#model, query.input),
       },
       where: {
-        value: this.renameModelFields(this.#model, query.where),
+        value: this.finalize(this.#model, query.where),
       },
+      // where: {
+      //   value: Object.entries(Util.flatten(this.finalize(this.#model, query.where), { safe: true })).reduce((prev, [key, value]) => {
+      //     value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
+      //     value = Array.isArray(value) ? { $in: value } : value;
+      //     return Object.assign(prev, { [key]: value });
+      //   }, {}),
+      // },
+      // joins: {
+      //   value: Object.values(this.#model.fields).map(field => field.name),
+      // },
       before: {
         get: () => {
           if (!query.isCursorPaging || !query.before) return undefined;
@@ -114,19 +126,12 @@ module.exports = class Query {
     });
   }
 
-  renameModelFields(model, fields = {}) {
+  finalize(model, fields = {}, fn = ({ value }) => value) {
     return Object.entries(fields).reduce((prev, [name, value]) => {
       const field = model.fields[name];
-      if (!field) {
-        console.log('cannot find field', model.name, name);
-        return prev;
-      }
-
-      return Object.assign(prev, {
-        [field.key]: Util.map(value, (val) => {
-          return field.model && !field.isFKReference && !field.isPrimaryKey ? this.renameModelFields(field.model, val) : val;
-        }),
-      });
+      if (!field) return prev;
+      if (field.model && !field.isFKReference && !field.isPrimaryKey) value = Util.map(value, val => this.finalize(field.model, val, fn));
+      return Object.assign(prev, { [field.key]: fn({ model, field, value }) });
     }, {});
   }
 
@@ -135,34 +140,30 @@ module.exports = class Query {
     const { model, where = {} } = query;
 
     [query.joins, query.where] = (function traverse($model, target, joins, clause) {
-      Object.entries(target).forEach(([key, value]) => {
-        const $field = $model.fields[key];
+      Object.entries(target).forEach(([name, value]) => {
+        const $field = $model.fields[name];
+        const join = { ...$field?.join, where: {} };
         // const isSelfReference = $field?.model?.name === model && $model.name !== model;
         // const from = isSelfReference ? $model.fields[$model.idField].key : $field?.join?.from;
-        const join = { ...$field?.join, where: {} };
 
         if ($field?.join && isPlainObject(value)) {
           joins.push(join);
           traverse($field.model, value, joins, join.where);
         } else {
           value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
-          clause[key] = value;
+          clause[name] = value;
         }
       });
 
-      return [joins, self.#globToRegex(query, clause)];
+      return [joins, self.#globToRegex(clause)];
     }(self.#schema.models[model], where, [], {}));
 
     return query;
   }
 
-  #globToRegex(query, obj, arrayOp = '$in') {
-    return Object.entries(Util.flatten(obj, false)).reduce((prev, [key, value]) => {
-      // const field = this.#schema.resolvePath(`${query.model}.${key}`);
+  #globToRegex(obj, arrayOp = '$in') {
+    return Object.entries(Util.flatten(obj, { safe: true })).reduce((prev, [key, value]) => {
       const isArray = Array.isArray(value);
-      // value = isArray ? Util.ensureArray(value) : value;
-      // if (query.flags?.debug) console.log(query.model, key, value);
-      // value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
       if (isArray) return Object.assign(prev, { [key]: { [arrayOp]: value } });
       return Object.assign(prev, { [key]: value });
     }, {});
