@@ -110,28 +110,39 @@ module.exports = class MongoDriver {
       pointer = $agg[0].$lookup.pipeline;
     });
 
-    return $aggregate;
+    return $aggregate.concat({
+      $group: {
+        _id: '$_id',
+        data: { $first: '$$ROOT' },
+        parent0: { $addToSet: '$parent0' },
+      },
+    }, {
+      $replaceRoot: {
+        newRoot: {
+          $mergeObjects: ['$data', { parent0: '$parent0' }],
+        },
+      },
+    });
 
-    // return pipeline.reduce((prev, curr, i) => {
-    //   const $aggregate = MongoDriver.aggregateJoin(query, curr, i + 1);
-    //   prev[0].$lookup.pipeline.push(...$aggregate);
-    //   return prev;
-    // }, MongoDriver.aggregateJoin(query, join, 0));
+    //   {
+    //   '$group': {
+    //     '_id': '$_id',
+    //     'data': { '$first': '$$ROOT' },
+    //     'parent0': { '$addToSet': '$parent0' }
+    //   }
+    // },
+    // {
+    //   '$replaceRoot': {
+    //     'newRoot': {
+    //       '$mergeObjects': [ '$data', { 'parent0': '$parent0' } ]
+    //     }
+    //   }
+    // }
   }
 
   // static aggregateJoins(query, joins = []) {
   //   return joins.map((join, i) => {
   //     return MongoDriver.aggregateJoin(query, join, i);
-  //     // const result = [];
-  //     // const as = `join${i}`;
-  //     // const { to: from, on: foreignField, from: localField, where: match } = join;
-  //     // const $match = Object.entries(Util.flatten(match)).reduce((prev, [key, value]) => Object.assign(prev, { [`${as}.${key}`]: value }), {});
-  //     // const $addJoinFields = MongoDriver.convertFieldsForRegex(query.$schema, from, $match, true);
-  //     // result.push({ $lookup: { from, foreignField, localField, as } });
-  //     // if (Object.keys($addJoinFields).length) result.push({ $addFields: $addJoinFields });
-  //     // if (Object.keys($match).length) result.push({ $match });
-  //     // result.push({ $unwind: `$${as}` });
-  //     // return result;
   //   }).flat();
   // }
 

@@ -2,7 +2,7 @@ const get = require('lodash.get');
 const merge = require('lodash.merge');
 const Util = require('@coderich/util');
 const Pipeline = require('../data/Pipeline');
-const { isPlainObject, isGlob, globToRegex, mergeDeep } = require('../service/AppService');
+const { isPlainObject, isBasicObject, isGlob, globToRegex, mergeDeep } = require('../service/AppService');
 
 module.exports = class Query {
   #config;
@@ -53,7 +53,7 @@ module.exports = class Query {
   toDriver(query) {
     const clone = query.$clone();
 
-    return this.prepare(Object.defineProperties(clone, {
+    const $clone = Object.defineProperties(clone, {
       select: {
         value: Object.values(this.#model.fields).map(field => field.name),
       },
@@ -88,7 +88,9 @@ module.exports = class Query {
       $schema: {
         value: this.#schema.resolvePath,
       },
-    }));
+    });
+
+    return this.prepare($clone);
   }
 
   async transform(query, target, model, data, transformers = [], paths = []) {
@@ -126,12 +128,14 @@ module.exports = class Query {
     });
   }
 
-  finalize(model, fields = {}, fn = ({ value }) => value) {
+  finalize(model, fields = {}) {
+    if (!isPlainObject(fields)) return fields;
+
     return Object.entries(fields).reduce((prev, [name, value]) => {
       const field = model.fields[name];
       if (!field) return prev;
-      if (field.model && !field.isFKReference && !field.isPrimaryKey) value = Util.map(value, val => this.finalize(field.model, val, fn));
-      return Object.assign(prev, { [field.key]: fn({ model, field, value }) });
+      if (field.model && isBasicObject(value)) value = Util.map(value, val => this.finalize(field.model, val));
+      return Object.assign(prev, { [field.key]: value });
     }, {});
   }
 
@@ -143,12 +147,14 @@ module.exports = class Query {
       Object.entries(target).forEach(([name, value]) => {
         const $field = $model.fields[name];
         const join = { ...$field?.join, where: {} };
-        // const isSelfReference = $field?.model?.name === model && $model.name !== model;
-        // const from = isSelfReference ? $model.fields[$model.idField].key : $field?.join?.from;
 
-        if ($field?.join && isPlainObject(value)) {
+        if ($field?.isVirtual || ($field?.join && isPlainObject(value))) {
+        // if ($field?.join) {
+          // const isSelfReference = $field.model.name === model && $model.name !== model;
+          // const from = isSelfReference ? $model.fields[$model.idField].key : $field.join.from;
+          if ($field.isVirtual && !isPlainObject(value)) value = { [join.from]: value };
           joins.push(join);
-          traverse($field.model, value, joins, join.where);
+          [, join.where] = traverse($field.model, value, joins, join.where);
         } else {
           value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
           clause[name] = value;
