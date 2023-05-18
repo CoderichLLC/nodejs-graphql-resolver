@@ -123,21 +123,6 @@ module.exports = class MongoDriver {
         },
       },
     });
-
-    //   {
-    //   '$group': {
-    //     '_id': '$_id',
-    //     'data': { '$first': '$$ROOT' },
-    //     'parent0': { '$addToSet': '$parent0' }
-    //   }
-    // },
-    // {
-    //   '$replaceRoot': {
-    //     'newRoot': {
-    //       '$mergeObjects': [ '$data', { 'parent0': '$parent0' } ]
-    //     }
-    //   }
-    // }
   }
 
   // static aggregateJoins(query, joins = []) {

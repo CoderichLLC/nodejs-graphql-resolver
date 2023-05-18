@@ -2,7 +2,7 @@ const get = require('lodash.get');
 const merge = require('lodash.merge');
 const Util = require('@coderich/util');
 const Pipeline = require('../data/Pipeline');
-const { isPlainObject, isBasicObject, isGlob, globToRegex, mergeDeep } = require('../service/AppService');
+const { isPlainObject, isGlob, globToRegex, mergeDeep, reduceModel } = require('../service/AppService');
 
 module.exports = class Query {
   #config;
@@ -31,7 +31,6 @@ module.exports = class Query {
 
   clone(query) {
     query = merge({}, this.#config.query, query);
-    // query = { ...this.#config.query, ...query };
     return new Query({ ...this.#config, query });
   }
 
@@ -51,28 +50,16 @@ module.exports = class Query {
   }
 
   toDriver(query) {
-    const clone = query.$clone();
-
-    const $clone = Object.defineProperties(clone, {
+    return this.finalize(Object.defineProperties(query.$clone(), {
       select: {
         value: Object.values(this.#model.fields).map(field => field.name),
       },
       input: {
-        value: this.finalize(this.#model, query.input),
+        value: reduceModel(this.#model, query.input, data => Object.assign(data, { key: data.field.key })),
       },
       where: {
-        value: this.finalize(this.#model, query.where),
+        value: reduceModel(this.#model, query.where, data => Object.assign(data, { key: data.field.key })),
       },
-      // where: {
-      //   value: Object.entries(Util.flatten(this.finalize(this.#model, query.where), { safe: true })).reduce((prev, [key, value]) => {
-      //     value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
-      //     value = Array.isArray(value) ? { $in: value } : value;
-      //     return Object.assign(prev, { [key]: value });
-      //   }, {}),
-      // },
-      // joins: {
-      //   value: Object.values(this.#model.fields).map(field => field.name),
-      // },
       before: {
         get: () => {
           if (!query.isCursorPaging || !query.before) return undefined;
@@ -88,9 +75,7 @@ module.exports = class Query {
       $schema: {
         value: this.#schema.resolvePath,
       },
-    });
-
-    return this.prepare($clone);
+    }));
   }
 
   async transform(query, target, model, data, transformers = [], paths = []) {
@@ -128,46 +113,31 @@ module.exports = class Query {
     });
   }
 
-  finalize(model, fields = {}) {
-    if (!isPlainObject(fields)) return fields;
-
-    return Object.entries(fields).reduce((prev, [name, value]) => {
-      const field = model.fields[name];
-      if (!field) return prev;
-      if (field.model && isBasicObject(value)) value = Util.map(value, val => this.finalize(field.model, val));
-      return Object.assign(prev, { [field.key]: value });
-    }, {});
-  }
-
-  prepare(query) {
+  finalize(query) {
     const self = this;
-    const { model, where = {} } = query;
+    const { where = {} } = query;
 
     [query.joins, query.where] = (function traverse($model, target, joins, clause) {
-      Object.entries(target).forEach(([name, value]) => {
-        const $field = $model.fields[name];
-        const join = { ...$field?.join, where: {} };
+      reduceModel($model, target, ({ field, key, value }) => {
+        const join = { ...field.join, where: {} };
 
-        if ($field?.isVirtual || ($field?.join && isPlainObject(value))) {
-        // if ($field?.join) {
-          // const isSelfReference = $field.model.name === model && $model.name !== model;
-          // const from = isSelfReference ? $model.fields[$model.idField].key : $field.join.from;
-          if ($field.isVirtual && !isPlainObject(value)) value = { [join.from]: value };
+        if (field.isVirtual || (field.join && isPlainObject(value))) {
+          if (field.isVirtual && !isPlainObject(value)) value = { [join.from]: value };
           joins.push(join);
-          [, join.where] = traverse($field.model, value, joins, join.where);
+          [, join.where] = traverse(field.model, value, joins, join.where);
         } else {
           value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
-          clause[name] = value;
+          clause[key] = value;
         }
-      });
+      }, 'key');
 
-      return [joins, self.#globToRegex(clause)];
-    }(self.#schema.models[model], where, [], {}));
+      return [joins, self.#finalizeWhereClause(clause)];
+    }(this.#model, where, [], {}));
 
     return query;
   }
 
-  #globToRegex(obj, arrayOp = '$in') {
+  #finalizeWhereClause(obj, arrayOp = '$in') {
     return Object.entries(Util.flatten(obj, { safe: true })).reduce((prev, [key, value]) => {
       const isArray = Array.isArray(value);
       if (isArray) return Object.assign(prev, { [key]: { [arrayOp]: value } });

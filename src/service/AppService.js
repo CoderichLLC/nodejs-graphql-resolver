@@ -17,3 +17,20 @@ const smartMerge = (target, source, options) => source;
 exports.isBasicObject = obj => obj != null && typeof obj === 'object' && !(ObjectId.isValid(obj)) && !(obj instanceof Date) && typeof (obj.then) !== 'function';
 exports.isPlainObject = obj => exports.isBasicObject(obj) && !Array.isArray(obj);
 exports.mergeDeep = (...args) => DeepMerge.all(args, { isMergeableObject: obj => (exports.isPlainObject(obj) || Array.isArray(obj)), arrayMerge: smartMerge });
+
+exports.reduceModel = (model, fieldMap, fn, prop = 'name') => {
+  if (!exports.isPlainObject(fieldMap)) return fieldMap;
+
+  return Object.entries(fieldMap).reduce((prev, [key, value]) => {
+    // Find the field; remove it if not found
+    const field = Object.values(model.fields).find(el => el[prop] === key);
+    if (!field) return prev;
+
+    // Reduce value by invoking callback function
+    const data = fn({ model, field, key, value });
+    if (!data) return prev;
+
+    const $value = field.model && exports.isBasicObject(data.value) ? Util.map(data.value, el => exports.reduceModel(field.model, el, fn, prop)) : data.value;
+    return Object.assign(prev, { [data.key]: $value });
+  }, {});
+};
