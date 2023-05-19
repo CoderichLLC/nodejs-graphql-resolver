@@ -32,14 +32,14 @@ module.exports = class Resolver {
   }
 
   toResultSet(model, data) {
-    // const query = this.match(model);
     const $model = this.#schema.models[model];
     return this.#normalize({}, $model, data);
   }
 
-  resolve(query) {
+  async resolve(query) {
     const model = this.#schema.models[query.model];
-    return model.source.driver.resolve(query.$toDriver(query)).then(data => this.#normalize(query, model, data));
+    const $query = await query.$toDriver(query);
+    return model.source.driver.resolve($query).then(data => this.#normalize(query, model, data));
   }
 
   #normalize(query, model, data) {

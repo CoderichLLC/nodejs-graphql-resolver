@@ -2,7 +2,7 @@ const get = require('lodash.get');
 const merge = require('lodash.merge');
 const Util = require('@coderich/util');
 const Pipeline = require('../data/Pipeline');
-const { isPlainObject, isGlob, globToRegex, mergeDeep, shapeModel } = require('../service/AppService');
+const { isPlainObject, isGlob, globToRegex, mergeDeep, visitModel } = require('../service/AppService');
 
 module.exports = class Query {
   #config;
@@ -55,10 +55,10 @@ module.exports = class Query {
         value: Object.values(this.#model.fields).map(field => field.name),
       },
       input: {
-        value: shapeModel(this.#model, query.input, data => Object.assign(data, { key: data.field.key })),
+        value: visitModel(this.#model, query.input, data => Object.assign(data, { key: data.field.key })),
       },
       where: {
-        value: shapeModel(this.#model, query.where, data => Object.assign(data, { key: data.field.key })),
+        value: visitModel(this.#model, query.where, data => Object.assign(data, { key: data.field.key })),
       },
       before: {
         get: () => {
@@ -115,7 +115,7 @@ module.exports = class Query {
     const { where = {} } = query;
 
     [query.joins, query.where] = (function traverse($model, target, joins, clause) {
-      shapeModel($model, target, ({ field, key, value }) => {
+      visitModel($model, target, ({ field, key, value }) => {
         const join = { ...field.join, where: {} };
 
         if (field.isVirtual || (field.join && isPlainObject(value))) {
