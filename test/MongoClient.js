@@ -74,6 +74,26 @@ module.exports = class MongoDriver {
     return this.collection(name);
   }
 
+  transaction(ops) {
+    return Util.promiseRetry(() => {
+      // Create session and start transaction
+      return this.connection.then(client => client.startSession({ readPreference: { mode: 'primary' } })).then((session) => {
+        session.startTransaction({ readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } });
+        const close = () => { session.endSession(); };
+
+        // Execute each operation with session
+        return Promise.all(ops.map(op => op.exec({ session }))).then((results) => {
+          results.$commit = () => session.commitTransaction().then(close);
+          results.$rollback = () => session.abortTransaction().then(close);
+          return results;
+        }).catch((e) => {
+          close();
+          throw e;
+        });
+      });
+    }, 200, 5, e => e.errorLabels && e.errorLabels.indexOf('TransientTransactionError') > -1);
+  }
+
   static aggregateJoin(query, join, id) {
     const { to: from, on: foreignField, from: localField, where: $match } = join;
     const as = `parent${id}`;
@@ -124,12 +144,6 @@ module.exports = class MongoDriver {
       },
     });
   }
-
-  // static aggregateJoins(query, joins = []) {
-  //   return joins.map((join, i) => {
-  //     return MongoDriver.aggregateJoin(query, join, i);
-  //   }).flat();
-  // }
 
   static convertFieldsForSort(sort) {
     return Util.unflatten(Object.entries(Util.flatten(sort, false)).reduce((prev, [key, value]) => {

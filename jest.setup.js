@@ -2,7 +2,7 @@ const Schema = require('./src/data/Schema');
 const Resolver = require('./src/data/Resolver');
 const config = require('./test/config');
 
-let driver;
+let client;
 
 const createIndexes = (mongoClient, indexes) => {
   return Promise.all(indexes.map(({ key, name, type, on }) => {
@@ -12,14 +12,14 @@ const createIndexes = (mongoClient, indexes) => {
 };
 
 beforeAll(async () => {
-  ({ driver } = config.dataSources.default);
+  ({ client } = config.dataSources.default);
   const schema = new Schema(config).decorate().parse();
   const context = { network: { id: 'networkId' } };
-  await createIndexes(driver, schema.indexes);
+  await createIndexes(client, schema.indexes);
   global.resolver = new Resolver({ schema, context });
-  global.mongoClient = driver;
+  global.mongoClient = client;
 });
 
 afterAll(() => {
-  return driver.disconnect();
+  return client.disconnect();
 });

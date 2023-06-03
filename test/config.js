@@ -1,6 +1,6 @@
 const { ObjectId } = require('mongodb');
 const Validator = require('validator');
-const MongoClient = require('./mongo/MongoClient');
+const MongoClient = require('./MongoClient');
 const Pipeline = require('../src/data/Pipeline');
 
 Pipeline.define('bookName', Pipeline.Deny('The Bible'));
@@ -26,7 +26,8 @@ module.exports = {
           return value;
         }
       },
-      driver: new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' }),
+      supports: [],
+      client: new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' }),
     },
   },
   decorators: {

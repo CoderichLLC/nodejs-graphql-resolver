@@ -109,6 +109,10 @@ module.exports = class Schema {
                 field.isPersistable = value;
                 break;
               }
+              case 'field-onDelete': {
+                field.onDelete = value;
+                break;
+              }
               case 'link-by': {
                 field.fkField = value;
                 field.isVirtual = true;
@@ -176,6 +180,26 @@ module.exports = class Schema {
       const on = index.on.map(f => index.model.fields[f].key);
       return { key, name, type, on };
     });
+
+    // Resolve onDeletes
+    // exports.identifyOnDeletes = (models, parentModel) => {
+    //   return models.reduce((prev, model) => {
+    //     model.getOnDeleteFields().forEach((field) => {
+    //       const { modelRef, isArray } = field.toObject();
+
+    //       if (`${modelRef}` === `${parentModel}`) {
+    //         if (model.isEntity()) {
+    //           prev.push({ model, field, isArray, op: field.getOnDelete() });
+    //         } else {
+    //           prev.push(...exports.identifyOnDeletes(models, model).map(od => Object.assign(od, { fieldRef: field, isArray, op: field.getOnDelete() })));
+    //         }
+    //       }
+    //     });
+
+    //     // Assign model referential integrity
+    //     return uniqWith(prev, (a, b) => `${a.model}:${a.field}:${a.fieldRef}:${a.op}` === `${b.model}:${b.field}:${b.fieldRef}:${b.op}`);
+    //   }, []);
+    // };
 
     // Helper methods
     schema.resolvePath = (path, prop = 'key') => {

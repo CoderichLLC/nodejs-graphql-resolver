@@ -2,6 +2,7 @@ const get = require('lodash.get');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const Pipeline = require('./Pipeline');
+const Transaction = require('./Transaction');
 const QueryResolver = require('../query/QueryResolver');
 
 module.exports = class Resolver {
@@ -19,7 +20,7 @@ module.exports = class Resolver {
   }
 
   raw(model) {
-    return this.#schema.models[model]?.source?.driver?.driver(model);
+    return this.#toModel(model)?.source?.client?.driver(model);
   }
 
   match(model) {
@@ -31,6 +32,10 @@ module.exports = class Resolver {
     });
   }
 
+  transaction(parentTxn) {
+    return new Transaction(this, parentTxn);
+  }
+
   toResultSet(model, data) {
     const $model = this.#schema.models[model];
     return this.#normalize({}, $model, data);
@@ -39,8 +44,26 @@ module.exports = class Resolver {
   async resolve(query) {
     const model = this.#schema.models[query.model];
     const $query = await query.$toDriver(query);
-    return model.source.driver.resolve($query).then(data => this.#normalize(query, model, data));
+    return model.source.client.resolve($query).then(data => this.#normalize(query, model, data));
   }
+
+  #toModel(model) {
+    return typeof model === 'string' ? this.#schema.models[model] : model;
+  }
+
+  #toModelMarked(model) {
+    const marked = this.toModel(model);
+    if (!marked) throw new Error(`${model} is not defined in schema`);
+    if (!marked.isMarkedModel) throw new Error(`${model} is not a marked model`);
+    return marked;
+  }
+
+  // #toModelEntity(model) {
+  //   const entity = this.toModel(model);
+  //   if (!entity) throw new Error(`${model} is not defined in schema`);
+  //   if (!entity.isEntity()) throw new Error(`${model} is not an entity`);
+  //   return entity;
+  // }
 
   #normalize(query, model, data) {
     const { flags, crud, isCursorPaging } = query;
