@@ -77,7 +77,7 @@ module.exports = class MongoDriver {
   transaction(ops) {
     return Util.promiseRetry(() => {
       // Create session and start transaction
-      return this.connection.then(client => client.startSession({ readPreference: { mode: 'primary' } })).then((session) => {
+      return this.#connection.then(client => client.startSession({ readPreference: { mode: 'primary' } })).then((session) => {
         session.startTransaction({ readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } });
         const close = () => { session.endSession(); };
 

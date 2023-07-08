@@ -12,7 +12,7 @@ module.exports = class QueryBuilder {
     this.#schema = schema;
 
     this.#query = Object.defineProperties(query, {
-      id: { writable: true, enumerable: false, value: query.id },
+      id: { writable: true, enumerable: true, value: query.id },
       flags: { writable: true, enumerable: true, value: query.flags || {} },
     });
 
@@ -72,6 +72,11 @@ module.exports = class QueryBuilder {
   sort(sort) {
     this.#propCheck('sort', 'id');
     this.#query.sort = sort;
+    return this;
+  }
+
+  options(options) {
+    this.#query.options = options;
     return this;
   }
 

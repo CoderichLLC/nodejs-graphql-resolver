@@ -19,8 +19,16 @@ module.exports = class Resolver {
     return this.#context;
   }
 
+  clear() {
+    return this;
+  }
+
+  clearAll() {
+    return this;
+  }
+
   raw(model) {
-    return this.#toModel(model)?.source?.client?.driver(model);
+    return this.toModel(model)?.source?.client?.driver(model);
   }
 
   match(model) {
@@ -28,12 +36,17 @@ module.exports = class Resolver {
       resolver: this,
       schema: this.#schema,
       context: this.#context,
-      query: { model },
+      query: { model: `${model}` },
     });
   }
 
   transaction(parentTxn) {
-    return new Transaction(this, parentTxn);
+    return new Transaction({
+      resolver: this,
+      schema: this.#schema,
+      context: this.#context,
+      parentTxn,
+    });
   }
 
   toResultSet(model, data) {
@@ -47,23 +60,23 @@ module.exports = class Resolver {
     return model.source.client.resolve($query).then(data => this.#normalize(query, model, data));
   }
 
-  #toModel(model) {
+  toModel(model) {
     return typeof model === 'string' ? this.#schema.models[model] : model;
   }
 
-  #toModelMarked(model) {
+  toModelMarked(model) {
     const marked = this.toModel(model);
     if (!marked) throw new Error(`${model} is not defined in schema`);
     if (!marked.isMarkedModel) throw new Error(`${model} is not a marked model`);
     return marked;
   }
 
-  // #toModelEntity(model) {
-  //   const entity = this.toModel(model);
-  //   if (!entity) throw new Error(`${model} is not defined in schema`);
-  //   if (!entity.isEntity()) throw new Error(`${model} is not an entity`);
-  //   return entity;
-  // }
+  toModelEntity(model) {
+    const entity = this.toModel(model);
+    if (!entity) throw new Error(`${model} is not defined in schema`);
+    if (!entity.isEntity) throw new Error(`${model} is not an entity`);
+    return entity;
+  }
 
   #normalize(query, model, data) {
     const { flags, crud, isCursorPaging } = query;

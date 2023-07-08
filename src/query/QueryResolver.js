@@ -93,17 +93,67 @@ module.exports = class QueryResolver extends QueryBuilder {
       case 'deleteOne': {
         return this.#get(query).then((doc) => {
           $query.doc = doc;
-          return this.#resolver.resolve($query).then(() => doc);
+          // return this.#resolveReferentialIntegrity($query).then(() => {
+            return this.#resolver.resolve($query).then(() => doc);
+          // });
         });
       }
       case 'deleteMany': {
         return this.#find($query).then((docs) => {
-          return Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).delete()));
+          const txn = this.#resolver.transaction($query.transaction);
+          docs.forEach(doc => txn.match(this.#model.name).id(doc.id).delete());
+          return txn.run();
         });
       }
       default: {
         throw new Error(`Unknown operation "${operation}"`);
       }
     }
+  }
+
+  #resolveReferentialIntegrity(query) {
+    const { id, transaction } = query;
+    const txn = this.#resolver.transaction(transaction);
+
+    return new Promise((resolve, reject) => {
+      try {
+        this.#model.referentialIntegrity.forEach(({ model, field, fieldRef, isArray, op }) => {
+          const fieldStr = fieldRef ? `${field}.${fieldRef}` : `${field.name}`;
+          const $where = { [fieldStr]: id };
+
+          console.log(model.name, op, $where);
+
+          switch (op) {
+            case 'cascade': {
+              if (isArray) {
+                txn.match(model).flags({ debug: true }).where($where).pull(fieldStr, id);
+              } else {
+                txn.match(model).flags({ debug: true }).where($where).remove();
+              }
+              break;
+            }
+            case 'nullify': {
+              txn.match(model).where($where).save({ [fieldStr]: null });
+              break;
+            }
+            case 'restrict': {
+              txn.match(model).flags({ debug: true }).where($where).count().then(count => (count ? reject(new Error('Restricted')) : count));
+              break;
+            }
+            case 'defer': {
+              // Defer to the embedded object
+              // Marks the field as an onDelete candidate otherwise it (and the embedded object) will get skipped
+              break;
+            }
+            default: throw new Error(`Unknown onDelete operator: '${op}'`);
+          }
+        });
+
+        // Execute the transaction
+        txn.run().then(results => resolve(results)).catch(e => reject(e));
+      } catch (e) {
+        txn.rollback().then(() => reject(e)).catch(err => reject(err));
+      }
+    });
   }
 };

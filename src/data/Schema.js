@@ -50,15 +50,30 @@ module.exports = class Schema {
     // Parse AST
     visit(parse(this.#config.typeDefs), {
       enter: (node) => {
+        const name = node.name?.value;
         if (!allowedKinds.includes(node.kind)) return false;
 
-        if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
-          const name = node.name.value;
-          model = schema.models[name] = { key: name, name, idField: 'id', fields: {}, source: this.#config.dataSources?.default };
+        if (modelKinds.includes(node.kind) && !operations.includes(name)) {
+          model = schema.models[name] = {
+            name,
+            key: name,
+            fields: {},
+            idField: 'id',
+            dalScope: 'crud',
+            gqlScope: 'cruds',
+            isPersistable: true,
+            source: this.#config.dataSources?.default,
+            toString: () => name,
+          };
         } else if (node.kind === Kind.FIELD_DEFINITION) {
-          const name = node.name.value;
-          field = model.fields[name] = { key: name, name, pipelines: { validate: [], serialize: [], construct: [] } };
           isField = true;
+          field = model.fields[name] = {
+            name,
+            key: name,
+            dalScope: 'crud',
+            gqlScope: 'cruds',
+            pipelines: { validate: [], serialize: [], construct: [] },
+          };
         } else if (node.kind === Kind.NON_NULL_TYPE) {
           field[isList ? 'isArrayRequired' : 'isRequired'] = true;
         } else if (node.kind === Kind.NAMED_TYPE) {
@@ -67,7 +82,6 @@ module.exports = class Schema {
           field.isArray = true;
           isList = true;
         } else if (node.kind === Kind.DIRECTIVE) {
-          const name = node.name.value;
           const target = isField ? field : model;
 
           if (name === 'model') model.isMarkedModel = true;
@@ -95,6 +109,14 @@ module.exports = class Schema {
               }
               case 'model-embed': {
                 model.isEmbedded = value;
+                break;
+              }
+              case 'model-persist': {
+                model.isPersistable = value;
+                break;
+              }
+              case 'model-gqlScope': case 'model-dalScope': {
+                model[key] = Util.nvl(value, '');
                 break;
               }
               case 'field-key': {
@@ -133,13 +155,16 @@ module.exports = class Schema {
       },
       leave: (node) => {
         if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
-          // const $model = model;
+          const $model = model;
           // const idField = $model.fields[$model.idField];
           // $model.primaryKey = Util.nvl(idField?.key, idField?.name, 'id');
 
-          // // Model resolution after field resolution (push)
-          // thunks.push(() => {
-          // });
+          // Model resolution after field resolution (push)
+          thunks.push(($schema) => {
+            $model.gqlScope = $model.isMarkedModel ? $model.gqlScope : '';
+            $model.dalScope = $model.isMarkedModel ? $model.dalScope : '';
+            $model.isEntity = Boolean($model.dalScope !== '' && !$model.isEmbedded);
+          });
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const $field = field;
           const $model = model;
@@ -181,25 +206,10 @@ module.exports = class Schema {
       return { key, name, type, on };
     });
 
-    // Resolve onDeletes
-    // exports.identifyOnDeletes = (models, parentModel) => {
-    //   return models.reduce((prev, model) => {
-    //     model.getOnDeleteFields().forEach((field) => {
-    //       const { modelRef, isArray } = field.toObject();
-
-    //       if (`${modelRef}` === `${parentModel}`) {
-    //         if (model.isEntity()) {
-    //           prev.push({ model, field, isArray, op: field.getOnDelete() });
-    //         } else {
-    //           prev.push(...exports.identifyOnDeletes(models, model).map(od => Object.assign(od, { fieldRef: field, isArray, op: field.getOnDelete() })));
-    //         }
-    //       }
-    //     });
-
-    //     // Assign model referential integrity
-    //     return uniqWith(prev, (a, b) => `${a.model}:${a.field}:${a.fieldRef}:${a.op}` === `${b.model}:${b.field}:${b.fieldRef}:${b.op}`);
-    //   }, []);
-    // };
+    // Resolve referential integrity
+    Object.values(schema.models).forEach(($model) => {
+      $model.referentialIntegrity = Schema.identifyOnDeletes(Object.values(schema.models), $model.name);
+    });
 
     // Helper methods
     schema.resolvePath = (path, prop = 'key') => {
@@ -211,5 +221,22 @@ module.exports = class Schema {
 
     // Return schema
     return schema;
+  }
+
+  static identifyOnDeletes(models, parentName) {
+    return models.reduce((prev, model) => {
+      Object.values(model.fields).filter(f => f.onDelete).forEach((field) => {
+        if (`${field.model.name}` === `${parentName}`) {
+          if (model.isEntity) {
+            prev.push({ model, field, isArray: field.isArray, op: field.onDelete });
+          } else {
+            prev.push(...Schema.identifyOnDeletes(models, model.name).map(od => Object.assign(od, { fieldRef: field.name, isArray: field.isArray, op: field.onDelete })));
+          }
+        }
+      });
+
+      // Assign model referential integrity
+      return Util.filterBy(prev, (a, b) => `${a.model.name}:${a.field.name}:${a.fieldRef}:${a.op}` === `${b.model.name}:${b.field.name}:${b.fieldRef}:${b.op}`);
+    }, []);
   }
 };

@@ -1,90 +1,47 @@
-const TreeMap = require('./TreeMap');
-const QueryBuilderTransaction = require('../query/QueryBuilderTransaction');
+const Util = require('@coderich/util');
+const QueryResolver = require('../query/QueryResolver');
+
+/**
+ * Extended class in order to defer execution until the very end
+ */
+class QueryResolverTransaction extends QueryResolver {
+  resolve() { return this; }
+  exec() { return super.resolve(); }
+}
 
 module.exports = class Transaction {
-  constructor(resolver, parentTxn) {
-    this.data = [];
-    this.resolver = resolver;
-    this.sourceMap = new Map();
-    this.txnMap = parentTxn?.txnMap || this.#makeMap(resolver);
-    this.txnMap.add(parentTxn, this);
+  #schema;
+  #context;
+  #resolver;
+  #queries;
+
+  constructor(config) {
+    this.#queries = [];
+    this.#schema = config.schema;
+    this.#context = config.context;
+    this.#resolver = config.resolver;
   }
 
-  match(mixed) {
-    const model = this.resolver.toModelMarked(mixed);
-    if (!this.sourceMap.has(model.source)) this.sourceMap.set(model.source, []);
-    const op = new QueryBuilderTransaction(this.resolver, model, this);
-    this.sourceMap.get(model.source).push(op);
-    return op;
+  match(model) {
+    return Util.push(this.#queries, new QueryResolverTransaction({
+      resolver: this.#resolver,
+      schema: this.#schema,
+      context: this.#context,
+      query: { model: `${model}` },
+    }));
   }
 
+  /**
+   * Executes all queries in the transaction but does not commit or rollback
+   */
   exec() {
-    return Promise.all(Array.from(this.sourceMap.entries()).map(([source, ops]) => {
-      return source.supports?.includes('transactions') ? source.client.transaction(ops) : Promise.all(ops.map(op => op.exec())).then((results) => {
-        results.$commit = () => this.resolver.clearAll();
-        results.$rollback = () => this.resolver.clearAll();
-        return results;
-      });
-    })).then((results) => {
-      this.data = results;
-      return results.flat();
-    });
+    return Promise.all(this.#queries.map(q => q.exec()));
   }
 
+  /**
+   * Calls exec() and auto commit/rollback
+   */
   run() {
-    return this.exec().then((results) => {
-      if (this.txnMap.root(this) === this) return this.commit().then(() => results);
-      this.commit();
-      return results;
-    }).catch((e) => {
-      if (this.txnMap.root(this) === this) return this.rollback().then(() => Promise.reject(e));
-      this.rollback();
-      throw e;
-    });
-  }
-
-  commit() {
-    if (this.marker !== 'rollback') this.marker = 'commit';
-    return this.txnMap.perform();
-  }
-
-  rollback() {
-    this.marker = 'rollback';
-    return this.txnMap.perform();
-  }
-
-  #makeMap() {
-    let resolve, reject;
-    const map = new TreeMap();
-    map.promise = new Promise((good, bad) => { resolve = good; reject = bad; });
-    map.resolve = resolve;
-    map.reject = reject;
-
-    map.ready = () => {
-      const elements = map.elements();
-      const notReady = elements.filter(el => !el.marker);
-      if (notReady.length) return [undefined, undefined];
-      let rollbackIndex = elements.findIndex(el => el.marker === 'rollback');
-      if (rollbackIndex === -1) rollbackIndex = Infinity;
-      return [elements.slice(0, rollbackIndex), elements.slice(rollbackIndex)];
-    };
-
-    map.perform = () => {
-      const [commits, rollbacks] = map.ready();
-
-      if (commits && rollbacks) {
-        const rollbackData = rollbacks.map(tnx => tnx.data).flat();
-        const commitData = commits.map(tnx => tnx.data).flat();
-
-        Promise.all(rollbackData.map(rbd => rbd.$rollback())).then(() => {
-          if (commits.length) this.resolver.clearAll();
-          Promise.all(commitData.map(cd => cd.$commit())).then(d => map.resolve(d));
-        }).catch(e => map.reject(e));
-      }
-
-      return map.promise;
-    };
-
-    return map;
+    return this.exec();
   }
 };

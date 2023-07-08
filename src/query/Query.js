@@ -30,7 +30,7 @@ module.exports = class Query {
   }
 
   clone(query) {
-    query = merge({}, this.#config.query, query);
+    query = merge({}, this.#query, query);
     return new Query({ ...this.#config, query });
   }
 
