@@ -1,7 +1,7 @@
 {
   "name": "@coderich/graphql-resolver",
   "main": "src/Resolver.js",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "publishConfig": {
     "access": "public"
   },
