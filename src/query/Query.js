@@ -37,13 +37,14 @@ module.exports = class Query {
   async toObject() {
     const query = this.#query;
     const clone = this.clone().#query;
-    const { crud, input, where } = query;
+    const { crud, input, where, sort } = query;
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[crud] || [];
 
-    [clone.input, clone.where] = await Promise.all([
+    [clone.input, clone.where, clone.sort] = await Promise.all([
       this.transform(query, 'input', this.#model, Util.unflatten(input), ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el])),
       this.transform(query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])),
+      this.transform(query, 'sort', this.#model, Util.unflatten(sort), ['castValue'].map(el => Pipeline[el])),
     ]);
 
     return clone;
@@ -53,6 +54,9 @@ module.exports = class Query {
     return this.finalize(Object.defineProperties(query.$clone(), {
       select: {
         value: Object.values(this.#model.fields).map(field => field.name),
+      },
+      sort: {
+        value: visitModel(this.#model, query.sort, data => Object.assign(data, { key: data.field.key })),
       },
       input: {
         value: visitModel(this.#model, query.input, data => Object.assign(data, { key: data.field.key })),
@@ -112,7 +116,10 @@ module.exports = class Query {
 
   finalize(query) {
     const self = this;
-    const { where = {} } = query;
+    const { where = {}, sort = {} } = query;
+    const flatSort = Util.flatten(sort, { safe: true });
+    const $sort = Util.unflatten(Object.keys(flatSort).reduce((prev, key) => Object.assign(prev, { [key]: {} }), {}));
+    const $target = mergeDeep($sort, where);
 
     [query.joins, query.where] = (function traverse($model, target, joins, clause) {
       visitModel($model, target, ({ field, key, value }) => {
@@ -129,7 +136,7 @@ module.exports = class Query {
       }, 'key');
 
       return [joins, self.#finalizeWhereClause(clause)];
-    }(this.#model, where, [], {}));
+    }(this.#model, $target, [], {}));
 
     return query;
   }

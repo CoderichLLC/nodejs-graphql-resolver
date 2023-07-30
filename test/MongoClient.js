@@ -96,7 +96,7 @@ module.exports = class MongoDriver {
 
   static aggregateJoin(query, join, id) {
     const { to: from, on: foreignField, from: localField, where: $match } = join;
-    const as = `parent${id}`;
+    const as = join.key;
     const $let = { [`${as}_${localField}`]: `$${localField}` };
     const $field = query.$schema(`${from}.${localField}`);
     const op = $field.isArray ? '$in' : '$eq';
@@ -122,6 +122,7 @@ module.exports = class MongoDriver {
   static aggregateJoins(query, joins = []) {
     const [join, ...pipeline] = joins;
     const $aggregate = MongoDriver.aggregateJoin(query, join, 0);
+    const as = join.key;
     let pointer = $aggregate[0].$lookup.pipeline;
 
     pipeline.forEach((j, i) => {
@@ -134,21 +135,21 @@ module.exports = class MongoDriver {
       $group: {
         _id: '$_id',
         data: { $first: '$$ROOT' },
-        parent0: { $addToSet: '$parent0' },
+        [as]: { $addToSet: `$${as}` },
       },
     }, {
       $replaceRoot: {
         newRoot: {
-          $mergeObjects: ['$data', { parent0: '$parent0' }],
+          $mergeObjects: ['$data', { [as]: `$${as}` }],
         },
       },
     });
   }
 
-  static convertFieldsForSort(sort) {
-    return Util.unflatten(Object.entries(Util.flatten(sort, false)).reduce((prev, [key, value]) => {
+  static convertFieldsForSort($schema, model, sort) {
+    return Object.entries(Util.flatten(sort, false)).reduce((prev, [key, value]) => {
       return Object.assign(prev, { [key]: value === 'asc' ? 1 : -1 });
-    }, {}), false);
+    }, {});
   }
 
   static convertFieldsForRegex($schema, model, where, forceArray) {
@@ -182,7 +183,7 @@ module.exports = class MongoDriver {
     const { model, where, sort = {}, skip, limit, joins, after, before, first } = query;
     const $aggregate = [{ $match: where }];
     const $addFields = MongoDriver.convertFieldsForRegex(query.$schema, model, where);
-    const $sort = MongoDriver.convertFieldsForSort(sort);
+    const $sort = MongoDriver.convertFieldsForSort(query.$schema, model, sort);
 
     if (Object.keys($addFields).length) $aggregate.unshift({ $addFields });
 
@@ -213,6 +214,7 @@ module.exports = class MongoDriver {
       if (first) $aggregate.push({ $limit: first });
     }
 
+    if (query.flags?.debug) console.log(joins);
     if (query.flags?.debug) console.log(inspect($aggregate, { depth: null, showHidden: false, colors: true }));
 
     return $aggregate;
