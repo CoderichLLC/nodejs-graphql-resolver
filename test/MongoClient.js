@@ -17,8 +17,10 @@ module.exports = class MongoDriver {
 
   resolve(query) {
     if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
-    if (!this[query.op]) console.log('what', query);
-    return this[query.op](query);
+    return this[query.op](query).then((result) => {
+      if (query.flags?.debug) console.log(inspect(result, { depth: null, showHidden: false, colors: true }));
+      return result;
+    });
   }
 
   findOne(query) {
@@ -131,19 +133,22 @@ module.exports = class MongoDriver {
       pointer = $agg[0].$lookup.pipeline;
     });
 
-    return $aggregate.concat({
-      $group: {
-        _id: '$_id',
-        data: { $first: '$$ROOT' },
-        [as]: { $addToSet: `$${as}` },
-      },
-    }, {
-      $replaceRoot: {
-        newRoot: {
-          $mergeObjects: ['$data', { [as]: `$${as}` }],
+    return $aggregate.concat(
+      {
+        $group: {
+          _id: '$_id',
+          data: { $first: '$$ROOT' },
+          [as]: { $addToSet: `$${as}` },
         },
       },
-    });
+      {
+        $replaceRoot: {
+          newRoot: {
+            $mergeObjects: ['$data', { [as]: `$${as}` }],
+          },
+        },
+      },
+    );
   }
 
   static convertFieldsForSort($schema, model, sort) {
@@ -180,7 +185,7 @@ module.exports = class MongoDriver {
   }
 
   static aggregateQuery(query, count = false) {
-    const { model, where, sort = {}, skip, limit, joins, after, before, first } = query;
+    const { model, select, where, sort = {}, skip, limit, joins, after, before, first } = query;
     const $aggregate = [{ $match: where }];
     const $addFields = MongoDriver.convertFieldsForRegex(query.$schema, model, where);
     const $sort = MongoDriver.convertFieldsForSort(query.$schema, model, sort);
@@ -212,9 +217,11 @@ module.exports = class MongoDriver {
       if (after) $aggregate.push({ $match: { $or: Object.entries(after).reduce((prev, [key, value]) => prev.concat({ [key]: { [$sort[key] === 1 ? '$gte' : '$lte']: value } }), []) } });
       if (before) $aggregate.push({ $match: { $or: Object.entries(before).reduce((prev, [key, value]) => prev.concat({ [key]: { [$sort[key] === 1 ? '$lte' : '$gte']: value } }), []) } });
       if (first) $aggregate.push({ $limit: first });
+
+      // Field projections
+      if (select?.length) $aggregate.push({ $project: select.reduce((prev, key) => Object.assign(prev, { [key]: 1 }), {}) });
     }
 
-    if (query.flags?.debug) console.log(joins);
     if (query.flags?.debug) console.log(inspect($aggregate, { depth: null, showHidden: false, colors: true }));
 
     return $aggregate;

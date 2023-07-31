@@ -53,16 +53,16 @@ module.exports = class Query {
   toDriver(query) {
     return this.finalize(Object.defineProperties(query.$clone(), {
       select: {
-        value: Object.values(this.#model.fields).map(field => field.name),
-      },
-      sort: {
-        value: visitModel(this.#model, query.sort, data => Object.assign(data, { key: data.field.key })),
+        value: Object.values(this.#model.fields).map(field => field.key),
       },
       input: {
-        value: visitModel(this.#model, query.input, data => Object.assign(data, { key: data.field.key })),
+        value: visitModel(this.#model, query.input, node => Object.assign(node, { key: node.field.key })),
       },
       where: {
-        value: visitModel(this.#model, query.where, data => Object.assign(data, { key: data.field.key })),
+        value: visitModel(this.#model, query.where, node => Object.assign(node, { key: node.field.key })),
+      },
+      sort: {
+        value: visitModel(this.#model, query.sort, node => Object.assign(node, { key: node.field.key })),
       },
       before: {
         get: () => {
@@ -114,6 +114,33 @@ module.exports = class Query {
     });
   }
 
+  // finalize(query) {
+  //   const { where = {}, sort = {} } = query;
+  //   const flatSort = Util.flatten(sort, { safe: true });
+  //   const $sort = Util.unflatten(Object.keys(flatSort).reduce((prev, key) => Object.assign(prev, { [key]: {} }), {}));
+  //   const data = mergeDeep($sort, where);
+  //   query.joins = [];
+  //   query.where = {};
+
+  //   visitModel(this.#model, data, (node) => {
+  //     const { field, key } = node;
+  //     const join = { ...field.join, where: {} };
+
+  //     if (field.isVirtual || (field.join && isPlainObject(node.value))) {
+  //       if (field.isVirtual && !isPlainObject(node.value)) node.value = { [join.from]: node.value };
+  //       query.joins.push(join);
+  //       return node;
+  //       // [, join.where] = traverse(field.model, node.value, joins, join.where);
+  //     } else {
+  //       node.value = Util.map(node.value, el => (isGlob(el) ? globToRegex(el) : el));
+  //       query.where[key] = node.value;
+  //     }
+  //   }, 'key');
+
+  //   query.where = this.#finalizeWhereClause(query.where);
+  //   return query;
+  // }
+
   finalize(query) {
     const self = this;
     const { where = {}, sort = {} } = query;
@@ -122,18 +149,23 @@ module.exports = class Query {
     const $target = mergeDeep($sort, where);
 
     [query.joins, query.where] = (function traverse($model, target, joins, clause) {
-      visitModel($model, target, ({ field, key, value }) => {
+      visitModel($model, target, (node) => {
+        const { field, key } = node;
         const join = { ...field.join, where: {} };
 
-        if (field.isVirtual || (field.join && isPlainObject(value))) {
-          if (field.isVirtual && !isPlainObject(value)) value = { [join.from]: value };
+        if (field.isVirtual || (field.join && isPlainObject(node.value))) {
+          if (field.isVirtual && !isPlainObject(node.value)) node.value = { [join.from]: node.value };
           joins.push(join);
-          [, join.where] = traverse(field.model, value, joins, join.where);
+          [, join.where] = traverse(field.model, node.value, joins, join.where);
+        } else if (isPlainObject(node.value)) {
+          node.value = Util.map(node.value, el => (isGlob(el) ? globToRegex(el) : el));
+          clause[key] = node.value;
+          traverse(field.model, node.value, joins, join.where);
         } else {
-          value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
-          clause[key] = value;
+          node.value = Util.map(node.value, el => (isGlob(el) ? globToRegex(el) : el));
+          clause[key] = node.value;
         }
-      }, 'key');
+      }, 'key', query.flags?.debug);
 
       return [joins, self.#finalizeWhereClause(clause)];
     }(this.#model, $target, [], {}));

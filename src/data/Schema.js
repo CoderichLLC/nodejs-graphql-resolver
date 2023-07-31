@@ -219,6 +219,8 @@ module.exports = class Schema {
       return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
     };
 
+    // console.log(schema.models.Art.fields.sections);
+
     // Return schema
     return schema;
   }

@@ -9,18 +9,17 @@
   - Transactions
   - Batches
   - Composite index keys (probably need to move these tests elsewhere)
+* Joins return a lot of data - need to determine if this is needed
 
 ---------
 
-* Deep resolve where clause vs joins...
 * Transactions
 * onDeletes
-
----------
-
 * Emitter
 * DataLoader
 * Batching
+* Connections (.resolve())?
+* GraphQL API (or is that another module?)
 
 ---------
 

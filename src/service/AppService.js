@@ -18,19 +18,23 @@ exports.isBasicObject = obj => obj != null && typeof obj === 'object' && !(Objec
 exports.isPlainObject = obj => exports.isBasicObject(obj) && !Array.isArray(obj);
 exports.mergeDeep = (...args) => DeepMerge.all(args, { isMergeableObject: obj => (exports.isPlainObject(obj) || Array.isArray(obj)), arrayMerge: smartMerge });
 
-exports.visitModel = (model, fieldMap, fn, prop = 'name') => {
-  if (fieldMap == null || !exports.isPlainObject(fieldMap)) return fieldMap;
+/**
+ * Recursively transform a data object with respect to a given model
+ */
+exports.visitModel = (model, data, fn, prop = 'name') => {
+  if (data == null || !exports.isPlainObject(data)) return data;
 
-  return Object.entries(fieldMap).reduce((prev, [key, value]) => {
+  return Object.entries(data).reduce((prev, [key, value]) => {
     // Find the field; remove it if not found
     const field = Object.values(model.fields).find(el => el[prop] === key);
     if (!field) return prev;
 
-    // Reduce value by invoking callback function
-    const data = fn({ model, field, key, value });
-    if (!data) return prev;
+    // Invoke callback function; allowing result to be modified in order to change key/value
+    const node = fn({ model, field, key, value });
+    if (!node) return prev;
 
-    const $value = field.model && exports.isBasicObject(data.value) ? Util.map(data.value, el => exports.visitModel(field.model, el, fn, prop)) : data.value;
-    return Object.assign(prev, { [data.key]: $value });
+    // Transform
+    const $value = field.model && exports.isBasicObject(node.value) ? Util.map(node.value, el => exports.visitModel(field.model, el, fn, prop)) : node.value;
+    return Object.assign(prev, { [node.key]: $value });
   }, {});
 };
