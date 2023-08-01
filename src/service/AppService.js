@@ -39,3 +39,22 @@ exports.visitModel = (model, data, fn, prop = 'name', paths = []) => {
     return Object.assign(prev, { [node.key]: $value });
   }, {});
 };
+
+exports.isJoinPath = (model, path, prop = 'name') => {
+  let foundJoin = false;
+
+  return !path.split('.').every((el, i, arr) => {
+    if (foundJoin) return false;
+    const field = model.resolvePath(arr.slice(0, i + 1).join('.'), prop);
+    foundJoin = field.isVirtual || field.isFKReference;
+    return !field.isVirtual;
+  });
+};
+
+exports.finalizeWhereClause = (obj, arrayOp = '$in') => {
+  return Object.entries(Util.flatten(obj, { safe: true })).reduce((prev, [key, value]) => {
+    const isArray = Array.isArray(value);
+    if (isArray) return Object.assign(prev, { [key]: { [arrayOp]: value } });
+    return Object.assign(prev, { [key]: value });
+  }, {});
+};

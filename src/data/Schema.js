@@ -164,6 +164,7 @@ module.exports = class Schema {
             $model.gqlScope = $model.isMarkedModel ? $model.gqlScope : '';
             $model.dalScope = $model.isMarkedModel ? $model.dalScope : '';
             $model.isEntity = Boolean($model.dalScope !== '' && !$model.isEmbedded);
+            $model.resolvePath = (path, prop = 'key') => schema.resolvePath(`${$model[prop]}.${path}`, prop);
           });
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const $field = field;
