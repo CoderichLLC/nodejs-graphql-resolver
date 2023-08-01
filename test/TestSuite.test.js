@@ -457,7 +457,7 @@ describe('TestSuite', () => {
     test('Person', async () => {
       expect(await resolver.match('Person').where({ authored: { name: 'Moby Dick' } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
       expect(await resolver.match('Person').where({ authored: { author: { name: 'ChRist??' } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').flags({ debug: true }).where({ friends: { name: 'Christie' } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
+      expect(await resolver.match('Person').where({ friends: { name: 'Christie' } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
       expect(await resolver.match('Person').where({ friends: { authored: { name: 'Health*' } } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
       expect(await resolver.match('Person').where({ friends: { authored: { name: 'Cray Cray*' } } }).many()).toMatchObject([]);
       expect(await resolver.match('Person').where({ authored: { chapters: { pages: { verbage: 'city lust' } } } }).many()).toMatchObject([]);
@@ -467,7 +467,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ authored: { chapters: { name: 'chapter*', pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
       expect(await resolver.match('Person').where({ authored: { chapters: { name: '{citizen,chap*}' } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
       expect(await resolver.match('Person').where({ authored: { chapters: { name: ['citizen', 'chap*'], pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      // expect(await resolver.match('Person').flags({ debug: true }).where({ section: { person: { name: 'richard' } } }).one()).toMatchObject({ id: christie.id, name: 'Christie' });
+      expect(await resolver.match('Person').flags({ debug: true }).where({ section: { person: { name: 'richard' } } }).one()).toMatchObject({ id: christie.id, name: 'Christie' });
 
       // Covenience counterparts
       expect(await resolver.match('Person').where({ 'authored.name': 'Moby Dick' }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);

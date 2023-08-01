@@ -111,6 +111,10 @@ module.exports = class QueryResolver extends QueryBuilder {
     }
   }
 
+  toQuery() {
+    return super.resolve();
+  }
+
   #resolveReferentialIntegrity(query) {
     const { id, transaction } = query;
     const txn = this.#resolver.transaction(transaction);

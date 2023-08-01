@@ -21,7 +21,7 @@ exports.mergeDeep = (...args) => DeepMerge.all(args, { isMergeableObject: obj =>
 /**
  * Recursively transform a data object with respect to a given model
  */
-exports.visitModel = (model, data, fn, prop = 'name') => {
+exports.visitModel = (model, data, fn, prop = 'name', paths = []) => {
   if (data == null || !exports.isPlainObject(data)) return data;
 
   return Object.entries(data).reduce((prev, [key, value]) => {
@@ -30,11 +30,12 @@ exports.visitModel = (model, data, fn, prop = 'name') => {
     if (!field) return prev;
 
     // Invoke callback function; allowing result to be modified in order to change key/value
-    const node = fn({ model, field, key, value });
+    const path = paths.concat(field[prop]);
+    const node = fn({ model, field, key, value, path });
     if (!node) return prev;
 
     // Transform
-    const $value = field.model && exports.isBasicObject(node.value) ? Util.map(node.value, el => exports.visitModel(field.model, el, fn, prop)) : node.value;
+    const $value = field.model && exports.isBasicObject(node.value) ? Util.map(node.value, el => exports.visitModel(field.model, el, fn, prop, path)) : node.value;
     return Object.assign(prev, { [node.key]: $value });
   }, {});
 };

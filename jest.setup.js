@@ -16,6 +16,7 @@ beforeAll(async () => {
   const schema = new Schema(config).decorate().parse();
   const context = { network: { id: 'networkId' } };
   await createIndexes(client, schema.indexes);
+  global.schema = schema;
   global.resolver = new Resolver({ schema, context });
   global.mongoClient = client;
 });
