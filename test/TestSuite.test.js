@@ -467,7 +467,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ authored: { chapters: { name: 'chapter*', pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
       expect(await resolver.match('Person').where({ authored: { chapters: { name: '{citizen,chap*}' } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
       expect(await resolver.match('Person').where({ authored: { chapters: { name: ['citizen', 'chap*'], pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').flags({ debug: true }).where({ section: { person: { name: 'richard' } } }).one()).toMatchObject({ id: christie.id, name: 'Christie' });
+      expect(await resolver.match('Person').where({ section: { person: { name: 'richard' } } }).one()).toMatchObject({ id: christie.id, name: 'Christie' });
 
       // Covenience counterparts
       expect(await resolver.match('Person').where({ 'authored.name': 'Moby Dick' }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
@@ -510,8 +510,8 @@ describe('TestSuite', () => {
     test('Art', async () => {
       expect(await resolver.match('Art').where({ 'sections.name': 'section1' }).one()).toMatchObject({ name: 'My Find Art' });
       expect(await resolver.match('Art').where({ 'sections.name': 'section1' }).many()).toMatchObject([{ name: 'My Find Art' }]);
-      // expect(await resolver.match('Art').flags({ debug: true }).where({ 'sections.person.name': 'rich*' }).many()).toMatchObject([{ name: 'My Find Art' }]);
-      // expect(await resolver.match('Art').where({ 'sections.person.name': 'who' }).many()).toMatchObject([]);
+      expect(await resolver.match('Art').where({ 'sections.person.name': 'rich*' }).many()).toMatchObject([{ name: 'My Find Art' }]);
+      expect(await resolver.match('Art').where({ 'sections.person.name': 'who' }).many()).toMatchObject([]);
     });
   });
 

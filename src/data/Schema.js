@@ -137,7 +137,7 @@ module.exports = class Schema {
                 break;
               }
               case 'link-by': {
-                field.fkField = value;
+                field.linkBy = value;
                 field.isVirtual = true;
                 break;
               }
@@ -194,14 +194,15 @@ module.exports = class Schema {
                 if (!$field) return prev;
 
                 // Invoke callback function; allowing result to be modified in order to change key/value
-                const run = opts.run.concat($field[opts.key]);
+                let run = opts.run.concat($field[opts.key]);
                 const path = opts.path.concat($field[opts.key]);
                 const isLeaf = isLeafValue(value);
                 const $node = fn({ model: $model, field: $field, key, value, path, run, isLeaf });
                 if (!$node) return prev;
 
                 // Recursive walk
-                const $value = opts.itemize && $field.model && isBasicObject($node.value) ? Util.map($node.value, el => $field.model.walk(el, fn, { ...opts, path, run: $field.model.isEmbedded ? run : [] })) : $node.value;
+                if (!$field.model?.isEmbedded) run = [];
+                const $value = opts.itemize && $field.model && isBasicObject($node.value) ? Util.map($node.value, el => $field.model.walk(el, fn, { ...opts, path, run })) : $node.value;
                 return Object.assign(prev, { [$node.key]: $value });
               }, {});
             };
@@ -216,14 +217,15 @@ module.exports = class Schema {
           // Field resolution comes first (unshift)
           thunks.unshift(($schema) => {
             $field.model = $schema.models[$field.type];
+            $field.linkBy = $field.linkBy || $field.model?.idField;
+            $field.linkFrom = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             if ($field.isPrimaryKey || $field.isFKReference) $field.pipelines.serialize.unshift('$id');
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
             if ($field.isFKReference) {
-              const fkModel = $field.model;
-              const to = fkModel.key;
-              const on = fkModel.fields[$field.fkField || fkModel.idField].key;
-              const from = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
+              const to = $field.model.key;
+              const on = $field.model.fields[$field.linkBy].key;
+              const from = $field.linkFrom;
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
               $field.pipelines.validate.push('ensureId'); // Absolute Last

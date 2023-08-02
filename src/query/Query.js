@@ -145,8 +145,24 @@ module.exports = class Query {
     query.joins = [];
 
     this.#model.walk(joinData, (node) => {
-      const { model, field, key, value, isLeaf } = node;
-      if (field.join) query.joins.push({ ...field.join, where: {} });
+      const { model, field, key, value, isLeaf, path, run } = node;
+
+      if (field.join) {
+        let isArray;
+        const join = { ...field.join, where: {} };
+
+        if (run.length > 1) {
+          join.from = path.reduce((prev, curr, i) => {
+            const $field = this.#model.resolvePath(path.slice(0, i + 1).join('.'), 'key');
+            if ($field.isArray) isArray = true;
+            return prev.concat($field.linkFrom);
+          }, []).join('.');
+        }
+
+        join.isArray = isArray || model.resolvePath(join.from).isArray;
+
+        query.joins.push(join);
+      }
 
       if (isLeaf) {
         const $model = field.model || model;
@@ -160,32 +176,6 @@ module.exports = class Query {
 
       return node;
     }, { key: 'key' });
-
-    // [query.joins] = (function traverse($model, target, joins, clause) {
-    //   $model?.walk(target, ({ field, key, value }) => {
-    //     const join = { ...field.join, where: {} };
-
-    //     if (field.isVirtual || (field.join && isPlainObject(value))) {
-    //       if (field.isVirtual && !isPlainObject(value)) value = { [join.from]: value };
-    //       joins.push(join);
-    //       [, join.where] = traverse(field.model, value, joins, join.where);
-    //     }
-    //     else if (isPlainObject(value)) {
-    //       // if (query.flags?.debug) console.log(value);
-    //       value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
-    //       clause[key] = value;
-    //       traverse(field.model, value, joins, join.where);
-    //     }
-    //     else {
-    //       value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
-    //       clause[key] = value;
-    //     }
-    //   }, { key: 'key' });
-
-    //   return [joins, finalizeWhereClause(clause)];
-    // }(this.#model, joinData, [], {}));
-
-    // if (query.flags?.debug) console.log(JSON.stringify(query.joins, null, 2));
 
     return query;
   }

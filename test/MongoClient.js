@@ -98,11 +98,10 @@ module.exports = class MongoDriver {
 
   static aggregateJoin(query, join, id) {
     const { as, to: from, on: foreignField, from: localField, where: $match } = join;
-    const $let = { [`${as}_${localField}`]: `$${localField}` };
-    const $field = query.$schema(`${from}.${localField}`);
-    if (!$field) console.log(join);
-    const op = $field.isArray ? '$in' : '$eq';
-    $match.$expr = { [op]: [`$${foreignField}`, `$$${as}_${localField}`] };
+    const varName = `${as}_${join.from.replaceAll('.', '_')}`;
+    const $let = { [varName]: `$${localField}` };
+    const op = join.isArray ? '$in' : '$eq';
+    $match.$expr = { [op]: [`$${foreignField}`, `$$${varName}`] };
     const pipeline = [{ $match }];
     // const $addFields = MongoDriver.convertFieldsForRegex(query.$schema, from, $match, true);
     // if (Object.keys($addFields).length) pipeline.unshift({ $addFields });
