@@ -30,10 +30,10 @@ const sorter = (a, b) => {
 };
 
 describe('TestSuite', () => {
-  let mongoClient, resolver, context;
+  let resolver, context;
 
   beforeAll(() => {
-    ({ mongoClient, resolver } = global);
+    ({ resolver } = global);
     context = resolver.getContext();
   });
 
@@ -608,18 +608,12 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').sortBy({ authored: { name: 'desc' } }).many()).toMatchObject([{ id: richard.id }, { id: christie.id }]);
       expect(await resolver.match('Person').sortBy({ authored: { chapters: { name: 'asc' } } }).many()).toMatchObject([{ id: christie.id }, { id: richard.id }]);
       expect(await resolver.match('Person').sortBy({ authored: { chapters: { name: 'desc' } } }).many()).toMatchObject([{ id: richard.id }, { id: christie.id }]);
-      // expect(await resolver.match('Person').sortBy({ authored: { chapters: { countPages: 'asc' } } }).many()).toMatchObject([{ id: richard.id }, { id: christie.id }]);
-      // expect(await resolver.match('Person').sortBy({ authored: { chapters: { countPages: 'desc' } } }).many()).toMatchObject([{ id: christie.id }, { id: richard.id }]);
-      // expect(await resolver.match('Chapter').sortBy({ countPages: 'asc', name: 'desc' }).many()).toMatchObject([{ name: 'Chapter1' }, { name: 'Chapter2' }]);
-      // expect(await resolver.match('Chapter').sortBy({ countPages: 'desc', name: 'desc' }).many()).toMatchObject([{ name: 'Chapter2' }, { name: 'Chapter1' }]);
 
       // Convenience counterparts
       expect(await resolver.match('Person').sortBy({ 'authored.name': 'asc' }).many()).toMatchObject([{ id: christie.id }, { id: richard.id }]);
       expect(await resolver.match('Person').sortBy({ 'authored.name': 'desc' }).many()).toMatchObject([{ id: richard.id }, { id: christie.id }]);
       expect(await resolver.match('Person').sortBy({ 'authored.chapters.name': 'asc' }).many()).toMatchObject([{ id: christie.id }, { id: richard.id }]);
       expect(await resolver.match('Person').sortBy({ 'authored.chapters.name': 'desc' }).many()).toMatchObject([{ id: richard.id }, { id: christie.id }]);
-      // // expect(await resolver.match('Person').sortBy({ 'authored.chapters.countPages': 'asc' }).many()).toMatchObject([{ id: richard.id }, { id: christie.id }]);
-      // // expect(await resolver.match('Person').sortBy({ 'authored.chapters.countPages': 'desc' }).many()).toMatchObject([{ id: christie.id }, { id: richard.id }]);
     });
   });
 
@@ -654,19 +648,19 @@ describe('TestSuite', () => {
   });
 
   describe('Transactions (manual)', () => {
-    // test('single txn (commit)', async () => {
-    //   const txn1 = resolver.transaction();
-    //   txn1.match('Person').save({ name: 'person1', emailAddress: 'person1@gmail.com' });
-    //   txn1.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' });
-    //   const [person1$1, person2$1] = await txn1.exec();
-    //   expect(person1$1.id).toBeDefined();
-    //   expect(person1$1.name).toBe('Person1');
-    //   expect(person2$1.id).toBeDefined();
-    //   expect(person2$1.name).toBe('Person2');
-    //   expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
-    //   await txn1.commit();
-    //   expect(await resolver.match('Person').id(person1$1.id).one()).not.toBeNull();
-    // });
+    test('single txn (commit)', async () => {
+      // const txn1 = resolver.transaction();
+      // txn1.match('Person').save({ name: 'person1', emailAddress: 'person1@gmail.com' });
+      // txn1.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' });
+      // const [person1$1, person2$1] = await txn1.exec();
+      // expect(person1$1.id).toBeDefined();
+      // expect(person1$1.name).toBe('Person1');
+      // expect(person2$1.id).toBeDefined();
+      // expect(person2$1.name).toBe('Person2');
+      // expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
+      // await txn1.commit();
+      // expect(await resolver.match('Person').id(person1$1.id).one()).not.toBeNull();
+    });
 
     // test('single txn (rollback)', async () => {
     //   const txn1 = resolver.transaction();

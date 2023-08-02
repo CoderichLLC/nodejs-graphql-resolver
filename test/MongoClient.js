@@ -2,20 +2,20 @@ const { inspect } = require('util');
 const Util = require('@coderich/util');
 const { MongoClient } = require('mongodb');
 
-const queryOptions = { collation: { locale: 'en', strength: 2 } };
-
 module.exports = class MongoDriver {
+  #config;
   #mongoClient;
   #connection;
 
   constructor(config = {}) {
-    const { uri } = config;
-    const options = { useNewUrlParser: true, useUnifiedTopology: true, ignoreUndefined: false };
-    this.#mongoClient = new MongoClient(uri, options);
+    this.#config = config;
+    this.#config.query = this.#config.query || {};
+    this.#mongoClient = new MongoClient(config.uri, { useNewUrlParser: true, useUnifiedTopology: true, ignoreUndefined: false });
     this.#connection = this.#mongoClient.connect();
   }
 
   resolve(query) {
+    query.options = Object.assign(this.#config.query, query.options);
     if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
     return this[query.op](query).then((result) => {
       if (query.flags?.debug) console.log(inspect(result, { depth: null, showHidden: false, colors: true }));
@@ -29,12 +29,12 @@ module.exports = class MongoDriver {
 
   findMany(query) {
     const $aggregate = MongoDriver.aggregateQuery(query);
-    return this.collection(query.model).aggregate($aggregate, queryOptions).then(cursor => cursor.toArray());
+    return this.collection(query.model).aggregate($aggregate, query.options).then(cursor => cursor.toArray());
   }
 
   count(query) {
     const $aggregate = MongoDriver.aggregateQuery(query, true);
-    return this.collection(query.model).aggregate($aggregate, queryOptions).then((cursor) => {
+    return this.collection(query.model).aggregate($aggregate, query.options).then((cursor) => {
       return cursor.next().then((doc) => {
         return doc ? doc.count : 0;
       });
@@ -47,7 +47,7 @@ module.exports = class MongoDriver {
 
   updateOne(query) {
     const $update = { $set: Util.flatten(query.input, { safe: true }) };
-    return this.collection(query.model).updateOne(query.where, $update, queryOptions).then(() => query.input);
+    return this.collection(query.model).updateOne(query.where, $update, query.options).then(() => query.input);
   }
 
   deleteOne(query) {

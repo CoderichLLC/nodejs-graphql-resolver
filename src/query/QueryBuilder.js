@@ -14,6 +14,7 @@ module.exports = class QueryBuilder {
     this.#query = Object.defineProperties(query, {
       id: { writable: true, enumerable: true, value: query.id },
       flags: { writable: true, enumerable: true, value: query.flags || {} },
+      options: { writable: true, enumerable: true, value: query.options || {} },
     });
 
     // Aliases
@@ -83,7 +84,7 @@ module.exports = class QueryBuilder {
   }
 
   options(options) {
-    this.#query.options = options;
+    Object.assign(this.#query.options, options);
     return this;
   }
 

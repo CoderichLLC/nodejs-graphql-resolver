@@ -100,19 +100,15 @@ module.exports = class QueryResolver extends QueryBuilder {
       }
       case 'deleteMany': {
         return this.#find($query).then((docs) => {
-          const txn = this.#resolver.transaction($query.transaction);
-          docs.forEach(doc => txn.match(this.#model.name).id(doc.id).delete());
-          return txn.run();
+          // const txn = this.#resolver.transaction($query.transaction);
+          return Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).delete()));
+          // return txn.run();
         });
       }
       default: {
         throw new Error(`Unknown operation "${operation}"`);
       }
     }
-  }
-
-  toQuery() {
-    return super.resolve();
   }
 
   #resolveReferentialIntegrity(query) {

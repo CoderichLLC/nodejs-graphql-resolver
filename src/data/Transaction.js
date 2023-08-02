@@ -1,29 +1,24 @@
 const Util = require('@coderich/util');
-const QueryResolver = require('../query/QueryResolver');
-
-/**
- * Extended class in order to defer execution until the very end
- */
-class QueryResolverTransaction extends QueryResolver {
-  resolve() { return this; }
-  exec() { return super.resolve(); }
-}
+// const QueryResolverTransaction = require('../query/QueryResolver');
+const QueryResolverTransaction = require('../query/QueryResolverTransaction');
 
 module.exports = class Transaction {
   #schema;
   #context;
   #resolver;
-  #queries;
+  #sourceMap;
 
   constructor(config) {
-    this.#queries = [];
     this.#schema = config.schema;
     this.#context = config.context;
     this.#resolver = config.resolver;
+    this.#sourceMap = new Map();
   }
 
   match(model) {
-    return Util.push(this.#queries, new QueryResolverTransaction({
+    const { source: { client } } = this.#schema.models[model];
+    if (!this.#sourceMap.has(client)) this.#sourceMap.set(client, []);
+    return Util.push(this.#sourceMap.get(client), new QueryResolverTransaction({
       resolver: this.#resolver,
       schema: this.#schema,
       context: this.#context,
@@ -35,7 +30,10 @@ module.exports = class Transaction {
    * Executes all queries in the transaction but does not commit or rollback
    */
   exec() {
-    return Promise.all(this.#queries.map(q => q.exec()));
+    return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, queries]) => {
+      // return Promise.all(queries.map(query => ))
+      return client.transaction(queries);
+    }));
   }
 
   /**

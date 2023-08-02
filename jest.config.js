@@ -5,7 +5,6 @@ module.exports = {
   testTimeout: 20000,
   testEnvironment: 'node',
   collectCoverage: false,
-  preset: '@shelf/jest-mongodb',
   collectCoverageFrom: ['src/**/**/*.js'],
   // globalSetup: '<rootDir>/test/jest.global.setup.js',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],

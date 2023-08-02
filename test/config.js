@@ -27,7 +27,10 @@ module.exports = {
         }
       },
       supports: [],
-      client: new MongoClient({ uri: 'mongodb://127.0.0.1:27000/jest' }),
+      client: new MongoClient({
+        uri: 'mongodb://127.0.0.1:27000/jest',
+        query: { collation: { locale: 'en', strength: 2 } },
+      }),
     },
   },
   decorators: {

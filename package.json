@@ -27,9 +27,9 @@
   },
   "devDependencies": {
     "@coderich/dev": "0.0.17",
-    "@shelf/jest-mongodb": "4.1.7",
     "graphql": "16.6.0",
     "mongodb": "5.2.0",
+    "mongodb-memory-server": "8.13.0",
     "validator": "13.9.0"
   },
   "peerDependencies": {
