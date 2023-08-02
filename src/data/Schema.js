@@ -1,6 +1,7 @@
 const Util = require('@coderich/util');
 const { Kind, parse, print, visit } = require('graphql');
 const { mergeGraphQLTypes } = require('@graphql-tools/merge');
+const { isLeafValue, isPlainObject, isBasicObject } = require('../service/AppService');
 
 const operations = ['Query', 'Mutation', 'Subscription'];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
@@ -164,7 +165,46 @@ module.exports = class Schema {
             $model.gqlScope = $model.isMarkedModel ? $model.gqlScope : '';
             $model.dalScope = $model.isMarkedModel ? $model.dalScope : '';
             $model.isEntity = Boolean($model.dalScope !== '' && !$model.isEmbedded);
-            $model.resolvePath = (path, prop = 'key') => schema.resolvePath(`${$model[prop]}.${path}`, prop);
+
+            // Utility functions
+            $model.resolvePath = (path, prop = 'name') => schema.resolvePath(`${$model[prop]}.${path}`, prop);
+
+            $model.isJoinPath = (path, prop = 'name') => {
+              let foundJoin = false;
+              return !path.split('.').every((el, i, arr) => {
+                if (foundJoin) return false;
+                const $field = $model.resolvePath(arr.slice(0, i + 1).join('.'), prop);
+                foundJoin = $field.isVirtual || $field.isFKReference;
+                return !$field.isVirtual;
+              });
+            };
+
+            $model.walk = (data, fn, opts = {}) => {
+              if (data == null || !isPlainObject(data)) return data;
+
+              // Options
+              opts.key = opts.key ?? 'name';
+              opts.run = opts.run ?? [];
+              opts.path = opts.path ?? [];
+              opts.itemize = opts.itemize ?? true;
+
+              return Object.entries(data).reduce((prev, [key, value]) => {
+                // Find the field; remove it if not found
+                const $field = Object.values($model.fields).find(el => el[opts.key] === key);
+                if (!$field) return prev;
+
+                // Invoke callback function; allowing result to be modified in order to change key/value
+                const run = opts.run.concat($field[opts.key]);
+                const path = opts.path.concat($field[opts.key]);
+                const isLeaf = isLeafValue(value);
+                const $node = fn({ model: $model, field: $field, key, value, path, run, isLeaf });
+                if (!$node) return prev;
+
+                // Recursive walk
+                const $value = opts.itemize && $field.model && isBasicObject($node.value) ? Util.map($node.value, el => $field.model.walk(el, fn, { ...opts, path, run: $field.model.isEmbedded ? run : [] })) : $node.value;
+                return Object.assign(prev, { [$node.key]: $value });
+              }, {});
+            };
           });
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const $field = field;

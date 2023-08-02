@@ -14,42 +14,11 @@ exports.hashObject = (obj) => {
 };
 
 const smartMerge = (target, source, options) => source;
+exports.isScalarValue = value => typeof value !== 'object' && typeof value !== 'function';
+exports.isLeafValue = value => Array.isArray(value) || value instanceof Date || ObjectId.isValid(value) || exports.isScalarValue(value);
 exports.isBasicObject = obj => obj != null && typeof obj === 'object' && !(ObjectId.isValid(obj)) && !(obj instanceof Date) && typeof (obj.then) !== 'function';
 exports.isPlainObject = obj => exports.isBasicObject(obj) && !Array.isArray(obj);
 exports.mergeDeep = (...args) => DeepMerge.all(args, { isMergeableObject: obj => (exports.isPlainObject(obj) || Array.isArray(obj)), arrayMerge: smartMerge });
-
-/**
- * Recursively transform a data object with respect to a given model
- */
-exports.visitModel = (model, data, fn, prop = 'name', paths = []) => {
-  if (data == null || !exports.isPlainObject(data)) return data;
-
-  return Object.entries(data).reduce((prev, [key, value]) => {
-    // Find the field; remove it if not found
-    const field = Object.values(model.fields).find(el => el[prop] === key);
-    if (!field) return prev;
-
-    // Invoke callback function; allowing result to be modified in order to change key/value
-    const path = paths.concat(field[prop]);
-    const node = fn({ model, field, key, value, path });
-    if (!node) return prev;
-
-    // Transform
-    const $value = field.model && exports.isBasicObject(node.value) ? Util.map(node.value, el => exports.visitModel(field.model, el, fn, prop, path)) : node.value;
-    return Object.assign(prev, { [node.key]: $value });
-  }, {});
-};
-
-exports.isJoinPath = (model, path, prop = 'name') => {
-  let foundJoin = false;
-
-  return !path.split('.').every((el, i, arr) => {
-    if (foundJoin) return false;
-    const field = model.resolvePath(arr.slice(0, i + 1).join('.'), prop);
-    foundJoin = field.isVirtual || field.isFKReference;
-    return !field.isVirtual;
-  });
-};
 
 exports.finalizeWhereClause = (obj, arrayOp = '$in') => {
   return Object.entries(Util.flatten(obj, { safe: true })).reduce((prev, [key, value]) => {

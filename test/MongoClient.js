@@ -100,6 +100,7 @@ module.exports = class MongoDriver {
     const { as, to: from, on: foreignField, from: localField, where: $match } = join;
     const $let = { [`${as}_${localField}`]: `$${localField}` };
     const $field = query.$schema(`${from}.${localField}`);
+    if (!$field) console.log(join);
     const op = $field.isArray ? '$in' : '$eq';
     $match.$expr = { [op]: [`$${foreignField}`, `$$${as}_${localField}`] };
     const pipeline = [{ $match }];
@@ -218,7 +219,7 @@ module.exports = class MongoDriver {
       if (first) $aggregate.push({ $limit: first });
 
       // Field projections
-      if (select?.length) $aggregate.push({ $project: select.reduce((prev, key) => Object.assign(prev, { [key]: 1 }), {}) });
+      // if (select?.length) $aggregate.push({ $project: select.reduce((prev, key) => Object.assign(prev, { [key]: 1 }), {}) });
     }
 
     if (query.flags?.debug) console.log(inspect($aggregate, { depth: null, showHidden: false, colors: true }));
