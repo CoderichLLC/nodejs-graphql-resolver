@@ -2,7 +2,7 @@ const get = require('lodash.get');
 const merge = require('lodash.merge');
 const Util = require('@coderich/util');
 const Pipeline = require('../data/Pipeline');
-const { isPlainObject, isGlob, globToRegex, mergeDeep, finalizeWhereClause } = require('../service/AppService');
+const { isGlob, globToRegex, mergeDeep, finalizeWhereClause } = require('../service/AppService');
 
 module.exports = class Query {
   #config;
@@ -35,25 +35,27 @@ module.exports = class Query {
   }
 
   async toObject() {
-    const query = this.#query;
-    const clone = this.clone().#query;
-    const { crud, input, where, sort } = query;
+    const query = this.clone().#query;
+    const { crud, input, where, sort, isNative } = query;
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[crud] || [];
 
-    [clone.input, clone.where, clone.sort] = await Promise.all([
-      this.transform(query, 'input', this.#model, Util.unflatten(input), ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el])),
-      this.transform(query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])),
-      this.transform(query, 'sort', this.#model, Util.unflatten(sort), ['castValue'].map(el => Pipeline[el])),
+    [query.input, query.where, query.sort] = await Promise.all([
+      this.transform(this.#query, 'input', this.#model, Util.unflatten(input), ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el])),
+      isNative ? where : this.transform(this.#query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])),
+      this.transform(this.#query, 'sort', this.#model, Util.unflatten(sort), ['castValue'].map(el => Pipeline[el])),
     ]);
 
-    return clone;
+    return query;
   }
 
   toDriver(query) {
-    const clone = query.$clone();
+    const { where, isNative } = query;
 
-    return this.finalize(Object.defineProperties(clone, {
+    const $query = Object.defineProperties(query.$clone(), {
+      isNative: {
+        value: isNative,
+      },
       select: {
         value: Object.values(this.#model.fields).map(field => field.key),
       },
@@ -61,7 +63,7 @@ module.exports = class Query {
         value: this.#model.walk(query.input, node => Object.assign(node, { key: node.field.key })),
       },
       where: {
-        value: this.#model.walk(query.where, node => Object.assign(node, { key: node.field.key })),
+        value: isNative ? where : this.#model.walk(query.where, node => Object.assign(node, { key: node.field.key })),
       },
       sort: {
         value: this.#model.walk(query.sort, node => Object.assign(node, { key: node.field.key })),
@@ -81,7 +83,9 @@ module.exports = class Query {
       $schema: {
         value: this.#schema.resolvePath,
       },
-    }));
+    });
+
+    return isNative ? $query : this.finalize($query);
   }
 
   async transform(query, target, model, data, transformers = [], paths = []) {

@@ -9,7 +9,6 @@
   - Transactions
   - Batches
   - Composite index keys (probably need to move these tests elsewhere)
-* Joins return a lot of data - need to determine if this is needed
 
 ---------
 

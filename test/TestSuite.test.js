@@ -766,26 +766,18 @@ describe('TestSuite', () => {
     });
   });
 
-  // describe('Native Queries', () => {
-  //   test('get', async () => {
-  //     switch (driver) {
-  //       case 'mongo': {
-  //         expect(await resolver.match('Person').native({ name: 'Christie' }).one()).toMatchObject({ id: christie.id, name: 'Christie', emailAddress: 'christie@gmail.com' }); // case insensitive
-  //         expect(await resolver.match('Person').native({ name: 'christie' }).one()).toMatchObject({ id: christie.id, name: 'Christie', emailAddress: 'christie@gmail.com' });
-  //         expect(await resolver.match('Person').native({ name: 'Christie' }).count()).toBe(1); // case insensitive
-  //         expect(await resolver.match('Person').native({ name: 'christie' }).count()).toBe(1);
-  //         const count = await resolver.match('Person').native({ name: { $ne: 'chard' } }).count();
-  //         expect(count).toBeGreaterThanOrEqual(1);
-  //         expect(await resolver.match('Person').native({ name: { $ne: 'christie' } }).count()).toBe(count - 1);
-  //         expect(await resolver.match('Person').native({ email_address: 'christie@gmail.com' }).count()).toBe(1);
-  //         break;
-  //       }
-  //       default: {
-  //         break;
-  //       }
-  //     }
-  //   });
-  // });
+  describe('Native Queries', () => {
+    test('get', async () => {
+      expect(await resolver.match('Person').native({ name: 'Christie' }).one()).toMatchObject({ id: christie.id, name: 'Christie', emailAddress: 'christie@gmail.com' }); // case insensitive
+      expect(await resolver.match('Person').native({ name: 'christie' }).one()).toMatchObject({ id: christie.id, name: 'Christie', emailAddress: 'christie@gmail.com' });
+      expect(await resolver.match('Person').native({ name: 'Christie' }).count()).toBe(1); // case insensitive
+      expect(await resolver.match('Person').native({ name: 'christie' }).count()).toBe(1);
+      const count = await resolver.match('Person').native({ name: { $ne: 'chard' } }).count();
+      expect(count).toBeGreaterThanOrEqual(1);
+      expect(await resolver.match('Person').native({ name: { $ne: 'christie' } }).count()).toBe(count - 1);
+      expect(await resolver.match('Person').native({ email_address: 'christie@gmail.com' }).count()).toBe(1);
+    });
+  });
 
   describe('Raw Queries', () => {
     test('get', async () => {

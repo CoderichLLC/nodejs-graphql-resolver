@@ -23,14 +23,21 @@ module.exports = class QueryBuilder {
   }
 
   id(id) {
-    this.#propCheck('id', 'where', 'sort', 'skip', 'limit', 'before', 'after', 'first', 'last');
+    this.#propCheck('id', 'where', 'native', 'sort', 'skip', 'limit', 'before', 'after', 'first', 'last');
     this.#query.id = id;
     this.#query.where = { id };
     return this;
   }
 
+  native(clause) {
+    this.#propCheck('native', 'id', 'where');
+    this.#query.isNative = true;
+    this.#query.where = clause;
+    return this;
+  }
+
   where(clause) {
-    this.#propCheck('where', 'id');
+    this.#propCheck('where', 'id', 'native');
     this.#query.where = clause;
     return this;
   }

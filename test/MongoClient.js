@@ -184,9 +184,9 @@ module.exports = class MongoDriver {
   }
 
   static aggregateQuery(query, count = false) {
-    const { model, select, where, sort = {}, skip, limit, joins, after, before, first } = query;
+    const { model, select, where, sort = {}, skip, limit, joins, after, before, first, isNative } = query;
     const $aggregate = [{ $match: where }];
-    const $addFields = MongoDriver.convertFieldsForRegex(query.$schema, model, where);
+    const $addFields = isNative ? {} : MongoDriver.convertFieldsForRegex(query.$schema, model, where);
     const $sort = MongoDriver.convertFieldsForSort(query.$schema, model, sort);
 
     if (Object.keys($addFields).length) $aggregate.unshift({ $addFields });
@@ -218,7 +218,7 @@ module.exports = class MongoDriver {
       if (first) $aggregate.push({ $limit: first });
 
       // Field projections
-      // if (select?.length) $aggregate.push({ $project: select.reduce((prev, key) => Object.assign(prev, { [key]: 1 }), {}) });
+      if (select?.length) $aggregate.push({ $project: select.reduce((prev, key) => Object.assign(prev, { [key]: 1 }), {}) });
     }
 
     if (query.flags?.debug) console.log(inspect($aggregate, { depth: null, showHidden: false, colors: true }));
