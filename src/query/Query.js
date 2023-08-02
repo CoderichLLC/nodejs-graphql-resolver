@@ -121,27 +121,39 @@ module.exports = class Query {
     const flatSort = Util.flatten(sort, { safe: true });
     const flatWhere = Util.flatten(where, { safe: true });
     const $sort = Util.unflatten(Object.keys(flatSort).reduce((prev, key) => Object.assign(prev, { [key]: {} }), {}));
-    const $target = mergeDeep($sort, where);
 
+    //
+    query.sort = visitModel(this.#model, sort, (node) => {
+      if (node.field.isVirtual || node.field.isFKReference) node.key = `join_${node.field.model.key}`;
+      return node;
+    }, 'key');
+
+    // Reconstruct the where clause by pulling out anything that requires a join
     query.where = finalizeWhereClause(Util.unflatten(Object.entries(flatWhere).reduce((prev, [key, value]) => {
       if (isJoinPath(this.#model, key, 'key')) return prev;
       value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
       return Object.assign(prev, { [key]: value });
     }, {}), { safe: true }));
 
-    [query.joins] = (function traverse($model, target, joins, clause, paths = []) {
+    // Determine what join data is needed (derived from where + sort)
+    const joinData = mergeDeep($sort, Util.unflatten(Object.entries(flatWhere).reduce((prev, [key, value]) => {
+      if (isJoinPath(this.#model, key, 'key')) return Object.assign(prev, { [key]: value });
+      return prev;
+    }, {}), { safe: true }));
+
+    // Construct joins
+    [query.joins] = (function traverse($model, target, joins, clause) {
       visitModel($model, target, ({ field, key, value }) => {
-        const path = paths.concat(field.key);
         const join = { ...field.join, where: {} };
 
         if (field.isVirtual || (field.join && isPlainObject(value))) {
           if (field.isVirtual && !isPlainObject(value)) value = { [join.from]: value };
           joins.push(join);
-          [, join.where] = traverse(field.model, value, joins, join.where, path);
+          [, join.where] = traverse(field.model, value, joins, join.where);
         } else if (isPlainObject(value)) {
           value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
           clause[key] = value;
-          traverse(field.model, value, joins, join.where, path);
+          traverse(field.model, value, joins, join.where);
         } else {
           value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
           clause[key] = value;
@@ -149,7 +161,7 @@ module.exports = class Query {
       }, 'key');
 
       return [joins, finalizeWhereClause(clause)];
-    }(this.#model, $target, [], {}));
+    }(this.#model, joinData, [], {}));
 
     return query;
   }

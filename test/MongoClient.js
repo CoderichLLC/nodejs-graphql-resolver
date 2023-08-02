@@ -97,8 +97,7 @@ module.exports = class MongoDriver {
   }
 
   static aggregateJoin(query, join, id) {
-    const { to: from, on: foreignField, from: localField, where: $match } = join;
-    const as = join.key;
+    const { as, to: from, on: foreignField, from: localField, where: $match } = join;
     const $let = { [`${as}_${localField}`]: `$${localField}` };
     const $field = query.$schema(`${from}.${localField}`);
     const op = $field.isArray ? '$in' : '$eq';
@@ -123,8 +122,8 @@ module.exports = class MongoDriver {
 
   static aggregateJoins(query, joins = []) {
     const [join, ...pipeline] = joins;
+    const { as } = join;
     const $aggregate = MongoDriver.aggregateJoin(query, join, 0);
-    const as = join.key;
     let pointer = $aggregate[0].$lookup.pipeline;
 
     pipeline.forEach((j, i) => {

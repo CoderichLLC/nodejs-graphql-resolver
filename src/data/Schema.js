@@ -184,7 +184,8 @@ module.exports = class Schema {
               const to = fkModel.key;
               const on = fkModel.fields[$field.fkField || fkModel.idField].key;
               const from = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
-              $field.join = { key: $field.key, to, on, from };
+              const as = `join_${to}`;
+              $field.join = { to, on, from, as };
               $field.pipelines.validate.push('ensureId'); // Absolute Last
             }
           });
