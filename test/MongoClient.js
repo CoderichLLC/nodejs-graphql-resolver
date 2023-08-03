@@ -85,10 +85,7 @@ module.exports = class MongoDriver {
 
       // Because we allow queries in parallel we want to prevent calling this more than once
       const close = (operator) => {
-        if (!closed) {
-          closed = true;
-          return session[operator]().finally(() => session.endSession());
-        }
+        if (!closed) return (closed = true && session[operator]().finally(() => session.endSession()));
         return Promise.resolve();
       };
 
