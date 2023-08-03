@@ -29,8 +29,8 @@ module.exports = {
       supports: [],
       client: new MongoClient({
         uri: 'mongodb://127.0.0.1:27000/?replicaSet=testset',
-        options: { useNewUrlParser: true, useUnifiedTopology: true, ignoreUndefined: false, minPoolSize: 5 },
-        query: { collation: { locale: 'en', strength: 2 } },
+        options: { useNewUrlParser: true, useUnifiedTopology: true, ignoreUndefined: false },
+        query: { collation: { locale: 'en', strength: 2 }, readPreference: 'primary' },
         session: { retryWrites: true, readPreference: { mode: 'primary' }, readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } },
         transaction: { readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } },
       }),

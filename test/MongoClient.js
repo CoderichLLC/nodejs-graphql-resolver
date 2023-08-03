@@ -16,9 +16,9 @@ module.exports = class MongoDriver {
 
   resolve(query) {
     query.options = { ...this.#config.query, ...query.options };
-    if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
+    if (query.flags?.debug) console.log(inspect(query, { showHidden: false, colors: true }));
     return this[query.op](query).then((result) => {
-      if (query.flags?.debug) console.log(inspect(result, { depth: null, showHidden: false, colors: true }));
+      if (query.flags?.debug) console.log(inspect(result, { showHidden: false, colors: true }));
       return result;
     });
   }
@@ -85,7 +85,10 @@ module.exports = class MongoDriver {
 
       // Because we allow queries in parallel we want to prevent calling this more than once
       const close = (operator) => {
-        if (!closed) return (closed = true && session[operator]().finally(() => session.endSession()));
+        if (!closed) {
+          closed = true;
+          return session[operator]().finally(() => session.endSession());
+        }
         return Promise.resolve();
       };
 

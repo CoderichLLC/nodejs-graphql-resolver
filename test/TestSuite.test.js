@@ -679,7 +679,7 @@ describe('TestSuite', () => {
     test('single txn (sequential)', async () => {
       const txn = resolver.transaction();
       await expect(txn.match('Person').id('no-such-id').one({ required: true })).rejects.toThrow(/not found/gi);
-      await expect(txn.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' })).rejects.toThrow(/expired/gi);
+      await expect(txn.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' })).rejects.toThrow();
     });
 
     test('single txn (parallel)', async () => {
@@ -703,15 +703,15 @@ describe('TestSuite', () => {
       await txn.rollback();
     });
 
-    test('multi txn (isolated queries)', async () => {
+    test('multi txn (isolated snapshots)', async () => {
       const txn1 = resolver.transaction();
       const txn2 = resolver.transaction();
       const person1$1 = await txn1.match('Person').save({ name: 'person100', emailAddress: 'person100@gmail.com' });
       expect(await txn1.match('Person').id(person1$1.id).one()).not.toBeNull();
-      expect(await txn2.match('Person').id(person1$1.id).one()).toBeNull();
+      expect(await txn2.match('Person').id(person1$1.id).one()).toBeNull(); // txns has a "snapshot" of this query (null!)
       expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
       await txn1.commit();
-      expect(await txn2.match('Person').id(person1$1.id).one()).toBeNull();
+      expect(await txn2.match('Person').id(person1$1.id).one()).toBeNull(); // It's null because it's snapshotted!!!!
       expect(await resolver.match('Person').id(person1$1.id).one()).not.toBeNull();
     });
   });

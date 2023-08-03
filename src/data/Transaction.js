@@ -5,7 +5,6 @@ module.exports = class Transaction {
   #context;
   #resolver;
   #sourceMap;
-  // #transaction;
 
   constructor(config) {
     this.#schema = config.schema;
