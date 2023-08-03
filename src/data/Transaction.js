@@ -1,5 +1,4 @@
 const Util = require('@coderich/util');
-// const QueryResolverTransaction = require('../query/QueryResolver');
 const QueryResolverTransaction = require('../query/QueryResolverTransaction');
 
 module.exports = class Transaction {
@@ -7,6 +6,7 @@ module.exports = class Transaction {
   #context;
   #resolver;
   #sourceMap;
+  // #transaction;
 
   constructor(config) {
     this.#schema = config.schema;
@@ -17,29 +17,60 @@ module.exports = class Transaction {
 
   match(model) {
     const { source: { client } } = this.#schema.models[model];
-    if (!this.#sourceMap.has(client)) this.#sourceMap.set(client, []);
-    return Util.push(this.#sourceMap.get(client), new QueryResolverTransaction({
+
+    if (!this.#sourceMap.has(client)) {
+      this.#sourceMap.set(client, {
+        transaction: client.transaction(),
+        queries: [],
+      });
+    }
+
+    const { transaction, queries } = this.#sourceMap.get(client);
+
+    return Util.push(queries, new QueryResolverTransaction({
       resolver: this.#resolver,
       schema: this.#schema,
       context: this.#context,
+      transaction,
       query: { model: `${model}` },
     }));
   }
 
-  /**
-   * Executes all queries in the transaction but does not commit or rollback
-   */
-  exec() {
-    return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, queries]) => {
-      // return Promise.all(queries.map(query => ))
-      return client.transaction(queries);
+  commit() {
+    return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, { transaction }]) => {
+      return transaction.then(({ commit }) => commit());
     }));
   }
 
-  /**
-   * Calls exec() and auto commit/rollback
-   */
-  run() {
-    return this.exec();
+  rollback() {
+    return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, { transaction }]) => {
+      return transaction.then(({ rollback }) => rollback());
+    }));
   }
+
+  // /**
+  //  * Executes all queries in the transaction but does not commit or rollback
+  //  */
+  // exec() {
+  //   // this.#transaction = Promise.all(Array.from(this.#sourceMap.entries()).map(([client, queries]) => {
+  //   //   return client.transaction(queries);
+  //   // }));
+  //   // return this.#transaction;
+  // }
+
+  // /**
+  //  * Calls exec() and auto commit/rollback
+  //  */
+  // run() {
+  //   return this.exec();
+  // }
+
+  // commit() {
+  //   console.log('lets commit');
+
+  //   return this.#transaction.then((rs) => {
+  //     console.log(rs);
+  //     return rs.$commit();
+  //   });
+  // }
 };

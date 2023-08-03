@@ -15,7 +15,7 @@ module.exports = class MongoDriver {
   }
 
   resolve(query) {
-    query.options = Object.assign(this.#config.query, query.options);
+    query.options = { ...this.#config.query, ...query.options };
     if (query.flags?.debug) console.log(inspect(query, { depth: null, showHidden: false, colors: true }));
     return this[query.op](query).then((result) => {
       if (query.flags?.debug) console.log(inspect(result, { depth: null, showHidden: false, colors: true }));
@@ -24,7 +24,7 @@ module.exports = class MongoDriver {
   }
 
   findOne(query) {
-    return this.findMany(Object.assign(query, { first: 1 })).then(([doc]) => doc);
+    return this.findMany(Object.assign(query, { first: 1 }), query.options).then(([doc]) => doc);
   }
 
   findMany(query) {
@@ -42,7 +42,8 @@ module.exports = class MongoDriver {
   }
 
   createOne(query) {
-    return this.collection(query.model).insertOne(query.input).then(result => ({ ...query.input, _id: result.insertedId }));
+    delete query.options.collation;
+    return this.collection(query.model).insertOne(query.input, query.options).then(result => ({ ...query.input, _id: result.insertedId }));
   }
 
   updateOne(query) {
@@ -51,11 +52,11 @@ module.exports = class MongoDriver {
   }
 
   deleteOne(query) {
-    return this.collection(query.model).deleteOne(query.where);
+    return this.collection(query.model).deleteOne(query.where, query.options);
   }
 
   deleteMany(query) {
-    return this.collection(query.model).deleteMany(query.where);
+    return this.collection(query.model).deleteMany(query.where, query.options);
   }
 
   collection(name) {
@@ -76,25 +77,37 @@ module.exports = class MongoDriver {
     return this.collection(name);
   }
 
-  transaction(ops) {
-    return Util.promiseRetry(() => {
-      // Create session and start transaction
-      return this.#connection.then(client => client.startSession({ readPreference: { mode: 'primary' } })).then((session) => {
-        session.startTransaction({ readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } });
-        const close = () => { session.endSession(); };
+  transaction() {
+    return this.#connection.then((client) => {
+      const session = client.startSession(this.#config.session);
+      session.startTransaction(this.#config.transaction);
 
-        // Execute each operation with session
-        return Promise.all(ops.map(op => op.exec({ session }))).then((results) => {
-          results.$commit = () => session.commitTransaction().then(close);
-          results.$rollback = () => session.abortTransaction().then(close);
-          return results;
-        }).catch((e) => {
-          close();
-          throw e;
-        });
+      return Object.defineProperties({}, {
+        session: { value: session, enumerable: true },
+        commit: { value: () => session.commitTransaction().finally(() => session.endSession()) },
+        rollback: { value: () => session.abortTransaction().finally(() => session.endSession()) },
       });
-    }, 200, 5, e => e.errorLabels && e.errorLabels.indexOf('TransientTransactionError') > -1);
+    });
   }
+  // transaction(ops) {
+  //   return Util.promiseRetry(() => {
+  //     // Create session and start transaction
+  //     return this.#connection.then(client => client.startSession({ readPreference: { mode: 'primary' } })).then((session) => {
+  //       session.startTransaction({ readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } });
+  //       const close = () => { session.endSession(); };
+
+  //       // Execute each operation with session
+  //       return Promise.all(ops.map(op => op.exec({ session }))).then((results) => {
+  //         results.$commit = () => session.commitTransaction().then(close);
+  //         results.$rollback = () => session.abortTransaction().then(close);
+  //         return results;
+  //       }).catch((e) => {
+  //         close();
+  //         throw e;
+  //       });
+  //     });
+  //   }, 200, 5, e => e.errorLabels && e.errorLabels.indexOf('TransientTransactionError') > -1);
+  // }
 
   static aggregateJoin(query, join, id) {
     const { as, to: from, on: foreignField, from: localField, where: $match } = join;

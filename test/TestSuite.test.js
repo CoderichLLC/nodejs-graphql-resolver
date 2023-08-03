@@ -1,4 +1,5 @@
 const { ObjectId } = require('mongodb');
+const Util = require('@coderich/util');
 
 let richard;
 let christie;
@@ -649,92 +650,95 @@ describe('TestSuite', () => {
 
   describe('Transactions (manual)', () => {
     test('single txn (commit)', async () => {
-      // const txn1 = resolver.transaction();
-      // txn1.match('Person').save({ name: 'person1', emailAddress: 'person1@gmail.com' });
-      // txn1.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' });
-      // const [person1$1, person2$1] = await txn1.exec();
-      // expect(person1$1.id).toBeDefined();
-      // expect(person1$1.name).toBe('Person1');
-      // expect(person2$1.id).toBeDefined();
-      // expect(person2$1.name).toBe('Person2');
-      // expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
-      // await txn1.commit();
-      // expect(await resolver.match('Person').id(person1$1.id).one()).not.toBeNull();
+      const txn = resolver.transaction();
+
+      const person1$1 = await txn.match('Person').save({ name: 'person1', emailAddress: 'person1@gmail.com' });
+      expect(person1$1.id).toBeDefined();
+      expect(person1$1.name).toBe('Person1');
+
+      const person2$1 = await txn.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' });
+      expect(person2$1.id).toBeDefined();
+      expect(person2$1.name).toBe('Person2');
+
+      expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
+      await txn.commit();
+      expect(await resolver.match('Person').id(person1$1.id).one()).not.toBeNull();
     });
 
-    // test('single txn (rollback)', async () => {
-    //   const txn1 = resolver.transaction();
-    //   txn1.match('Person').save({ name: 'person3', emailAddress: 'person3@gmail.com' });
-    //   txn1.match('Person').save({ name: 'person4', emailAddress: 'person4@gmail.com' });
-    //   const [person1$1, person2$1] = await txn1.exec();
-    //   expect(person1$1.name).toBe('Person3');
-    //   expect(person2$1.name).toBe('Person4');
-    //   expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
-    //   await txn1.rollback();
-    //   expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
-    // });
+    test('single txn (rollback)', async () => {
+      const txn = resolver.transaction();
+      const person1$1 = await txn.match('Person').save({ name: 'person3', emailAddress: 'person3@gmail.com' });
+      const person2$1 = await txn.match('Person').save({ name: 'person4', emailAddress: 'person4@gmail.com' });
+      expect(person1$1.name).toBe('Person3');
+      expect(person2$1.name).toBe('Person4');
+      expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
+      await txn.rollback();
+      expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
+    });
 
-    // test('single txn (duplicate key)', async () => {
-    //   const txn1 = resolver.transaction();
-    //   txn1.match('Person').save({ name: 'person1', emailAddress: 'person1@gmail.com' });
-    //   txn1.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' });
-    //   await expect(txn1.exec()).rejects.toThrow(/duplicate/gi);
-    // });
+    test('single txn (duplicate key)', async () => {
+      const txn = resolver.transaction();
+      expect(Promise.all([
+        txn.match('Person').save({ name: 'person1', emailAddress: 'person1@gmail.com' }),
+        txn.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' }),
+      ])).rejects.toThrow(/duplicate/gi);
+    });
 
-    // test('single-txn (read & write)', async () => {
-    //   const txn = resolver.transaction();
-    //   txn.match('Person').save({ name: 'write1', emailAddress: 'write1@gmail.com' });
-    //   txn.match('Person').id(richard.id).one();
-    //   txn.match('Person').save({ name: 'write2', emailAddress: 'write2@gmail.com' });
-    //   const [person1, richie, person2] = await txn.exec();
-    //   expect(person1.name).toBe('Write1');
-    //   expect(richie.name).toBe('Richard');
-    //   expect(person2.name).toBe('Write2');
-    //   await txn.rollback();
-    // });
+    test('single-txn (read & write)', async () => {
+      const txn = resolver.transaction();
+      const [person1, richie, person2] = await Promise.all([
+        txn.match('Person').save({ name: 'write1', emailAddress: 'write1@gmail.com' }),
+        txn.match('Person').id(richard.id).one(),
+        txn.match('Person').save({ name: 'write2', emailAddress: 'write2@gmail.com' }),
+      ]);
+      expect(person1.name).toBe('Write1');
+      expect(richie.name).toBe('Richard');
+      expect(person2.name).toBe('Write2');
+      await txn.rollback();
+    });
   });
 
-  // describe('Transactions (manual-with-auto)', () => {
-  //   test('multi-txn (duplicate key with rollback)', async () => {
-  //     const txn1 = resolver.transaction();
-  //     const txn2 = resolver.transaction();
-  //     txn1.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
-  //     txn2.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
+  describe('Transactions (manual-with-auto)', () => {
+    // test('multi-txn (duplicate key with rollback)', async () => {
+    //   const txn1 = resolver.transaction();
+    //   const txn2 = resolver.transaction();
+    //   txn1.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
+    //   txn2.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
 
-  //     await txn1.exec().then((results) => {
-  //       const [[person1, person2]] = results;
-  //       expect(person1.name).toBe('Person10');
-  //       expect(person2.name).toBe('Person11');
-  //       return txn1.rollback();
-  //     });
+    //   await txn1.exec().then((results) => {
+    //     const [[person1, person2]] = results;
+    //     expect(person1.name).toBe('Person10');
+    //     expect(person2.name).toBe('Person11');
+    //     return txn1.rollback();
+    //   });
 
-  //     await timeout(100);
+    //   await Util.timeout(100);
 
-  //     await txn2.exec().then((results) => {
-  //       const [[person1, person2]] = results;
-  //       expect(person1.name).toBe('Person10');
-  //       expect(person2.name).toBe('Person11');
-  //       return txn2.rollback();
-  //     });
-  //   });
+    //   await txn2.exec().then((results) => {
+    //     const [[person1, person2]] = results;
+    //     expect(person1.name).toBe('Person10');
+    //     expect(person2.name).toBe('Person11');
+    //     return txn2.rollback();
+    //   });
+    // });
 
-  //   test('multi-txn (duplicate key with commit)', async () => {
-  //     const txn1 = resolver.transaction();
-  //     const txn2 = resolver.transaction();
-  //     txn1.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
-  //     txn2.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
+    // test('multi-txn (duplicate key with commit)', async () => {
+    //   const txn1 = resolver.transaction();
+    //   const txn2 = resolver.transaction();
+    //   txn1.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
+    //   txn2.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
 
-  //     txn1.exec().then((results) => {
-  //       const [[person1, person2]] = results;
-  //       expect(person1.name).toBe('Person10');
-  //       expect(person2.name).toBe('Person11');
-  //       txn1.commit();
-  //     });
+    //   txn1.exec().then((results) => {
+    //     const [[person1, person2]] = results;
+    //     expect(person1.name).toBe('Person10');
+    //     expect(person2.name).toBe('Person11');
+    //     txn1.commit();
+    //   });
 
-  //     await timeout(100);
-  //     await expect(txn2.exec()).rejects.toThrow(/duplicate/gi);
-  //   });
-  // });
+    //   await timeout(100);
+    //   await expect(txn2.exec()).rejects.toThrow(/duplicate/gi);
+    // });
+  });
 
   describe('Referential Integrity', () => {
     test('remove', async () => {

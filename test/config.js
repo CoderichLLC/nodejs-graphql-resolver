@@ -30,6 +30,8 @@ module.exports = {
       client: new MongoClient({
         uri: 'mongodb://127.0.0.1:27000/jest',
         query: { collation: { locale: 'en', strength: 2 } },
+        session: { readPreference: { mode: 'primary' } },
+        transaction: { readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } },
       }),
     },
   },

@@ -1,15 +1,17 @@
 const QueryResolver = require('./QueryResolver');
 
-/**
- * Extended class in order to defer execution until the very end
- */
 module.exports = class QueryResolverTransaction extends QueryResolver {
-  resolve() {
-    return this;
+  #config;
+
+  constructor(config) {
+    super(config);
+    this.#config = config;
   }
 
-  exec(options) {
-    super.options(options);
-    return super.resolve();
+  resolve() {
+    return this.#config.transaction.then((transaction) => {
+      super.options(transaction);
+      return super.resolve();
+    });
   }
 };
