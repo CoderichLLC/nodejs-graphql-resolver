@@ -676,12 +676,18 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
     });
 
-    test('single txn (duplicate key)', async () => {
+    test('single txn (sequential)', async () => {
       const txn = resolver.transaction();
-      expect(Promise.all([
+      await expect(txn.match('Person').id('no-such-id').one({ required: true })).rejects.toThrow(/not found/gi);
+      await expect(txn.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' })).rejects.toThrow(/expired/gi);
+    });
+
+    test('single txn (parallel)', async () => {
+      const txn = resolver.transaction();
+      await expect(Promise.all([
         txn.match('Person').save({ name: 'person1', emailAddress: 'person1@gmail.com' }),
         txn.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' }),
-      ])).rejects.toThrow(/duplicate/gi);
+      ])).rejects.toThrow(); // There's no way to know the error when called in parallel
     });
 
     test('single-txn (read & write)', async () => {
@@ -695,6 +701,18 @@ describe('TestSuite', () => {
       expect(richie.name).toBe('Richard');
       expect(person2.name).toBe('Write2');
       await txn.rollback();
+    });
+
+    test('multi txn (isolated queries)', async () => {
+      const txn1 = resolver.transaction();
+      const txn2 = resolver.transaction();
+      const person1$1 = await txn1.match('Person').save({ name: 'person100', emailAddress: 'person100@gmail.com' });
+      expect(await txn1.match('Person').id(person1$1.id).one()).not.toBeNull();
+      expect(await txn2.match('Person').id(person1$1.id).one()).toBeNull();
+      expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
+      await txn1.commit();
+      expect(await txn2.match('Person').id(person1$1.id).one()).toBeNull();
+      expect(await resolver.match('Person').id(person1$1.id).one()).not.toBeNull();
     });
   });
 

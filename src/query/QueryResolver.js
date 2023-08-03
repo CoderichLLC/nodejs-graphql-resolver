@@ -94,15 +94,14 @@ module.exports = class QueryResolver extends QueryBuilder {
         return this.#get(query).then((doc) => {
           $query.doc = doc;
           // return this.#resolveReferentialIntegrity($query).then(() => {
-            return this.#resolver.resolve($query).then(() => doc);
+          return this.#resolver.resolve($query).then(() => doc);
           // });
         });
       }
       case 'deleteMany': {
         return this.#find($query).then((docs) => {
-          // const txn = this.#resolver.transaction($query.transaction);
+          // const txn = this.#resolver.transaction();
           return Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).delete()));
-          // return txn.run();
         });
       }
       default: {

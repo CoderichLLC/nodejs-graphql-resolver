@@ -9,8 +9,8 @@ module.exports = class MongoDriver {
 
   constructor(config = {}) {
     this.#config = config;
-    this.#config.query = this.#config.query || {};
-    this.#mongoClient = new MongoClient(config.uri, { useNewUrlParser: true, useUnifiedTopology: true, ignoreUndefined: false });
+    this.#config.query = config.query || {};
+    this.#mongoClient = new MongoClient(config.uri, config.options);
     this.#connection = this.#mongoClient.connect();
   }
 
@@ -79,35 +79,23 @@ module.exports = class MongoDriver {
 
   transaction() {
     return this.#connection.then((client) => {
+      let closed = false;
       const session = client.startSession(this.#config.session);
       session.startTransaction(this.#config.transaction);
 
+      // Because we allow queries in parallel we want to prevent calling this more than once
+      const close = (operator) => {
+        if (!closed) return (closed = true && session[operator]().finally(() => session.endSession()));
+        return Promise.resolve();
+      };
+
       return Object.defineProperties({}, {
         session: { value: session, enumerable: true },
-        commit: { value: () => session.commitTransaction().finally(() => session.endSession()) },
-        rollback: { value: () => session.abortTransaction().finally(() => session.endSession()) },
+        commit: { value: () => close('commitTransaction') },
+        rollback: { value: () => close('abortTransaction') },
       });
     });
   }
-  // transaction(ops) {
-  //   return Util.promiseRetry(() => {
-  //     // Create session and start transaction
-  //     return this.#connection.then(client => client.startSession({ readPreference: { mode: 'primary' } })).then((session) => {
-  //       session.startTransaction({ readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } });
-  //       const close = () => { session.endSession(); };
-
-  //       // Execute each operation with session
-  //       return Promise.all(ops.map(op => op.exec({ session }))).then((results) => {
-  //         results.$commit = () => session.commitTransaction().then(close);
-  //         results.$rollback = () => session.abortTransaction().then(close);
-  //         return results;
-  //       }).catch((e) => {
-  //         close();
-  //         throw e;
-  //       });
-  //     });
-  //   }, 200, 5, e => e.errorLabels && e.errorLabels.indexOf('TransientTransactionError') > -1);
-  // }
 
   static aggregateJoin(query, join, id) {
     const { as, to: from, on: foreignField, from: localField, where: $match } = join;

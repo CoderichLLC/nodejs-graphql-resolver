@@ -11,7 +11,9 @@ module.exports = class QueryResolverTransaction extends QueryResolver {
   resolve() {
     return this.#config.transaction.then((transaction) => {
       super.options(transaction);
-      return super.resolve();
+      return super.resolve().catch((e) => {
+        return transaction.rollback().finally(() => Promise.reject(e));
+      });
     });
   }
 };
