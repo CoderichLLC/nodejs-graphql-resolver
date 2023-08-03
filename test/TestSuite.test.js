@@ -717,28 +717,30 @@ describe('TestSuite', () => {
   });
 
   describe('Transactions (manual-with-auto)', () => {
-    // test('multi-txn (duplicate key with rollback)', async () => {
-    //   const txn1 = resolver.transaction();
-    //   const txn2 = resolver.transaction();
-    //   txn1.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
-    //   txn2.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
+    test('multi-txn (duplicate key with rollback)', async () => {
+      const txn1 = resolver.transaction();
+      const txn2 = resolver.transaction();
 
-    //   await txn1.exec().then((results) => {
-    //     const [[person1, person2]] = results;
-    //     expect(person1.name).toBe('Person10');
-    //     expect(person2.name).toBe('Person11');
-    //     return txn1.rollback();
-    //   });
+      const [[person1$1, person2$1], [person1$2, person2$2]] = await Promise.all([
+        txn1.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]),
+        txn2.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]),
+      ]);
+      expect(person1$1.name).toBe('Person10');
+      expect(person2$1.name).toBe('Person11');
+      expect(person1$2.name).toBe('Person10');
+      expect(person2$2.name).toBe('Person11');
 
-    //   await Util.timeout(100);
+      return txn1.rollback();
 
-    //   await txn2.exec().then((results) => {
-    //     const [[person1, person2]] = results;
-    //     expect(person1.name).toBe('Person10');
-    //     expect(person2.name).toBe('Person11');
-    //     return txn2.rollback();
-    //   });
-    // });
+      // await Util.timeout(100);
+
+      // await txn2.exec().then((results) => {
+      //   const [[person1, person2]] = results;
+      //   expect(person1.name).toBe('Person10');
+      //   expect(person2.name).toBe('Person11');
+      //   return txn2.rollback();
+      // });
+    });
 
     // test('multi-txn (duplicate key with commit)', async () => {
     //   const txn1 = resolver.transaction();
