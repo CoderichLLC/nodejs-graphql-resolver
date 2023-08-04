@@ -11,10 +11,7 @@ module.exports = class QueryResolverTransaction extends QueryResolver {
 
   resolve() {
     return this.#config.transaction.then((transaction) => {
-      return Util.timeout(0).then(() => super.resolve(super.options(transaction))).catch((e) => {
-        transaction.rollback();
-        throw e;
-      });
+      return Util.timeout(0).then(() => super.resolve(super.options(transaction)));
     });
   }
 };

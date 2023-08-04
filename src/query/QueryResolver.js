@@ -40,7 +40,12 @@ module.exports = class QueryResolver extends QueryBuilder {
         return this.#resolver.resolve($query);
       }
       case 'createMany': {
-        return Promise.all(input.map(el => this.#resolver.match(this.#model.name).save(el)));
+        this.#resolver.transaction(false);
+        return Promise.all(input.map(el => this.#resolver.match(this.#model.name).save(el))).then((results) => {
+          return this.#resolver.commit().then(() => results);
+        }).catch((e) => {
+          return this.#resolver.rollback().then(() => Promise.reject(e));
+        });
       }
       case 'updateOne': {
         return this.#get(query).then(async (doc) => {

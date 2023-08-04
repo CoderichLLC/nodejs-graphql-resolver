@@ -8,6 +8,7 @@ const QueryResolver = require('../query/QueryResolver');
 module.exports = class Resolver {
   #schema;
   #context;
+  #transactions = [];
 
   constructor(config) {
     this.#schema = config.schema;
@@ -27,12 +28,19 @@ module.exports = class Resolver {
     return this;
   }
 
+  clone() {
+    return new Resolver({
+      schema: this.#schema,
+      context: this.#context,
+    });
+  }
+
   raw(model) {
     return this.toModel(model)?.source?.client?.driver(model);
   }
 
   match(model) {
-    return new QueryResolver({
+    return this.#transactions[this.#transactions.length - 1]?.slice(-1).pop()?.match(model) ?? new QueryResolver({
       resolver: this,
       schema: this.#schema,
       context: this.#context,
@@ -40,13 +48,31 @@ module.exports = class Resolver {
     });
   }
 
-  transaction(parentTxn) {
-    return new Transaction({
-      resolver: this,
-      schema: this.#schema,
-      context: this.#context,
-      parentTxn,
-    });
+  transaction(isolated = true) {
+    if (isolated) return this.clone().transaction(false);
+
+    const transactions = this.#transactions[this.#transactions.length - 1];
+    const prevTransaction = transactions?.slice(-1).pop();
+    const newTransaction = new Transaction({ resolver: this, schema: this.#schema, context: this.#context });
+
+    const linkedTransaction = {
+      match: (...args) => prevTransaction?.match(...args),
+      commit: () => Promise.resolve(transactions.pop()),
+      rollback: () => Promise.resolve(transactions.pop()),
+    };
+
+    if (prevTransaction) transactions.push(newTransaction);
+    this.#transactions.push([prevTransaction ? linkedTransaction : newTransaction]);
+
+    return this;
+  }
+
+  commit() {
+    return Util.promiseChain(this.#transactions.pop()?.map(transaction => () => transaction.commit()));
+  }
+
+  rollback() {
+    return Util.promiseChain(this.#transactions.pop()?.map(transaction => () => transaction.rollback()));
   }
 
   toResultSet(model, data) {

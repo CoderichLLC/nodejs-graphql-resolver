@@ -29,14 +29,16 @@ module.exports = class Transaction {
   }
 
   commit() {
-    return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, transaction]) => {
-      return transaction.then(({ commit }) => commit());
-    }));
+    return this.#close('commit');
   }
 
   rollback() {
-    return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, transaction]) => {
-      return transaction.then(({ rollback }) => rollback());
+    return this.#close('rollback');
+  }
+
+  #close(op) {
+    return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, promise]) => {
+      return promise.then(transaction => transaction[op]());
     }));
   }
 };
