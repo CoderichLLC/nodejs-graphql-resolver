@@ -1,5 +1,4 @@
 const { ObjectId } = require('mongodb');
-const Util = require('@coderich/util');
 
 let richard;
 let christie;
@@ -746,12 +745,12 @@ describe('TestSuite', () => {
   describe('Referential Integrity', () => {
     test('remove', async () => {
       expect(() => resolver.match('Person').remove()).toThrow(/delete requires/gi);
-      // await expect(resolver.match('Person').id(christie.id).remove()).rejects.toThrow(/restricted/gi);
-      // await resolver.match('Chapter').id(chapter3.id).remove(); // Need to delete chapter to remove Author....
-      // expect(await resolver.match('Person').id(richard.id).remove()).toMatchObject({ id: richard.id, name: 'Richard' });
-      // expect(await resolver.match('Person').where({ name: '{christie,richard}' }).many()).toMatchObject([{ id: christie.id }]);
-      // expect(await resolver.match('Book').many()).toMatchObject([{ id: healthBook.id }]);
-      // expect(await resolver.match('Chapter').sortBy({ name: 'asc' }).many()).toMatchObject([{ id: chapter1.id }, { id: chapter2.id }]);
+      await expect(resolver.match('Person').id(christie.id).remove()).rejects.toThrow(/restricted/gi);
+      await resolver.match('Chapter').id(chapter3.id).remove(); // Need to delete chapter to remove Author....
+      expect(await resolver.match('Person').id(richard.id).remove()).toMatchObject({ id: richard.id, name: 'Richard' });
+      expect(await resolver.match('Person').where({ name: '{christie,richard}' }).many()).toMatchObject([{ id: christie.id }]);
+      expect(await resolver.match('Book').many()).toMatchObject([{ id: healthBook.id }]);
+      expect(await resolver.match('Chapter').sortBy({ name: 'asc' }).many()).toMatchObject([{ id: chapter1.id }, { id: chapter2.id }]);
     });
 
     test('remove multi', async () => {
@@ -783,7 +782,7 @@ describe('TestSuite', () => {
   describe('Raw Queries', () => {
     test('get', async () => {
       expect(await resolver.raw('Person').findOne({})).toBeDefined();
-      // expect(await resolver.raw('Person').findOne({ name: 'richard' })).toBeNull(); // deleted
+      expect(await resolver.raw('Person').findOne({ name: 'richard' })).toBeNull(); // deleted
       expect(await resolver.raw('Person').findOne({ name: 'Christie' })).toBeNull(); // case
       expect(await resolver.raw('Person').findOne({ name: 'christie' })).toMatchObject({ name: 'christie', email_address: 'christie@gmail.com' });
       expect(await resolver.driver('Person').findOne({ name: 'christie' })).toMatchObject({ name: 'christie', email_address: 'christie@gmail.com' }); // Alias
@@ -827,7 +826,7 @@ describe('TestSuite', () => {
 
     test('embedded array with modelRef', async () => {
       // Create section
-      // await expect(resolver.match('Art').save({ name: 'Piedmont Beauty', sections: [{ name: 'Section1', person: richard.id }] })).rejects.toThrow(/not found/gi);
+      await expect(resolver.match('Art').save({ name: 'Piedmont Beauty', sections: [{ name: 'Section1', person: richard.id }] })).rejects.toThrow(/not found/gi);
       const art = await resolver.match('Art').save({ name: 'Piedmont Beauty', sections: [{ name: 'Section1', person: christie.id }] });
       expect(art).toBeDefined();
       expect(art.sections[0].id).toBeDefined();

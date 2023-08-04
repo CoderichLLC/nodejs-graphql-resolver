@@ -93,9 +93,9 @@ module.exports = class QueryResolver extends QueryBuilder {
       case 'deleteOne': {
         return this.#get(query).then((doc) => {
           $query.doc = doc;
-          // return this.#resolveReferentialIntegrity($query).then(() => {
-          return this.#resolver.resolve($query).then(() => doc);
-          // });
+          return this.#resolveReferentialIntegrity($query).then(() => {
+            return this.#resolver.resolve($query).then(() => doc);
+          });
         });
       }
       case 'deleteMany': {
@@ -110,48 +110,24 @@ module.exports = class QueryResolver extends QueryBuilder {
   }
 
   #resolveReferentialIntegrity(query) {
-    const { id, transaction } = query;
-    const txn = this.#resolver.transaction(transaction);
+    const { id } = query;
+    const txn = this.#resolver.transaction(false);
 
-    return new Promise((resolve, reject) => {
-      try {
-        this.#model.referentialIntegrity.forEach(({ model, field, fieldRef, isArray, op }) => {
-          const fieldStr = fieldRef ? `${field}.${fieldRef}` : `${field.name}`;
-          const $where = { [fieldStr]: id };
+    return Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, fieldRef, isArray, op }) => () => {
+      const fieldStr = fieldRef ? `${field}.${fieldRef}` : `${field.name}`;
+      const $where = { [fieldStr]: id };
 
-          console.log(model.name, op, $where);
-
-          switch (op) {
-            case 'cascade': {
-              if (isArray) {
-                txn.match(model).flags({ debug: true }).where($where).pull(fieldStr, id);
-              } else {
-                txn.match(model).flags({ debug: true }).where($where).remove();
-              }
-              break;
-            }
-            case 'nullify': {
-              txn.match(model).where($where).save({ [fieldStr]: null });
-              break;
-            }
-            case 'restrict': {
-              txn.match(model).flags({ debug: true }).where($where).count().then(count => (count ? reject(new Error('Restricted')) : count));
-              break;
-            }
-            case 'defer': {
-              // Defer to the embedded object
-              // Marks the field as an onDelete candidate otherwise it (and the embedded object) will get skipped
-              break;
-            }
-            default: throw new Error(`Unknown onDelete operator: '${op}'`);
-          }
-        });
-
-        // Execute the transaction
-        txn.run().then(results => resolve(results)).catch(e => reject(e));
-      } catch (e) {
-        txn.rollback().then(() => reject(e)).catch(err => reject(err));
+      switch (op) {
+        case 'cascade': return isArray ? txn.match(model).where($where).pull(fieldStr, id) : txn.match(model).where($where).remove();
+        case 'nullify': return txn.match(model).where($where).save({ [fieldStr]: null });
+        case 'restrict': return txn.match(model).where($where).count().then(count => (count ? Promise.reject(new Error('Restricted')) : count));
+        case 'defer': return Promise.resolve();
+        default: throw new Error(`Unknown onDelete operator: '${op}'`);
       }
+    })).then((results) => {
+      return txn.commit().then(() => results);
+    }).catch((e) => {
+      return txn.rollback().then(() => Promise.reject(e));
     });
   }
 };

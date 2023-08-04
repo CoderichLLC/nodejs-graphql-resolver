@@ -1,24 +1,33 @@
-* Consider passing input to driver without merging doc (a lot of transformations happen) and then combining result in QueryResolver
-* You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
-* Need to consider if mutationMany really needs to be spread into individual mutationOnes
-  - Validation performed on each doc post mutation
-  - Audit trail per record
-  - Inherit address currently implemented as cascade logic
-* config.dataSources to determine if supports
-  - Joins
-  - Transactions
-  - Batches
-  - Composite index keys (probably need to move these tests elsewhere)
+TODO:
+  * onDeletes
+  * Emitter
+    - event should have getters to interesting data?
+  * DataLoader
+  * Batching
+  * Connections (.resolve())?
+  * GraphQL API (or is that another module?)
 
----------
+Known Issues:
+  * Get to the bottom of why you need a timeout when running transactions
+  * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
+  * Tests unable to run because of mongo memory server setup
 
-* Transactions
-* onDeletes
-* Emitter
-* DataLoader
-* Batching
-* Connections (.resolve())?
-* GraphQL API (or is that another module?)
+Improvement Considerations:
+  * Consider passing input to driver without merging doc (a lot of transformations happen) and then combining result in QueryResolver
+  * Need to consider if mutationMany really needs to be spread into individual mutationOnes
+    - Validation performed on each doc post mutation
+    - Audit trail per record
+    - Inherit address currently implemented as cascade logic
+    - onDelete
+  * config.dataSources to determine if supports
+    - Joins
+    - Transactions
+    - Batches
+    - Composite index keys (probably need to move these tests elsewhere)
+
+BREAKING CHANGELOG:
+  * Revamped how transactions work
+  * Revamped how initial setup works (config.js)
 
 ---------
 
