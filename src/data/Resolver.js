@@ -51,9 +51,9 @@ module.exports = class Resolver {
   transaction(isolated = true) {
     if (isolated) return this.clone().transaction(false);
 
+    const newTransaction = new Transaction({ resolver: this, schema: this.#schema, context: this.#context });
     const transactions = this.#transactions[this.#transactions.length - 1];
     const prevTransaction = transactions?.slice(-1).pop();
-    const newTransaction = new Transaction({ resolver: this, schema: this.#schema, context: this.#context });
 
     const linkedTransaction = {
       match: (...args) => prevTransaction?.match(...args),
@@ -67,12 +67,37 @@ module.exports = class Resolver {
     return this;
   }
 
+  run(promise) {
+    return promise.then((results) => {
+      return this.commit().then(() => results);
+    }).catch((e) => {
+      return this.rollback().then(() => Promise.reject(e));
+    });
+  }
+
   commit() {
-    return Util.promiseChain(this.#transactions.pop()?.map(transaction => () => transaction.commit()));
+    let op = 'commit';
+    const errors = [];
+
+    return Util.promiseChain(this.#transactions.pop()?.reverse().map(transaction => () => {
+      return transaction[op]().catch((e) => {
+        op = 'rollback';
+        errors.push(e);
+        return transaction[op]().catch(ee => errors.push(ee));
+      });
+    })).then(() => {
+      return errors.length ? Promise.reject(errors) : Promise.resolve();
+    });
   }
 
   rollback() {
-    return Util.promiseChain(this.#transactions.pop()?.map(transaction => () => transaction.rollback()));
+    const errors = [];
+
+    return Util.promiseChain(this.#transactions.pop()?.reverse().map(transaction => () => {
+      transaction.rollback().catch(e => errors.push(e));
+    })).then(() => {
+      return errors.length ? Promise.reject(errors) : Promise.resolve();
+    });
   }
 
   toResultSet(model, data) {
