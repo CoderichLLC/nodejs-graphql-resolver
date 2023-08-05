@@ -713,7 +713,7 @@ describe('TestSuite', () => {
   });
 
   describe('Transactions (manual-with-auto)', () => {
-    test('multi-txn (duplicate key with rollback)', async () => {
+    test('multi-txn (duplicate key with rollback OK)', async () => {
       const txn1 = resolver.transaction(false);
       const [person1$1, person2$1] = await txn1.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
       expect(person1$1.name).toBe('Person10');

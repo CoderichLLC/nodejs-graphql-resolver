@@ -9,7 +9,7 @@ module.exports = class Resolver {
   #schema;
   #context;
   #loaders;
-  #transactions = [];
+  #sessions = []; // Holds nested 2D array of transactions
 
   constructor(config) {
     this.#schema = config.schema;
@@ -43,8 +43,13 @@ module.exports = class Resolver {
     return this.toModel(model)?.source?.client?.driver(model);
   }
 
+  /**
+   *
+   * @param {string|object} model - The name (string) or model (object) you wish to query
+   * @returns {QueryResolver|QueryResolverTransaction} - A chainable API to build and execute a query
+   */
   match(model) {
-    return this.#transactions[this.#transactions.length - 1]?.slice(-1).pop()?.match(model) ?? new QueryResolver({
+    return this.#sessions.slice(-1).pop()?.slice(-1).pop()?.transaction?.match(model) ?? new QueryResolver({
       resolver: this,
       schema: this.#schema,
       context: this.#context,
@@ -52,25 +57,49 @@ module.exports = class Resolver {
     });
   }
 
-  transaction(isolated = true) {
-    if (isolated) return this.clone().transaction(false);
+  /**
+   * Start a new transaction.
+   *
+   * @param {boolean} isolated - Create the transaction in isolation from other queries
+   * @returns {Resolver} - A Resolver instance to construct queries in a transaction
+   */
+  transaction(isolated = true, parent = this) {
+    if (isolated) return this.clone().transaction(false, parent);
 
-    const newTransaction = new Transaction({ resolver: this, schema: this.#schema, context: this.#context });
-    const transactions = this.#transactions[this.#transactions.length - 1];
-    const prevTransaction = transactions?.slice(-1).pop();
+    const currSession = this.#sessions.slice(-1).pop();
+    const prevTransaction = currSession?.slice(-1).pop();
 
-    const linkedTransaction = {
-      match: (...args) => prevTransaction?.match(...args),
-      commit: () => Promise.resolve(transactions.pop()),
-      rollback: () => Promise.resolve(transactions.pop()),
+    const newTransaction = {
+      transaction: new Transaction({ resolver: this, schema: this.#schema, context: this.#context }),
     };
 
-    if (prevTransaction) transactions.push(newTransaction);
-    this.#transactions.push([prevTransaction ? linkedTransaction : newTransaction]);
+    // The linkedTransaction links in to the previous transaction
+    // The reason for the commit() & rollback() is that when the "resolver" is run
+    // the entire session group is popped and executed - this is a noop since it's bound to prevTransaction
+    const linkedTransaction = {
+      transaction: {
+        match: (...args) => prevTransaction?.transaction?.match(...args),
+        commit: () => Promise.resolve(currSession.pop()),
+        rollback: () => Promise.resolve(currSession.pop()),
+      },
+    };
+
+    if (prevTransaction) currSession.push(newTransaction);
+
+    this.#sessions.push(Object.defineProperties([prevTransaction ? linkedTransaction : newTransaction], {
+      parent: { value: parent },
+      thunks: { value: prevTransaction ? currSession.thunks : [] }, // Cleanup functions to run after session is committed
+    }));
 
     return this;
   }
 
+  /**
+   * Auto run (commit or rollback) the current transaction based on the outcome of a provided promise.
+   *
+   * @param {Promise} promise - A promise to resolve that determines the fate of the current transaction
+   * @returns {*} - The promise resolution
+   */
   run(promise) {
     return promise.then((results) => {
       return this.commit().then(() => results);
@@ -79,38 +108,56 @@ module.exports = class Resolver {
     });
   }
 
+  /**
+   * Commit the current transaction.
+   */
   commit() {
     let op = 'commit';
     const errors = [];
+    const session = this.#sessions.pop()?.reverse();
 
-    return Util.promiseChain(this.#transactions.pop()?.reverse().map(transaction => () => {
+    return Util.promiseChain(session.map(({ transaction }) => () => {
       return transaction[op]().catch((e) => {
         op = 'rollback';
         errors.push(e);
         return transaction[op]().catch(ee => errors.push(ee));
       });
     })).then(() => {
-      return errors.length ? Promise.reject(errors) : Promise.resolve();
+      return errors.length ? Promise.reject(errors) : Promise.all(session.thunks.map(thunk => thunk()));
     });
   }
 
+  /**
+   * Rollback the current transaction
+   */
   rollback() {
     const errors = [];
+    const session = this.#sessions.pop()?.reverse();
 
-    return Util.promiseChain(this.#transactions.pop()?.reverse().map(transaction => () => {
+    return Util.promiseChain(session.map(({ transaction }) => () => {
       transaction.rollback().catch(e => errors.push(e));
     })).then(() => {
-      return errors.length ? Promise.reject(errors) : Promise.resolve();
+      return errors.length ? Promise.reject(errors) : Promise.all(session.thunks.map(thunk => thunk()));
     });
   }
 
+  /**
+   * Resolve a query.
+   *
+   * This method ultimately delegates to a DataSource (for mutations) otherwise a DataLoader.
+   *
+   * @param {object} query - An instance of Query.toObject(); a normalized query object that has been transformed.
+   * @returns {*} - The resolved query data
+   */
   resolve(query) {
     let promise;
     const model = this.#schema.models[query.model];
+    const currSession = this.#sessions.slice(-1).pop();
 
     if (query.isMutation) {
       promise = model.source.client.resolve(query.$toDriver()).then((results) => {
         this.clear(query.model);
+        currSession?.thunks.push(...this.#sessions.map(s => () => s.parent.clear(query.model)));
         return results;
       });
     } else {
