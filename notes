@@ -1,18 +1,26 @@
 TODO:
-  * onDeletes
+  * Upsert???
   * Emitter
     - event should have getters to interesting data?
+    - setup?
+    - validation?
+  * Pipeline
+    - arguments?
+    - path, validation?
   * DataLoader
-  * Batching
+    - Batching
   * Connections (.resolve())?
   * GraphQL API (or is that another module?)
 
 Known Issues:
+  * mongodb dependency? AppService references ObjectId (use bson-objectid)
   * Get to the bottom of why you need a timeout when running transactions
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
   * Tests unable to run because of mongo memory server setup
 
 Improvement Considerations:
+  * Why do you send `${model}` in query instead of the actual model object?
+  * If no change in data, prevent entire operation?
   * Consider passing input to driver without merging doc (a lot of transformations happen) and then combining result in QueryResolver
   * Need to consider if mutationMany really needs to be spread into individual mutationOnes
     - Validation performed on each doc post mutation
@@ -24,6 +32,7 @@ Improvement Considerations:
     - Transactions
     - Batches
     - Composite index keys (probably need to move these tests elsewhere)
+  * onDelete defer - could probably be done dynamically instead
 
 BREAKING CHANGELOG:
   * Revamped how transactions work

@@ -18,11 +18,13 @@
     "@coderich/util": "0.1.0",
     "@graphql-tools/merge": "8.4.1",
     "@hapi/boom": "10.0.1",
+    "dataloader": "2.2.2",
     "deepmerge": "4.3.1",
     "fill-range": "7.0.1",
     "lodash.get": "4.4.2",
     "lodash.merge": "4.6.2",
     "lodash.uniqwith": "4.5.0",
+    "object-hash": "3.0.0",
     "picomatch": "2.3.1"
   },
   "devDependencies": {

@@ -113,7 +113,7 @@ module.exports = class QueryResolver extends QueryBuilder {
     const { id } = query;
     const txn = this.#resolver.transaction(false);
 
-    return Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, fieldRef, isArray, op }) => () => {
+    return txn.run(Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, fieldRef, isArray, op }) => () => {
       const fieldStr = fieldRef ? `${field}.${fieldRef}` : `${field.name}`;
       const $where = { [fieldStr]: id };
 
@@ -121,13 +121,9 @@ module.exports = class QueryResolver extends QueryBuilder {
         case 'cascade': return isArray ? txn.match(model).where($where).pull(fieldStr, id) : txn.match(model).where($where).remove();
         case 'nullify': return txn.match(model).where($where).save({ [fieldStr]: null });
         case 'restrict': return txn.match(model).where($where).count().then(count => (count ? Promise.reject(new Error('Restricted')) : count));
-        case 'defer': return Promise.resolve();
+        case 'defer': return Promise.resolve(); // Used for embedded models (could be improved)
         default: throw new Error(`Unknown onDelete operator: '${op}'`);
       }
-    })).then((results) => {
-      return txn.commit().then(() => results);
-    }).catch((e) => {
-      return txn.rollback().then(() => Promise.reject(e));
-    });
+    })));
   }
 };

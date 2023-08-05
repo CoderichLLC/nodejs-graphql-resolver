@@ -21,7 +21,7 @@ module.exports = class Query {
     this.#model = schema.models[query.model];
     this.#query = Object.defineProperties(query, {
       $clone: { value: (...args) => this.clone(...args).#query },
-      $toDriver: { value: q => this.toDriver(q) },
+      $toDriver: { value: () => this.toDriver() },
     });
   }
 
@@ -46,10 +46,25 @@ module.exports = class Query {
       this.transform(this.#query, 'sort', this.#model, Util.unflatten(sort), ['castValue'].map(el => Pipeline[el])),
     ]);
 
+    // Cache key
+    query.cacheKey = {
+      op: query.op,
+      where: query.where,
+      sort: query.sort,
+      joins: query.joins,
+      skip: query.skip,
+      limit: query.limit,
+      before: query.before,
+      after: query.after,
+      first: query.first,
+      last: query.last,
+    };
+
     return query;
   }
 
-  toDriver(query) {
+  toDriver() {
+    const query = this.#query;
     const { where, isNative } = query;
 
     const $query = Object.defineProperties(query.$clone(), {

@@ -74,6 +74,7 @@ module.exports = class Schema {
             dalScope: 'crud',
             gqlScope: 'cruds',
             pipelines: { validate: [], serialize: [], construct: [] },
+            toString: () => name,
           };
         } else if (node.kind === Kind.NON_NULL_TYPE) {
           field[isList ? 'isArrayRequired' : 'isRequired'] = true;
@@ -262,8 +263,6 @@ module.exports = class Schema {
       if (!$model || !fieldKeys.length) return $model;
       return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
     };
-
-    // console.log(schema.models.Person.referentialIntegrity);
 
     // Return schema
     return schema;

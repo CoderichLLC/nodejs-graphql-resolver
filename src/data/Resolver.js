@@ -2,17 +2,20 @@ const get = require('lodash.get');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const Pipeline = require('./Pipeline');
+const DataLoader = require('./DataLoader');
 const Transaction = require('./Transaction');
 const QueryResolver = require('../query/QueryResolver');
 
 module.exports = class Resolver {
   #schema;
   #context;
+  #loaders = {};
   #transactions = [];
 
   constructor(config) {
     this.#schema = config.schema;
     this.#context = config.context;
+    this.#loaders = Object.entries(this.#schema.models).reduce((prev, [key, value]) => Object.assign(prev, { [key]: new DataLoader(value) }), {});
     this.driver = this.raw; // Alias
   }
 
@@ -20,11 +23,13 @@ module.exports = class Resolver {
     return this.#context;
   }
 
-  clear() {
+  clear(model) {
+    this.#loaders[model].clearAll();
     return this;
   }
 
   clearAll() {
+    Object.values(this.#loaders).forEach(loader => loader.clearAll());
     return this;
   }
 
@@ -100,15 +105,30 @@ module.exports = class Resolver {
     });
   }
 
-  toResultSet(model, data) {
-    const $model = this.#schema.models[model];
-    return this.#normalize({}, $model, data);
+  resolve(query) {
+    let promise;
+    const model = this.#schema.models[query.model];
+
+    if (query.isMutation) {
+      promise = model.source.client.resolve(query.$toDriver()).then((results) => {
+        this.clear(query.model);
+        return results;
+      });
+    } else {
+      promise = this.#loaders[model].resolve(query);
+    }
+
+    return promise.then((data) => {
+      if (query.flags?.required && (data == null || data?.length === 0)) throw Boom.notFound();
+      return this.toResultSet(model, data, query);
+    });
   }
 
-  async resolve(query) {
-    const model = this.#schema.models[query.model];
-    const $query = await query.$toDriver(query);
-    return model.source.client.resolve($query).then(data => this.#normalize(query, model, data));
+  toResultSet(model, data, query = {}) {
+    const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
+    const crudLines = crudMap[query.crud] || [];
+    const $model = this.#schema.models[model];
+    return this.#finalize(query, $model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
   }
 
   toModel(model) {
@@ -129,17 +149,7 @@ module.exports = class Resolver {
     return entity;
   }
 
-  #normalize(query, model, data) {
-    const { flags, crud, isCursorPaging } = query;
-    const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
-    const crudLines = crudMap[crud] || [];
-    if (flags?.required && (data == null || data?.length === 0)) throw Boom.notFound();
-    if (data == null) return null; // Explicit return null;
-    if (isCursorPaging) data = Resolver.#paginateResults(data, query);
-    return this.#finalize(query, model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
-  }
-
-  async #finalize(query, model, data, transformers = [], paths = []) {
+  #finalize(query, model, data, transformers = [], paths = []) {
     if (data == null) return data;
     if (typeof data !== 'object') return data;
 
@@ -164,61 +174,6 @@ module.exports = class Resolver {
         $pageInfo: { value: doc.$pageInfo },
         $cursor: { value: doc.$cursor },
       }));
-    });
-  }
-
-  static #paginateResults(rs, query) {
-    let hasNextPage = false;
-    let hasPreviousPage = false;
-    const { first, after, last, before, sort = {} } = query;
-    const limiter = first || last;
-    const sortPaths = Object.keys(Util.flatten(sort, { safe: true }));
-
-    // Add $cursor data
-    Util.map(rs, (doc) => {
-      const sortValues = sortPaths.reduce((prev, path) => Object.assign(prev, { [path]: get(doc, path) }), {});
-      Object.defineProperty(doc, '$cursor', { value: Buffer.from(JSON.stringify(sortValues)).toString('base64') });
-    });
-
-    // First try to take off the "bookends" ($gte | $lte)
-    if (rs.length && rs[0].$cursor === after) {
-      rs.shift();
-      hasPreviousPage = true;
-    }
-
-    if (rs.length && rs[rs.length - 1].$cursor === before) {
-      rs.pop();
-      hasNextPage = true;
-    }
-
-    // Next, remove any overage
-    const overage = rs.length - (limiter - 2);
-
-    if (overage > 0) {
-      if (first) {
-        rs.splice(-overage);
-        hasNextPage = true;
-      } else if (last) {
-        rs.splice(0, overage);
-        hasPreviousPage = true;
-      } else {
-        rs.splice(-overage);
-        hasNextPage = true;
-      }
-    }
-
-    // Add $pageInfo
-    return Object.defineProperties(rs, {
-      $pageInfo: {
-        get() {
-          return {
-            startCursor: get(rs, '0.$cursor', ''),
-            endCursor: get(rs, `${rs.length - 1}.$cursor`, ''),
-            hasPreviousPage,
-            hasNextPage,
-          };
-        },
-      },
     });
   }
 };

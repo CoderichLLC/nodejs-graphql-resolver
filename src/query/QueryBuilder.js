@@ -156,7 +156,7 @@ module.exports = class QueryBuilder {
     const suffix = id || limit === 1 || (crud === 'create' && args.length < 2) ? 'One' : 'Many';
     let input = suffix === 'One' ? args[0] : args;
     if (input === undefined) input = {};
-    return this.resolve(Object.assign(this.#query, { op: `${crud}${suffix}`, crud, input }));
+    return this.resolve(Object.assign(this.#query, { op: `${crud}${suffix}`, crud, input, isMutation: true }));
   }
 
   #propCheck(prop, ...checks) {
