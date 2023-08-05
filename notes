@@ -7,16 +7,16 @@ TODO:
   * Pipeline
     - arguments?
     - path, validation?
-  * DataLoader
-    - Batching
   * Connections (.resolve())?
   * GraphQL API (or is that another module?)
 
 Known Issues:
+  * query.flags.debug should not be at driver level
   * mongodb dependency? AppService references ObjectId (use bson-objectid)
   * Get to the bottom of why you need a timeout when running transactions
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
   * Tests unable to run because of mongo memory server setup
+  * Transactions in isolation; after commit() not able to see data if Loader has cached value
 
 Improvement Considerations:
   * Why do you send `${model}` in query instead of the actual model object?
@@ -33,6 +33,7 @@ Improvement Considerations:
     - Batches
     - Composite index keys (probably need to move these tests elsewhere)
   * onDelete defer - could probably be done dynamically instead
+  * DataLoader - rewrite for batch queries
 
 BREAKING CHANGELOG:
   * Revamped how transactions work

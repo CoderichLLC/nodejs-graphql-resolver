@@ -1,21 +1,20 @@
-const get = require('lodash.get');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
+const Loader = require('./Loader');
 const Pipeline = require('./Pipeline');
-const DataLoader = require('./DataLoader');
 const Transaction = require('./Transaction');
 const QueryResolver = require('../query/QueryResolver');
 
 module.exports = class Resolver {
   #schema;
   #context;
-  #loaders = {};
+  #loaders;
   #transactions = [];
 
   constructor(config) {
     this.#schema = config.schema;
     this.#context = config.context;
-    this.#loaders = Object.entries(this.#schema.models).reduce((prev, [key, value]) => Object.assign(prev, { [key]: new DataLoader(value) }), {});
+    this.#loaders = this.#newLoaders();
     this.driver = this.raw; // Alias
   }
 
@@ -175,5 +174,13 @@ module.exports = class Resolver {
         $cursor: { value: doc.$cursor },
       }));
     });
+  }
+
+  #newLoaders() {
+    return Object.entries(this.#schema.models).filter(([key, value]) => {
+      return value.loader && value.isEntity;
+    }).reduce((prev, [key, value]) => {
+      return Object.assign(prev, { [key]: new Loader(value) });
+    }, {});
   }
 };

@@ -64,6 +64,7 @@ module.exports = class Schema {
             gqlScope: 'cruds',
             isPersistable: true,
             source: this.#config.dataSources?.default,
+            loader: this.#config.dataLoaders?.default,
             toString: () => name,
           };
         } else if (node.kind === Kind.FIELD_DEFINITION) {
@@ -107,6 +108,10 @@ module.exports = class Schema {
               }
               case 'model-source': {
                 model.source = this.#config.dataSources?.[value];
+                break;
+              }
+              case 'model-loader': {
+                model.loader = this.#config.dataLoaders?.[value];
                 break;
               }
               case 'model-embed': {

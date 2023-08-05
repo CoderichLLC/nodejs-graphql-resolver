@@ -16,7 +16,7 @@ module.exports = class MongoDriver {
 
   resolve(query) {
     query.options = { ...this.#config.query, ...query.options };
-    if (query.flags?.debug) console.log(inspect(query, { showHidden: false, colors: true, depth: null }));
+    if (query.flags?.debug) console.log(inspect(query, { showHidden: false, colors: true }));
     return this[query.op](query).then((result) => {
       if (query.flags?.debug) console.log(inspect(result, { showHidden: false, colors: true }));
       return result;

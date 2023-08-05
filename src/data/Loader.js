@@ -1,17 +1,16 @@
 const get = require('lodash.get');
 const Util = require('@coderich/util');
-const FBDataLoader = require('dataloader');
+const DataLoader = require('dataloader');
 const { hashObject } = require('../service/AppService');
 
-module.exports = class DataLoader {
+module.exports = class Loader {
   #model;
   #loader;
 
-  constructor(model, config = {}) {
+  constructor(model) {
     this.#model = model;
-    config.cache = false;
-    config.cacheKeyFn = config.cacheKeyFn ?? (query => hashObject(query.cacheKey));
-    this.#loader = new FBDataLoader(keys => this.#resolve(keys), config);
+    model.loader.cacheKeyFn = model.loader.cacheKeyFn ?? (query => hashObject(query.cacheKey));
+    this.#loader = new DataLoader(keys => this.#resolve(keys), model.loader);
   }
 
   clearAll() {
@@ -26,7 +25,7 @@ module.exports = class DataLoader {
     return Promise.all(queries.map(async (query) => {
       return this.#model.source.client.resolve(query.$toDriver()).then((data) => {
         if (data == null) return null; // Explicit return null;
-        if (query.isCursorPaging) return DataLoader.#paginateResults(data, query);
+        if (query.isCursorPaging) return Loader.#paginateResults(data, query);
         return data;
       });
     }));

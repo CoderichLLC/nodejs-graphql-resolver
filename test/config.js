@@ -14,6 +14,11 @@ Pipeline.define('email', ({ value }) => {
 });
 
 module.exports = {
+  dataLoaders: {
+    default: {
+      cache: false,
+    },
+  },
   dataSources: {
     default: {
       idValue: (value) => {
