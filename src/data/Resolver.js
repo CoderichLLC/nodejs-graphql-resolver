@@ -44,12 +44,13 @@ module.exports = class Resolver {
   }
 
   /**
+   * Create and execute a query for a provided model.
    *
    * @param {string|object} model - The name (string) or model (object) you wish to query
-   * @returns {QueryResolver|QueryResolverTransaction} - A chainable API to build and execute a query
+   * @returns {QueryResolver|QueryResolverTransaction} - An API to build and execute a query
    */
   match(model) {
-    return this.#sessions.slice(-1).pop()?.slice(-1).pop()?.transaction?.match(model) ?? new QueryResolver({
+    return this.#sessions.slice(-1).pop()?.slice(-1).pop()?.match(model) ?? new QueryResolver({
       resolver: this,
       schema: this.#schema,
       context: this.#context,
@@ -60,35 +61,38 @@ module.exports = class Resolver {
   /**
    * Start a new transaction.
    *
-   * @param {boolean} isolated - Create the transaction in isolation from other queries
+   * @param {boolean} isolated - Create the transaction in isolation (new resolver)
+   * @param {Resolver} parent - The parent resolver that created this transaction
    * @returns {Resolver} - A Resolver instance to construct queries in a transaction
    */
   transaction(isolated = true, parent = this) {
     if (isolated) return this.clone().transaction(false, parent);
 
     const currSession = this.#sessions.slice(-1).pop();
-    const prevTransaction = currSession?.slice(-1).pop();
+    const currTransaction = currSession?.slice(-1).pop();
+    const realTransaction = new Transaction({ resolver: this, schema: this.#schema, context: this.#context });
+    const thunks = currTransaction ? currSession.thunks : []; // If in a transaction, piggy back off session
 
-    const newTransaction = {
-      transaction: new Transaction({ resolver: this, schema: this.#schema, context: this.#context }),
+    // If we're already in a transaction; add the "real" transaction to the existing session
+    // We do this because a "session" holds a group of transactions all bound to the same resolver
+    // Therefore this transaction should resolve when THAT resolver is committed or rolled back
+    if (currTransaction) currSession.push(realTransaction);
+
+    // In the case where we are currently in a transaction we need to create a hybrid transaction
+    // This transaction is part "real" transaction and part "current" transaction...
+    // This transaction ultimately calls currSession.pop() to remove itself (all transactions do)
+    const hybridTransaction = {
+      match: (...args) => currTransaction?.match(...args), // Bound to current transaction
+      commit: () => Promise.resolve(currSession.pop()), // DO NOT COMMIT! It's fate to commit is in "currSession"!
+      rollback: () => realTransaction.rollback().then(() => currSession.pop()), // REALLY, we need to rollback()
     };
 
-    // The linkedTransaction links in to the previous transaction
-    // The reason for the commit() & rollback() is that when the "resolver" is run
-    // the entire session group is popped and executed - this is a noop since it's bound to prevTransaction
-    const linkedTransaction = {
-      transaction: {
-        match: (...args) => prevTransaction?.transaction?.match(...args),
-        commit: () => Promise.resolve(currSession.pop()),
-        rollback: () => Promise.resolve(currSession.pop()),
-      },
-    };
-
-    if (prevTransaction) currSession.push(newTransaction);
-
-    this.#sessions.push(Object.defineProperties([prevTransaction ? linkedTransaction : newTransaction], {
-      parent: { value: parent },
-      thunks: { value: prevTransaction ? currSession.thunks : [] }, // Cleanup functions to run after session is committed
+    // In ALL cases we MUST create a new session with either the real or hybrid transaction!
+    // It is THIS transaction API that is used when resolver.match() is called
+    // Additional attributes are defined for use in order to clear data loader cache during transactions
+    this.#sessions.push(Object.defineProperties([currTransaction ? hybridTransaction : realTransaction], {
+      parent: { value: parent }, // The parent resolver
+      thunks: { value: thunks }, // Cleanup functions to run after session is completed (references parent)
     }));
 
     return this;
@@ -116,7 +120,8 @@ module.exports = class Resolver {
     const errors = [];
     const session = this.#sessions.pop()?.reverse();
 
-    return Util.promiseChain(session.map(({ transaction }) => () => {
+    // All transactions bound to this resolver are to be committed
+    return Util.promiseChain(session.map(transaction => () => {
       return transaction[op]().catch((e) => {
         op = 'rollback';
         errors.push(e);
@@ -134,7 +139,8 @@ module.exports = class Resolver {
     const errors = [];
     const session = this.#sessions.pop()?.reverse();
 
-    return Util.promiseChain(session.map(({ transaction }) => () => {
+    // All transactions bound to this resolver are to be rolled back
+    return Util.promiseChain(session.map(transaction => () => {
       transaction.rollback().catch(e => errors.push(e));
     })).then(() => {
       return errors.length ? Promise.reject(errors) : Promise.all(session.thunks.map(thunk => thunk()));
@@ -156,8 +162,13 @@ module.exports = class Resolver {
 
     if (query.isMutation) {
       promise = model.source.client.resolve(query.$toDriver()).then((results) => {
+        // We clear the cache immediately (regardless if we're in transaction or not)
         this.clear(query.model);
+
+        // If we're in a transaction, we clear the cache of all sessions when this session resolves
         currSession?.thunks.push(...this.#sessions.map(s => () => s.parent.clear(query.model)));
+
+        // Return results
         return results;
       });
     } else {
