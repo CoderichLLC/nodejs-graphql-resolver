@@ -7,7 +7,7 @@ const Util = require('@coderich/util');
  * The difference is that I'm looking at each raw listeners to determine how many arguments it's expecting.
  * If it expects more than 1 we block and wait for it to finish.
  */
-module.exports = class extends EventEmitter {
+class Emitter extends EventEmitter {
   emit(event, data) {
     return Promise.all(this.rawListeners(event).map((wrapper) => {
       return new Promise((resolve, reject) => {
@@ -92,4 +92,6 @@ module.exports = class extends EventEmitter {
       }
     });
   }
-};
+}
+
+module.exports = new Emitter().setMaxListeners(100);

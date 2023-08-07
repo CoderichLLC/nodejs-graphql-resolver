@@ -1,6 +1,7 @@
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const Loader = require('./Loader');
+const Emitter = require('./Emitter');
 const Pipeline = require('./Pipeline');
 const Transaction = require('./Transaction');
 const QueryResolver = require('../query/QueryResolver');
@@ -14,7 +15,7 @@ module.exports = class Resolver {
   constructor(config) {
     this.#schema = config.schema;
     this.#context = config.context;
-    this.#loaders = this.#newLoaders();
+    this.#loaders = this.#createNewLoaders();
     this.driver = this.raw; // Alias
   }
 
@@ -156,12 +157,12 @@ module.exports = class Resolver {
    * @returns {*} - The resolved query data
    */
   resolve(query) {
-    let promise;
+    let thunk;
     const model = this.#schema.models[query.model];
     const currSession = this.#sessions.slice(-1).pop();
 
     if (query.isMutation) {
-      promise = model.source.client.resolve(query.$toDriver()).then((results) => {
+      thunk = () => model.source.client.resolve(query.$toDriver()).then((results) => {
         // We clear the cache immediately (regardless if we're in transaction or not)
         this.clear(query.model);
 
@@ -172,20 +173,20 @@ module.exports = class Resolver {
         return results;
       });
     } else {
-      promise = this.#loaders[model].resolve(query);
+      thunk = () => this.#loaders[model].resolve(query);
     }
 
-    return promise.then((data) => {
-      if (query.flags?.required && (data == null || data?.length === 0)) throw Boom.notFound();
-      return this.toResultSet(model, data, query);
+    return this.#createSystemEvent(query, thunk).then((result) => {
+      if (query.flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
+      return this.toResultSet(model, result, query);
     });
   }
 
-  toResultSet(model, data, query = {}) {
+  toResultSet(model, result, query = {}) {
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[query.crud] || [];
     const $model = this.#schema.models[model];
-    return this.#finalize(query, $model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
+    return this.#finalize(query, $model, result, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
   }
 
   toModel(model) {
@@ -234,11 +235,34 @@ module.exports = class Resolver {
     });
   }
 
-  #newLoaders() {
+  #createNewLoaders() {
     return Object.entries(this.#schema.models).filter(([key, value]) => {
       return value.loader && value.isEntity;
     }).reduce((prev, [key, value]) => {
       return Object.assign(prev, { [key]: new Loader(value) });
     }, {});
+  }
+
+  #createSystemEvent(query, thunk = () => {}) {
+    const type = query.isMutation ? 'Mutation' : 'Query';
+    const event = { context: this.#context, resolver: this, query };
+    event.doc = query.doc ?? query.input;
+    event.merged = query.merged ?? event.doc;
+
+    // console.log(query.transform);
+
+    return Emitter.emit(`pre${type}`, event).then((result) => {
+      return result === undefined ? thunk() : result;
+    }).then((result) => {
+      event.merged = result;
+      return Emitter.emit('validate', event);
+    }).then(() => {
+      return Emitter.emit(`post${type}`, event);
+    }).then(() => event.merged);
+    // .then(() => {
+    //   return Emitter.emit('preResponse', event);
+    // }).then(() => {
+    //   return Emitter.emit('postResponse', event);
+    // });
   }
 };

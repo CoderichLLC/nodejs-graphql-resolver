@@ -40,6 +40,7 @@ module.exports = class Query {
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[crud] || [];
 
+    // Pipeline
     [query.input, query.where, query.sort] = await Promise.all([
       this.transform(this.#query, 'input', this.#model, Util.unflatten(input), ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el])),
       isNative ? where : this.transform(this.#query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])),
@@ -103,7 +104,7 @@ module.exports = class Query {
     return isNative ? $query : this.finalize($query);
   }
 
-  async transform(query, target, model, data, transformers = [], paths = []) {
+  transform(query, target, model, data, transformers = [], paths = []) {
     const allFields = Object.values(model.fields).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const instructFields = Object.values(model.fields).filter(field => field.pipelines?.instruct).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
 

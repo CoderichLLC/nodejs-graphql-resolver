@@ -1,6 +1,7 @@
 const Util = require('@coderich/util');
 const { Kind, parse, print, visit } = require('graphql');
 const { mergeGraphQLTypes } = require('@graphql-tools/merge');
+// const Emitter = require('./Emitter');
 const { isLeafValue, isPlainObject, isBasicObject } = require('../service/AppService');
 
 const operations = ['Query', 'Mutation', 'Subscription'];
@@ -258,7 +259,7 @@ module.exports = class Schema {
 
     // Resolve referential integrity
     Object.values(schema.models).forEach(($model) => {
-      $model.referentialIntegrity = Schema.identifyOnDeletes(Object.values(schema.models), $model.name);
+      $model.referentialIntegrity = Schema.#identifyOnDeletes(Object.values(schema.models), $model.name);
     });
 
     // Helper methods
@@ -273,14 +274,14 @@ module.exports = class Schema {
     return schema;
   }
 
-  static identifyOnDeletes(models, parentName) {
+  static #identifyOnDeletes(models, parentName) {
     return models.reduce((prev, model) => {
       Object.values(model.fields).filter(f => f.onDelete).forEach((field) => {
         if (`${field.model.name}` === `${parentName}`) {
           if (model.isEntity) {
             prev.push({ model, field, isArray: field.isArray, op: field.onDelete });
           } else {
-            prev.push(...Schema.identifyOnDeletes(models, model.name).map(od => Object.assign(od, { fieldRef: field.name, isArray: field.isArray, op: field.onDelete })));
+            prev.push(...Schema.#identifyOnDeletes(models, model.name).map(od => Object.assign(od, { fieldRef: field.name, isArray: field.isArray, op: field.onDelete })));
           }
         }
       });

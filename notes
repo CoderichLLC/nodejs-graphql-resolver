@@ -1,24 +1,37 @@
 TODO:
-  * Upsert???
-  * Emitter
-    - event should have getters to interesting data?
-    - setup?
-    - validation?
+  * Emitter: Allow the modification of query|response, prevent operation, short-circuit with new response, business logic side-effects
+    - [
+      'setup',
+      'query|mutation',
+      'validate',
+      'response'
+    ]
+    - event should have getters to interesting data
+    {
+      context,
+      resolver,
+      query?, // query.toObject()
+      doc?, // Document from the db or query.input
+      merged?, // merge(doc, query.input)
+      result?, // The result...
+      changeset?,
+      args?, // original args before any Pipeline (Can't because out of scope GQL API)
+    }
   * Pipeline
     - arguments?
     - path, validation?
   * Connections (.resolve())?
   * GraphQL API (or is that another module?)
+  * Transactions enabled via config
 
 Known Issues:
   * query.flags.debug should not be at driver level
-  * mongodb dependency? AppService references ObjectId (use bson-objectid)
   * Get to the bottom of why you need a timeout when running transactions
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
   * Tests unable to run because of mongo memory server setup
-  * Transactions in isolation; after commit() not able to see data if Loader has cached value
 
 Improvement Considerations:
+  * Upsert???
   * Why do you send `${model}` in query instead of the actual model object?
   * If no change in data, prevent entire operation?
   * Consider passing input to driver without merging doc (a lot of transformations happen) and then combining result in QueryResolver
@@ -34,6 +47,7 @@ Improvement Considerations:
     - Composite index keys (probably need to move these tests elsewhere)
   * onDelete defer - could probably be done dynamically instead
   * DataLoader - rewrite for batch queries
+  * EnsureId - inline query?
 
 BREAKING CHANGELOG:
   * Revamped how transactions work

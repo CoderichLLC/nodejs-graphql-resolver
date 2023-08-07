@@ -372,7 +372,7 @@ describe('TestSuite', () => {
   describe('Data Validation', () => {
     test('Person', async () => {
       await expect(resolver.match('Person').save()).rejects.toThrow(/required/gi);
-      await expect(resolver.match('Person').save({ name: null, emailAddress: null })).rejects.toThrow(/required/gi);
+      await expect(resolver.match('Person').flags({ debug: true }).save({ name: null, emailAddress: null })).rejects.toThrow(/required/gi);
       await expect(resolver.match('Person').save({ name: 'Richard' })).rejects.toThrow(/required/gi);
       await expect(resolver.match('Person').save({ name: 'NewGuy', emailAddress: 'newguy@gmail.com', friends: ['nobody'] })).rejects.toThrow(/not found/gi);
       await expect(resolver.match('Person').save({ name: 'NewGuy', emailAddress: 'newguy@gmail.com', friends: [richard.id, 'nobody'] })).rejects.toThrow(/not found/gi);
