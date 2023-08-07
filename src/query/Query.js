@@ -34,17 +34,29 @@ module.exports = class Query {
     return new Query({ ...this.#config, query });
   }
 
-  async toObject() {
-    const query = this.clone().#query;
-    const { crud, input, where, sort, isNative } = query;
+  transform(target, data) {
+    data = Util.unflatten(data);
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
-    const crudLines = crudMap[crud] || [];
+    const crudLines = crudMap[this.#query.crud] || [];
+
+    switch (target) {
+      case 'input': return this.#transform(this.#query, 'input', this.#model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el]));
+      case 'where': return this.#transform(this.#query, 'where', this.#model, data, ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el]));
+      case 'sort': return this.#transform(this.#query, 'sort', this.#model, data, ['castValue'].map(el => Pipeline[el]));
+      default: return {};
+    }
+  }
+
+  async toObject() {
+    const clone = this.clone();
+    const query = clone.#query;
+    const { input, where, sort, isNative } = query;
 
     // Pipeline
     [query.input, query.where, query.sort] = await Promise.all([
-      this.transform(this.#query, 'input', this.#model, Util.unflatten(input), ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el])),
-      isNative ? where : this.transform(this.#query, 'where', this.#model, Util.unflatten(where), ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el])),
-      this.transform(this.#query, 'sort', this.#model, Util.unflatten(sort), ['castValue'].map(el => Pipeline[el])),
+      clone.transform('input', input),
+      isNative ? where : clone.transform('where', where),
+      clone.transform('sort', sort),
     ]);
 
     // Cache key
@@ -101,10 +113,10 @@ module.exports = class Query {
       },
     });
 
-    return isNative ? $query : this.finalize($query);
+    return isNative ? $query : this.#finalize($query);
   }
 
-  transform(query, target, model, data, transformers = [], paths = []) {
+  #transform(query, target, model, data, transformers = [], paths = []) {
     const allFields = Object.values(model.fields).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const instructFields = Object.values(model.fields).filter(field => field.pipelines?.instruct).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
 
@@ -126,7 +138,7 @@ module.exports = class Query {
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference && !field.isPrimaryKey) {
-          $value = await this.transform(query, target, field.model, $value, transformers, paths.concat(key));
+          $value = await this.#transform(query, target, field.model, $value, transformers, paths.concat(key));
         }
 
         // Assign it back
@@ -136,7 +148,7 @@ module.exports = class Query {
     });
   }
 
-  finalize(query) {
+  #finalize(query) {
     const { where = {}, sort = {} } = query;
     const flatSort = Util.flatten(sort, { safe: true });
     const flatWhere = Util.flatten(where, { safe: true });
