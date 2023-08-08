@@ -50,13 +50,12 @@ module.exports = class Query {
   async toObject() {
     const clone = this.clone();
     const query = clone.#query;
-    const { input, where, sort, isNative } = query;
 
     // Pipeline
     [query.input, query.where, query.sort] = await Promise.all([
-      clone.transform('input', input),
-      isNative ? where : clone.transform('where', where),
-      clone.transform('sort', sort),
+      clone.transform('input', query.input),
+      query.isNative ? query.where : clone.transform('where', query.where),
+      clone.transform('sort', query.sort),
     ]);
 
     // Cache key
