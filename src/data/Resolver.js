@@ -158,28 +158,29 @@ module.exports = class Resolver {
    */
   async resolve(query) {
     let thunk;
-    const $query = await query.transform();
-    const model = this.#schema.models[$query.model];
+    const tquery = await query.transform();
+    const { model: modelName, isMutation, flags } = tquery.toObject();
+    const model = this.#schema.models[modelName];
     const currSession = this.#sessions.slice(-1).pop();
 
-    if ($query.isMutation) {
-      thunk = () => model.source.client.resolve($query.$toDriver()).then((results) => {
+    if (isMutation) {
+      thunk = () => model.source.client.resolve(tquery.toDriver().toObject()).then((results) => {
         // We clear the cache immediately (regardless if we're in transaction or not)
-        this.clear($query.model);
+        this.clear(model);
 
         // If we're in a transaction, we clear the cache of all sessions when this session resolves
-        currSession?.thunks.push(...this.#sessions.map(s => () => s.parent.clear($query.model)));
+        currSession?.thunks.push(...this.#sessions.map(s => () => s.parent.clear(model)));
 
         // Return results
         return results;
       });
     } else {
-      thunk = () => this.#loaders[model].resolve($query);
+      thunk = () => this.#loaders[model].resolve(tquery);
     }
 
-    return this.#createSystemEvent(query, $query, thunk).then((result) => {
-      if ($query.flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
-      return this.toResultSet(model, result, $query);
+    return this.#createSystemEvent(query, tquery, thunk).then((result) => {
+      if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
+      return this.toResultSet(model, result, tquery.toObject());
     });
   }
 
@@ -244,12 +245,12 @@ module.exports = class Resolver {
     }, {});
   }
 
-  #createSystemEvent(query, $query, thunk = () => {}) {
-    const { isMutation } = $query;
+  #createSystemEvent(query, tquery, thunk = () => {}) {
+    const { isMutation } = query.toObject();
     const type = isMutation ? 'Mutation' : 'Query';
-    const event = { context: this.#context, resolver: this, query: $query };
-    event.doc = $query.doc ?? $query.input;
-    event.merged = $query.merged ?? event.doc;
+    const event = { context: this.#context, resolver: this, query: tquery.toObject() };
+    // event.doc = $query.doc ?? $query.input;
+    // event.merged = $query.merged ?? event.doc;
 
     return Emitter.emit(`pre${type}`, event).then((result) => {
       return result === undefined ? thunk() : result;
@@ -259,6 +260,7 @@ module.exports = class Resolver {
     }).then(() => {
       return Emitter.emit(`post${type}`, event);
     }).then(() => event.merged);
+
     // .then(() => {
     //   return Emitter.emit('preResponse', event);
     // }).then(() => {

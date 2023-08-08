@@ -18,10 +18,7 @@ module.exports = class Query {
     this.#context = context;
     this.#schema = schema;
     this.#model = schema.models[query.model];
-    this.#query = Object.defineProperties(query, {
-      $clone: { value: (...args) => this.clone(...args).#query },
-      $toDriver: { value: () => this.toDriver() },
-    });
+    this.#query = query;
   }
 
   clone(query) {
@@ -33,8 +30,23 @@ module.exports = class Query {
     return this.#query;
   }
 
+  toCacheKey() {
+    return {
+      op: this.#query.op,
+      where: this.#query.where,
+      sort: this.#query.sort,
+      joins: this.#query.joins,
+      skip: this.#query.skip,
+      limit: this.#query.limit,
+      before: this.#query.before,
+      after: this.#query.after,
+      first: this.#query.first,
+      last: this.#query.last,
+    };
+  }
+
   /**
-   * Run a target pipeline against a given data set
+   * Run a portion of the pipeline against a data set
    */
   pipeline(target, data) {
     data = Util.unflatten(data);
@@ -52,74 +64,38 @@ module.exports = class Query {
   /**
    * Transform entire query via pipeline
    */
-  async transform() {
-    const clone = this.clone();
-    const query = clone.#query;
+  transform() {
+    return Promise.all([
+      this.pipeline('input', this.#query.input),
+      this.#query.isNative ? this.#query.where : this.pipeline('where', this.#query.where),
+      this.pipeline('sort', this.#query.sort),
+    ]).then(([input, where, sort]) => this.clone({ input, where, sort }));
+  }
 
-    // Pipeline
-    [query.input, query.where, query.sort] = await Promise.all([
-      clone.pipeline('input', query.input),
-      query.isNative ? query.where : clone.pipeline('where', query.where),
-      clone.pipeline('sort', query.sort),
-    ]);
+  /**
+   * Transform entire query for driver
+   */
+  toDriver() {
+    const { input, where, sort, before, after, isNative, isCursorPaging } = this.#query;
 
-    // Cache key
-    query.cacheKey = {
-      op: query.op,
-      where: query.where,
-      sort: query.sort,
-      joins: query.joins,
-      skip: query.skip,
-      limit: query.limit,
-      before: query.before,
-      after: query.after,
-      first: query.first,
-      last: query.last,
-    };
+    const query = this.clone({
+      select: Object.values(this.#model.fields).map(field => field.key),
+      input: this.#model.walk(input, node => Object.assign(node, { key: node.field.key })),
+      where: isNative ? where : this.#model.walk(where, node => Object.assign(node, { key: node.field.key })),
+      sort: this.#model.walk(sort, node => Object.assign(node, { key: node.field.key })),
+      before: (!isCursorPaging || !before) ? undefined : JSON.parse(Buffer.from(before, 'base64').toString('ascii')),
+      after: (!isCursorPaging || !after) ? undefined : JSON.parse(Buffer.from(after, 'base64').toString('ascii')),
+      $schema: this.#schema.resolvePath,
+    });
+
+    if (!isNative) this.#finalize(query.toObject());
 
     return query;
   }
 
-  toDriver() {
-    const query = this.#query;
-    const { where, isNative } = query;
-
-    const $query = Object.defineProperties(query.$clone(), {
-      isNative: {
-        value: isNative,
-      },
-      select: {
-        value: Object.values(this.#model.fields).map(field => field.key),
-      },
-      input: {
-        value: this.#model.walk(query.input, node => Object.assign(node, { key: node.field.key })),
-      },
-      where: {
-        value: isNative ? where : this.#model.walk(query.where, node => Object.assign(node, { key: node.field.key })),
-      },
-      sort: {
-        value: this.#model.walk(query.sort, node => Object.assign(node, { key: node.field.key })),
-      },
-      before: {
-        get: () => {
-          if (!query.isCursorPaging || !query.before) return undefined;
-          return JSON.parse(Buffer.from(query.before, 'base64').toString('ascii'));
-        },
-      },
-      after: {
-        get: () => {
-          if (!query.isCursorPaging || !query.after) return undefined;
-          return JSON.parse(Buffer.from(query.after, 'base64').toString('ascii'));
-        },
-      },
-      $schema: {
-        value: this.#schema.resolvePath,
-      },
-    });
-
-    return isNative ? $query : this.#finalize($query);
-  }
-
+  /**
+   * Recursive pipeline function
+   */
   #pipeline(query, target, model, data, transformers = [], paths = []) {
     const allFields = Object.values(model.fields).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const instructFields = Object.values(model.fields).filter(field => field.pipelines?.instruct).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
@@ -152,6 +128,9 @@ module.exports = class Query {
     });
   }
 
+  /**
+   * Finalize the query for the driver
+   */
   #finalize(query) {
     const { where = {}, sort = {} } = query;
     const flatSort = Util.flatten(sort, { safe: true });
@@ -212,7 +191,5 @@ module.exports = class Query {
 
       return node;
     }, { key: 'key' });
-
-    return query;
   }
 };

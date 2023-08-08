@@ -9,7 +9,7 @@ module.exports = class Loader {
 
   constructor(model) {
     this.#model = model;
-    model.loader.cacheKeyFn = model.loader.cacheKeyFn ?? (query => hashObject(query.cacheKey));
+    model.loader.cacheKeyFn = model.loader.cacheKeyFn ?? (query => hashObject(query.toCacheKey()));
     this.#loader = new DataLoader(keys => this.#resolve(keys), model.loader);
   }
 
@@ -22,10 +22,13 @@ module.exports = class Loader {
   }
 
   #resolve(queries) {
-    return Promise.all(queries.map(async (query) => {
-      return this.#model.source.client.resolve(query.$toDriver()).then((data) => {
+    return Promise.all(queries.map((query) => {
+      const dquery = query.toDriver();
+      const $query = dquery.toObject();
+
+      return this.#model.source.client.resolve($query).then((data) => {
         if (data == null) return null; // Explicit return null;
-        if (query.isCursorPaging) return Loader.#paginateResults(data, query);
+        if ($query.isCursorPaging) return Loader.#paginateResults(data, query.toObject());
         return data;
       });
     }));
@@ -35,8 +38,8 @@ module.exports = class Loader {
     let hasNextPage = false;
     let hasPreviousPage = false;
     const { first, after, last, before, sort = {} } = query;
-    const limiter = first || last;
     const sortPaths = Object.keys(Util.flatten(sort, { safe: true }));
+    const limiter = first || last;
 
     // Add $cursor data
     Util.map(rs, (doc) => {
