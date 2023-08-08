@@ -1,4 +1,3 @@
-const get = require('lodash.get');
 const merge = require('lodash.merge');
 const Util = require('@coderich/util');
 const Pipeline = require('../data/Pipeline');
@@ -25,37 +24,43 @@ module.exports = class Query {
     });
   }
 
-  get(...args) {
-    return get(this.#query, ...args);
-  }
-
   clone(query) {
     query = merge({}, this.#query, query);
     return new Query({ ...this.#config, query });
   }
 
-  transform(target, data) {
+  toObject() {
+    return this.#query;
+  }
+
+  /**
+   * Run a target pipeline against a given data set
+   */
+  pipeline(target, data) {
     data = Util.unflatten(data);
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[this.#query.crud] || [];
 
     switch (target) {
-      case 'input': return this.#transform(this.#query, 'input', this.#model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el]));
-      case 'where': return this.#transform(this.#query, 'where', this.#model, data, ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el]));
-      case 'sort': return this.#transform(this.#query, 'sort', this.#model, data, ['castValue'].map(el => Pipeline[el]));
+      case 'input': return this.#pipeline(this.#query, 'input', this.#model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el]));
+      case 'where': return this.#pipeline(this.#query, 'where', this.#model, data, ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el]));
+      case 'sort': return this.#pipeline(this.#query, 'sort', this.#model, data, ['castValue'].map(el => Pipeline[el]));
       default: return {};
     }
   }
 
-  async toObject() {
+  /**
+   * Transform entire query via pipeline
+   */
+  async transform() {
     const clone = this.clone();
     const query = clone.#query;
 
     // Pipeline
     [query.input, query.where, query.sort] = await Promise.all([
-      clone.transform('input', query.input),
-      query.isNative ? query.where : clone.transform('where', query.where),
-      clone.transform('sort', query.sort),
+      clone.pipeline('input', query.input),
+      query.isNative ? query.where : clone.pipeline('where', query.where),
+      clone.pipeline('sort', query.sort),
     ]);
 
     // Cache key
@@ -115,7 +120,7 @@ module.exports = class Query {
     return isNative ? $query : this.#finalize($query);
   }
 
-  #transform(query, target, model, data, transformers = [], paths = []) {
+  #pipeline(query, target, model, data, transformers = [], paths = []) {
     const allFields = Object.values(model.fields).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
     const instructFields = Object.values(model.fields).filter(field => field.pipelines?.instruct).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
 
@@ -137,7 +142,7 @@ module.exports = class Query {
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference && !field.isPrimaryKey) {
-          $value = await this.#transform(query, target, field.model, $value, transformers, paths.concat(key));
+          $value = await this.#pipeline(query, target, field.model, $value, transformers, paths.concat(key));
         }
 
         // Assign it back

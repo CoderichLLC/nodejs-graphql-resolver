@@ -18,99 +18,97 @@ module.exports = class QueryResolver extends QueryBuilder {
     this.#model = schema.models[query.model];
   }
 
-  #get(query) {
-    return this.#resolver.match(this.#model.name).where(query.get('where')).one({ required: true });
-  }
-
-  #find($query) {
-    return this.#resolver.resolve($query.$clone({ op: 'findMany' }));
-  }
-
-  async resolve() {
+  resolve() {
     const query = super.resolve();
-    const $query = await query.toObject();
-    const [operation, input] = [query.get('op'), query.get('input')];
+    const { op, input } = query.toObject();
 
     // Resolve
-    switch (operation) {
+    switch (op) {
       case 'findOne': case 'findMany': case 'count': {
-        return this.#resolver.resolve($query);
+        return this.#resolver.resolve(query);
       }
       case 'createOne': {
-        return this.#resolver.resolve($query);
+        return this.#resolver.resolve(query);
       }
       case 'createMany': {
         return this.#resolver.transaction(false).run(Promise.all(input.map(el => this.#resolver.match(this.#model.name).save(el))));
       }
       case 'updateOne': {
-        return this.#get(query).then(async (doc) => {
+        return this.#get(query).then((doc) => {
           const merged = mergeDeep({}, Util.unflatten(doc), Util.unflatten(input));
-          const $clone = await query.clone({ input: merged, doc, merged }).toObject();
-          return this.#resolver.resolve($clone);
+          const clone = query.clone({ input: merged, doc, merged });
+          return this.#resolver.resolve(clone);
         });
       }
       case 'updateMany': {
-        return this.#find($query).then((docs) => {
+        return this.#find(query).then((docs) => {
           return this.#resolver.transaction(false).run(Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).save(input))));
         });
       }
       case 'pushOne': {
         return this.#get(query).then(async (doc) => {
           const [key] = Object.keys(input);
-          const values = get($query.input, key);
+          const values = get(await query.pipeline('input', input), key);
           const $input = { [key]: (get(doc, key) || []).concat(...values) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
       }
       case 'pushMany': {
         const [[key, values]] = Object.entries(input[0]);
-        return this.#find($query).then((docs) => {
+        return this.#find(query).then((docs) => {
           return this.#resolver.transaction(false).run(Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).push(key, values))));
         });
       }
       case 'pullOne': {
         return this.#get(query).then(async (doc) => {
           const [key] = Object.keys(input);
-          const values = get($query.input, key);
+          const values = get(await query.pipeline('input', input), key);
           const $input = { [key]: (get(doc, key) || []).filter(el => values.every(v => `${v}` !== `${el}`)) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
       }
       case 'pullMany': {
         const [[key, values]] = Object.entries(input[0]);
-        return this.#find($query).then((docs) => {
+        return this.#find(query).then((docs) => {
           return this.#resolver.transaction(false).run(Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).pull(key, values))));
         });
       }
       case 'spliceOne': {
         return this.#get(query).then(async (doc) => {
           const [key] = Object.keys(input);
-          const [find, replace] = get($query.input, key);
+          const [find, replace] = get(await query.pipeline('input', input), key);
           const $input = { [key]: (get(doc, key) || []).map(el => (`${el}` === `${find}` ? replace : el)) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
       }
       case 'deleteOne': {
         return this.#get(query).then((doc) => {
-          $query.doc = doc;
-          return this.#resolveReferentialIntegrity($query).then(() => {
-            return this.#resolver.resolve($query).then(() => doc);
+          return this.#resolveReferentialIntegrity(query).then(() => {
+            return this.#resolver.resolve(query).then(() => doc);
           });
         });
       }
       case 'deleteMany': {
-        return this.#find($query).then((docs) => {
+        return this.#find(query).then((docs) => {
           return this.#resolver.transaction(false).run(Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).delete())));
         });
       }
       default: {
-        throw new Error(`Unknown operation "${operation}"`);
+        throw new Error(`Unknown operation "${op}"`);
       }
     }
   }
 
+  #get(query) {
+    return this.#resolver.match(this.#model.name).where(query.toObject().where).one({ required: true });
+  }
+
+  #find(query) {
+    return this.#resolver.resolve(query.clone({ op: 'findMany' }));
+  }
+
   #resolveReferentialIntegrity(query) {
-    const { id } = query;
+    const { id } = query.toObject();
     const txn = this.#resolver.transaction(false);
 
     return txn.run(Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, fieldRef, isArray, op }) => () => {

@@ -153,32 +153,33 @@ module.exports = class Resolver {
    *
    * This method ultimately delegates to a DataSource (for mutations) otherwise a DataLoader.
    *
-   * @param {object} query - An instance of Query.toObject(); a normalized query object that has been transformed.
-   * @returns {*} - The resolved query data
+   * @param {Query} query - The query to resolve
+   * @returns {*} - The resolved query result
    */
-  resolve(query) {
+  async resolve(query) {
     let thunk;
-    const model = this.#schema.models[query.model];
+    const $query = await query.transform();
+    const model = this.#schema.models[$query.model];
     const currSession = this.#sessions.slice(-1).pop();
 
-    if (query.isMutation) {
-      thunk = () => model.source.client.resolve(query.$toDriver()).then((results) => {
+    if ($query.isMutation) {
+      thunk = () => model.source.client.resolve($query.$toDriver()).then((results) => {
         // We clear the cache immediately (regardless if we're in transaction or not)
-        this.clear(query.model);
+        this.clear($query.model);
 
         // If we're in a transaction, we clear the cache of all sessions when this session resolves
-        currSession?.thunks.push(...this.#sessions.map(s => () => s.parent.clear(query.model)));
+        currSession?.thunks.push(...this.#sessions.map(s => () => s.parent.clear($query.model)));
 
         // Return results
         return results;
       });
     } else {
-      thunk = () => this.#loaders[model].resolve(query);
+      thunk = () => this.#loaders[model].resolve($query);
     }
 
-    return this.#createSystemEvent(query, thunk).then((result) => {
-      if (query.flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
-      return this.toResultSet(model, result, query);
+    return this.#createSystemEvent(query, $query, thunk).then((result) => {
+      if ($query.flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
+      return this.toResultSet(model, result, $query);
     });
   }
 
@@ -243,13 +244,12 @@ module.exports = class Resolver {
     }, {});
   }
 
-  #createSystemEvent(query, thunk = () => {}) {
-    const type = query.isMutation ? 'Mutation' : 'Query';
-    const event = { context: this.#context, resolver: this, query };
-    event.doc = query.doc ?? query.input;
-    event.merged = query.merged ?? event.doc;
-
-    // console.log(query.transform);
+  #createSystemEvent(query, $query, thunk = () => {}) {
+    const { isMutation } = $query;
+    const type = isMutation ? 'Mutation' : 'Query';
+    const event = { context: this.#context, resolver: this, query: $query };
+    event.doc = $query.doc ?? $query.input;
+    event.merged = $query.merged ?? event.doc;
 
     return Emitter.emit(`pre${type}`, event).then((result) => {
       return result === undefined ? thunk() : result;
