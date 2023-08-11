@@ -245,12 +245,18 @@ module.exports = class Resolver {
     }, {});
   }
 
-  #createSystemEvent(query, tquery, thunk = () => {}) {
-    const { isMutation } = query.toObject();
-    const type = isMutation ? 'Mutation' : 'Query';
-    const event = { context: this.#context, resolver: this, query: tquery.toObject() };
-    // event.doc = $query.doc ?? $query.input;
-    // event.merged = $query.merged ?? event.doc;
+  #createSystemEvent(oquery, tquery, thunk = () => {}) {
+    const args = oquery.toObject();
+    const query = tquery.toObject();
+    const type = query.isMutation ? 'Mutation' : 'Query';
+    const event = {
+      context: this.#context,
+      resolver: this,
+      query,
+      args,
+      doc: query.doc,
+      merged: query.merged,
+    };
 
     return Emitter.emit(`pre${type}`, event).then((result) => {
       return result === undefined ? thunk() : result;

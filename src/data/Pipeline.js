@@ -73,7 +73,7 @@ module.exports = class Pipeline {
 
     //
     Pipeline.define('$pk', ({ model, value }) => model.source.idValue(value?.id || value), { ignoreNull: false });
-    Pipeline.define('$id', ({ model, value }) => model.source.idValue(value.id || value));
+    Pipeline.define('$fk', ({ model, value }) => model.source.idValue(value.id || value));
 
     //
     Pipeline.define('ensureId', ({ query, resolver, model, field, value }) => {

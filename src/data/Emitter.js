@@ -28,11 +28,9 @@ class Emitter extends EventEmitter {
     const numArgs = fn.length;
 
     return super.on(on, async (event, next) => {
-      const { key } = event;
-
-      if (Util.ensureArray(keys).indexOf(key) > -1) {
-        await fn(event, next);
+      if (Util.ensureArray(keys).indexOf(event.query.key) > -1) {
         if (numArgs < 2) next();
+        await fn(event, next);
       } else {
         next();
       }
@@ -46,11 +44,9 @@ class Emitter extends EventEmitter {
     const numArgs = fn.length;
 
     return super.once(once, async (event, next) => {
-      const { key } = event;
-
-      if (Util.ensureArray(keys).indexOf(key) > -1) {
-        await fn(event, next);
+      if (Util.ensureArray(keys).indexOf(event.query.key) > -1) {
         if (numArgs < 2) next();
+        await fn(event, next);
       } else {
         next();
       }
@@ -64,11 +60,9 @@ class Emitter extends EventEmitter {
     const numArgs = fn.length;
 
     return super.on(on, async (event, next) => {
-      const { model } = event;
-
-      if (Util.ensureArray(models).indexOf(`${model}`) > -1) {
-        await fn(event, next);
+      if (Util.ensureArray(models).indexOf(`${event.query.model}`) > -1) {
         if (numArgs < 2) next();
+        await fn(event, next);
       } else {
         next();
       }
@@ -82,11 +76,9 @@ class Emitter extends EventEmitter {
     const numArgs = fn.length;
 
     return super.once(once, async (event, next) => {
-      const { model } = event;
-
-      if (Util.ensureArray(models).indexOf(`${model}`) > -1) {
-        await fn(event, next);
+      if (Util.ensureArray(models).indexOf(`${event.query.model}`) > -1) {
         if (numArgs < 2) next();
+        await fn(event, next);
       } else {
         next();
       }

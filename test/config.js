@@ -43,7 +43,7 @@ module.exports = {
   },
   decorators: {
     default: `
-      id: ID! @field(key: "_id", serialize: "$pk")
+      id: ID! @field(key: "_id")
       createdAt: String @field(serialize: createdAt, gqlScope: r)
       updatedAt: String @field(serialize: timestamp, gqlScope: r)
     `,

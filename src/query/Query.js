@@ -1,4 +1,3 @@
-const merge = require('lodash.merge');
 const Util = require('@coderich/util');
 const Pipeline = require('../data/Pipeline');
 const { isGlob, globToRegex, mergeDeep, finalizeWhereClause } = require('../service/AppService');
@@ -22,7 +21,7 @@ module.exports = class Query {
   }
 
   clone(query) {
-    query = merge({}, this.#query, query);
+    query = { ...this.#query, ...query }; // NO deepMerge here; must replace fields entirely
     return new Query({ ...this.#config, query });
   }
 

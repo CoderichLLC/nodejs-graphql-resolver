@@ -227,7 +227,9 @@ module.exports = class Schema {
             $field.linkBy = $field.linkBy || $field.model?.idField;
             $field.linkFrom = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
-            if ($field.isPrimaryKey || $field.isFKReference) $field.pipelines.serialize.unshift('$id');
+            if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
+            if ($field.isFKReference) $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
+            // if ($field.isPrimaryKey || $field.isFKReference) $field.pipelines.serialize.unshift('$fk');
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
             if ($field.isFKReference) {
               const to = $field.model.key;
