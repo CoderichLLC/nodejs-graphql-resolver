@@ -249,23 +249,19 @@ module.exports = class Resolver {
     const args = oquery.toObject();
     const query = tquery.toObject();
     const type = query.isMutation ? 'Mutation' : 'Query';
-    const event = {
-      context: this.#context,
-      resolver: this,
-      query,
-      args,
-      doc: query.doc,
-      merged: query.merged,
-    };
+    const event = { context: this.#context, resolver: this, query, args };
 
     return Emitter.emit(`pre${type}`, event).then((result) => {
-      return result === undefined ? thunk() : result;
+      return query.isMutation ? Promise.all([
+        tquery.pipeline('input', query.input, ['$validate']), // Because input is merged
+        Emitter.emit('validate', event),
+      ]).then(() => result) : result;
     }).then((result) => {
-      event.merged = result;
-      return Emitter.emit('validate', event);
-    }).then(() => {
+      return result === undefined ? thunk() : result; // It's possible to by-pass thunk
+    }).then((result) => {
+      event.result = result;
       return Emitter.emit(`post${type}`, event);
-    }).then(() => event.merged);
+    }).then(() => event.result);
 
     // .then(() => {
     //   return Emitter.emit('preResponse', event);

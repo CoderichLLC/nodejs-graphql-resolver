@@ -74,6 +74,14 @@ module.exports = class Pipeline {
     //
     Pipeline.define('$pk', ({ model, value }) => model.source.idValue(value?.id || value), { ignoreNull: false });
     Pipeline.define('$fk', ({ model, value }) => model.source.idValue(value.id || value));
+    // Pipeline.define('$id', ({ query, model, field, value }) => {
+    //   if (field.isPrimaryKey) {
+    //     if (model.isEmbedded || ['create', 'push'].includes(query.crud)) return model.source.idValue(value?.id || value);
+    //     return value ? model.source.idValue(value.id || value) : value;
+    //   }
+    //   if (field.isFKReference && value) return model.source.idValue(value.id || value);
+    //   return value;
+    // }, { ignoreNull: false });
 
     //
     Pipeline.define('ensureId', ({ query, resolver, model, field, value }) => {

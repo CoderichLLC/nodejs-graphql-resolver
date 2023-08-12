@@ -47,17 +47,18 @@ module.exports = class Query {
   /**
    * Run a portion of the pipeline against a data set
    */
-  pipeline(target, data) {
+  pipeline(target, data, transformers) {
     data = Util.unflatten(data);
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[this.#query.crud] || [];
+    const transformerMap = {
+      input: ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform'],
+      where: ['castValue', '$instruct', '$serialize'],
+      sort: ['castValue'],
+    };
+    transformers = transformers || transformerMap[target];
 
-    switch (target) {
-      case 'input': return this.#pipeline(this.#query, 'input', this.#model, data, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform', '$validate'].map(el => Pipeline[el]));
-      case 'where': return this.#pipeline(this.#query, 'where', this.#model, data, ['castValue', '$instruct', '$serialize'].map(el => Pipeline[el]));
-      case 'sort': return this.#pipeline(this.#query, 'sort', this.#model, data, ['castValue'].map(el => Pipeline[el]));
-      default: return {};
-    }
+    return this.#pipeline(this.#query, target, this.#model, data, transformers.map(el => Pipeline[el]));
   }
 
   /**
