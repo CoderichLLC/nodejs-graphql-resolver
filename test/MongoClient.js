@@ -17,10 +17,11 @@ module.exports = class MongoDriver {
   resolve(query) {
     query.options = { ...this.#config.query, ...query.options };
     if (query.flags?.debug) console.log(inspect(query, { showHidden: false, colors: true }));
-    return this[query.op](query).then((result) => {
+
+    return Util.promiseRetry(() => this[query.op](query).then((result) => {
       if (query.flags?.debug) console.log(inspect(result, { showHidden: false, colors: true }));
       return result;
-    });
+    }), 5, 5, e => e.hasErrorLabel && e.hasErrorLabel('TransientTransactionError'));
   }
 
   findOne(query) {

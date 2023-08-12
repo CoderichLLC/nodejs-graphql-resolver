@@ -27,7 +27,6 @@ TODO:
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
   * query.flags.debug should not be at driver level
-  * Get to the bottom of why you need a timeout when running transactions
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
   * Tests unable to run because of mongo memory server setup
 

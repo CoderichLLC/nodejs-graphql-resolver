@@ -1,4 +1,3 @@
-const Util = require('@coderich/util');
 const QueryResolver = require('./QueryResolver');
 
 module.exports = class QueryResolverTransaction extends QueryResolver {
@@ -11,7 +10,7 @@ module.exports = class QueryResolverTransaction extends QueryResolver {
 
   resolve() {
     return this.#config.transaction.then((transaction) => {
-      return Util.timeout(10).then(() => super.resolve(super.options(transaction)));
+      return super.resolve(super.options(transaction));
     });
   }
 };

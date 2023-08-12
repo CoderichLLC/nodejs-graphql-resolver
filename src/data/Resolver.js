@@ -262,11 +262,5 @@ module.exports = class Resolver {
       event.result = result;
       return Emitter.emit(`post${type}`, event);
     }).then(() => event.result);
-
-    // .then(() => {
-    //   return Emitter.emit('preResponse', event);
-    // }).then(() => {
-    //   return Emitter.emit('postResponse', event);
-    // });
   }
 };
