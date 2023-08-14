@@ -52,7 +52,7 @@ module.exports = class Query {
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[this.#query.crud] || [];
     const transformerMap = {
-      input: ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$serialize', '$transform'],
+      input: ['defaultValue', 'castValue', '$normalize', '$instruct', ...crudLines, '$serialize'],
       where: ['castValue', '$instruct', '$serialize'],
       sort: ['castValue'],
     };

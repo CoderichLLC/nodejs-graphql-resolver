@@ -57,15 +57,12 @@ module.exports = class Pipeline {
     Pipeline.define('timestamp', ({ value }) => Date.now(), { ignoreNull: false });
     Pipeline.define('createdAt', ({ value }) => value || Date.now(), { ignoreNull: false });
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
-    Pipeline.define('ensureArrayValue', ({ field, value }) => (field.isArray && !Array.isArray(value) ? [value] : value), { itemize: false });
     Pipeline.define('defaultValue', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
 
     // Structures
     Pipeline.define('$instruct', params => Pipeline.#resolve(params, 'instruct'), { ignoreNull: false });
     Pipeline.define('$normalize', params => Pipeline.#resolve(params, 'normalize'), { ignoreNull: false });
     Pipeline.define('$serialize', params => Pipeline.#resolve(params, 'serialize'), { ignoreNull: false });
-    Pipeline.define('$deserialize', params => Pipeline.#resolve(params, 'deserialize'), { ignoreNull: false });
-    Pipeline.define('$transform', params => Pipeline.#resolve(params, 'transform'), { ignoreNull: false });
     Pipeline.define('$construct', params => Pipeline.#resolve(params, 'construct'), { ignoreNull: false });
     Pipeline.define('$restruct', params => Pipeline.#resolve(params, 'restruct'), { ignoreNull: false });
     Pipeline.define('$destruct', params => Pipeline.#resolve(params, 'destruct'), { ignoreNull: false });

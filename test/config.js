@@ -58,10 +58,10 @@ module.exports = {
       @index(name: "uix_person_name", type: unique, on: [name])
     {
       age: Int @field(key: "my_age")
-      name: String! @field(deserialize: toTitleCase, serialize: toLowerCase)
+      name: String! @field(normalize: toTitleCase, serialize: toLowerCase)
       authored: [Book] @link(by: author) @field(connection: true)
       emailAddress: String! @field(key: "email_address", validate: email)
-      friends: [Person] @field(transform: dedupe, validate: selfless, onDelete: cascade, connection: true)
+      friends: [Person] @field(normalize: dedupe, validate: selfless, onDelete: cascade, connection: true)
       status: String @field(key: "state")
       state: String @field(key: "address_state")
       telephone: String @field(default: "###-###-####")
@@ -76,7 +76,7 @@ module.exports = {
       @model
       @index(name: "uix_book", type: unique, on: [name, author])
     {
-      name: String! @field(transform: toTitleCase, validate: bookName)
+      name: String! @field(normalize: toTitleCase, validate: bookName)
       price: Float! @field(validate: bookPrice)
       author: Person! @field(validate: immutable, onDelete: cascade)
       bestSeller: Boolean
@@ -88,7 +88,7 @@ module.exports = {
       @model
       @index(name: "uix_chapter", type: unique, on: [name, book])
     {
-      name: String! @field(key: "chapter_name" transform: toTitleCase)
+      name: String! @field(key: "chapter_name" normalize: toTitleCase)
       book: Book! @field(onDelete: restrict)
       pages: [Page] @link(by: chapter)
     }
@@ -106,7 +106,7 @@ module.exports = {
       @model
       @index(name: "uix_bookstore", type: unique, on: [name])
     {
-      name: String! @field(transform: toTitleCase)
+      name: String! @field(normalize: toTitleCase)
       location: String
       books: [Book] @field(onDelete: cascade)
       building: Building!
@@ -117,7 +117,7 @@ module.exports = {
       @index(name: "uix_library", type: unique, on: [name])
       @index(name: "uix_library_bulding", type: unique, on: [building])
     {
-      name: String! @field(transform: toTitleCase)
+      name: String! @field(normalize: toTitleCase)
       location: String,
       books: [Book] @field(onDelete: cascade)
       building: Building!
@@ -128,7 +128,7 @@ module.exports = {
       @index(name: "uix_apartment", type: unique, on: [name])
       @index(name: "uix_apartment_bulding", type: unique, on: [building])
     {
-      name: String! @field(transform: toTitleCase)
+      name: String! @field(normalize: toTitleCase)
       location: String
       building: Building!
     }
@@ -152,14 +152,14 @@ module.exports = {
     type Art
       @model
     {
-      name: String! @field(transform: toTitleCase)
+      name: String! @field(normalize: toTitleCase)
       bids: [Float]
       comments: [String] @field(validate: artComment)
       sections: [Section]
     }
 
     type Section @model(embed: true) {
-      name: String! @field(transform: toLowerCase)
+      name: String! @field(normalize: toLowerCase)
       frozen: String! @field(default: "frozen", validate: immutable)
       description: String
       person: Person

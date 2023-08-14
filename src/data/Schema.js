@@ -75,7 +75,7 @@ module.exports = class Schema {
             key: name,
             dalScope: 'crud',
             gqlScope: 'cruds',
-            pipelines: { validate: [], serialize: [], construct: [] },
+            pipelines: { normalize: [], validate: [], serialize: [], construct: [] },
             toString: () => name,
           };
         } else if (node.kind === Kind.NON_NULL_TYPE) {
@@ -149,7 +149,7 @@ module.exports = class Schema {
                 break;
               }
               default: {
-                if (['validate', 'construct', 'restruct', 'destruct', 'instruct', 'normalize', 'transform', 'serialize', 'deserialize'].includes(key)) {
+                if (['validate', 'construct', 'restruct', 'destruct', 'instruct', 'normalize', 'serialize'].includes(key)) {
                   target.pipelines[key] = target.pipelines[key] || [];
                   target.pipelines[key] = target.pipelines[key].concat(value).filter(Boolean);
                 }
@@ -228,6 +228,7 @@ module.exports = class Schema {
             $field.linkFrom = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
 
+            if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
             if ($field.isFKReference) $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
             // if ($field.isPrimaryKey || $field.isFKReference) $field.pipelines.serialize.unshift('$id');

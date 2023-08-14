@@ -188,7 +188,7 @@ module.exports = class Resolver {
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[query.crud] || [];
     const $model = this.#schema.models[model];
-    return this.#finalize(query, $model, result, ['defaultValue', 'castValue', 'ensureArrayValue', '$normalize', '$instruct', ...crudLines, '$deserialize', '$transform'].map(el => Pipeline[el]));
+    return this.#finalize(query, $model, result, ['defaultValue', 'castValue', '$normalize', '$instruct', ...crudLines].map(el => Pipeline[el]));
   }
 
   toModel(model) {

@@ -52,6 +52,8 @@ Improvement Considerations:
 BREAKING CHANGELOG:
   * Revamped how transactions work
   * Revamped how initial setup works (config.js)
+  * Pipeline "toId" is now $id or $pk depending upon needs
+  * Merlin "transform: toArray" needed?
 
 ---------
 
