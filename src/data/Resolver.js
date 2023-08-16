@@ -251,12 +251,11 @@ module.exports = class Resolver {
     const type = query.isMutation ? 'Mutation' : 'Query';
     const event = { context: this.#context, resolver: this, query, args };
 
-    return Emitter.emit(`pre${type}`, event).then((result) => {
-      return query.isMutation ? Promise.all([
-        tquery.pipeline('input', query.input, ['$validate']), // Because input is merged
-        Emitter.emit('validate', event),
-      ]).then(() => result) : result;
-    }).then((result) => {
+    return Emitter.emit(`pre${type}`, event).then(async (result) => {
+      query.input = await tquery.pipeline('input', query.input, ['$validate']);
+      return query.isMutation ? Emitter.emit('validate', event).then(() => result) : result;
+    }).then(async (result) => {
+      query.input = await tquery.pipeline('input', query.input, ['$finalize']);
       return result === undefined ? thunk() : result; // It's possible to by-pass thunk
     }).then((result) => {
       event.result = result;

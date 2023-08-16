@@ -62,10 +62,11 @@ module.exports = class Pipeline {
     // Structures
     Pipeline.define('$instruct', params => Pipeline.#resolve(params, 'instruct'), { ignoreNull: false });
     Pipeline.define('$normalize', params => Pipeline.#resolve(params, 'normalize'), { ignoreNull: false });
-    Pipeline.define('$serialize', params => Pipeline.#resolve(params, 'serialize'), { ignoreNull: false });
     Pipeline.define('$construct', params => Pipeline.#resolve(params, 'construct'), { ignoreNull: false });
     Pipeline.define('$restruct', params => Pipeline.#resolve(params, 'restruct'), { ignoreNull: false });
     Pipeline.define('$destruct', params => Pipeline.#resolve(params, 'destruct'), { ignoreNull: false });
+    Pipeline.define('$serialize', params => Pipeline.#resolve(params, 'serialize'), { ignoreNull: false });
+    Pipeline.define('$finalize', params => Pipeline.#resolve(params, 'finalize'), { ignoreNull: false });
     Pipeline.define('$validate', params => Pipeline.#resolve(params, 'validate'), { ignoreNull: false });
 
     //
@@ -94,31 +95,29 @@ module.exports = class Pipeline {
       const { type, isEmbedded } = field;
       if (isEmbedded) return value;
 
-      return Util.map(value, (v) => {
-        switch (type.toLowerCase()) {
-          case 'string': {
-            return `${v}`;
-          }
-          case 'float': case 'number': {
-            const num = Number(v);
-            if (!Number.isNaN(num)) return num;
-            return v;
-          }
-          case 'int': {
-            const num = Number(v);
-            if (!Number.isNaN(num)) return parseInt(v, 10);
-            return v;
-          }
-          case 'boolean': {
-            if (v === 'true') return true;
-            if (v === 'false') return false;
-            return v;
-          }
-          default: {
-            return v;
-          }
+      switch (type.toLowerCase()) {
+        case 'string': {
+          return `${value}`;
         }
-      });
+        case 'float': case 'number': {
+          const num = Number(value);
+          if (!Number.isNaN(num)) return num;
+          return value;
+        }
+        case 'int': {
+          const num = Number(value);
+          if (!Number.isNaN(num)) return parseInt(value, 10);
+          return value;
+        }
+        case 'boolean': {
+          if (value === 'true') return true;
+          if (value === 'false') return false;
+          return value;
+        }
+        default: {
+          return value;
+        }
+      }
     });
 
     // Required fields

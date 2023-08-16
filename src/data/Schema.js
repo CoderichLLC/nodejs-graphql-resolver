@@ -149,7 +149,7 @@ module.exports = class Schema {
                 break;
               }
               default: {
-                if (['validate', 'construct', 'restruct', 'destruct', 'instruct', 'normalize', 'serialize'].includes(key)) {
+                if (['validate', 'construct', 'restruct', 'destruct', 'instruct', 'normalize', 'serialize', 'finalize'].includes(key)) {
                   target.pipelines[key] = target.pipelines[key] || [];
                   target.pipelines[key] = target.pipelines[key].concat(value).filter(Boolean);
                 }
