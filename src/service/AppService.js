@@ -23,3 +23,8 @@ exports.finalizeWhereClause = (obj, arrayOp = '$in') => {
     return Object.assign(prev, { [key]: value });
   }, {});
 };
+
+exports.getGQLReturnType = (returnType) => {
+  const typeMap = { array: /^\[.+\].?$/, connection: /.+Connection!?$/, number: /^(Int|Float)!?$/, scalar: /.*/ };
+  return Object.entries(typeMap).find(([type, pattern]) => returnType.match(pattern))[0];
+};

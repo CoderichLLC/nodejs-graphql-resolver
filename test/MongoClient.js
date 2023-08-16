@@ -192,6 +192,7 @@ module.exports = class MongoDriver {
     const $sort = MongoDriver.convertFieldsForSort(query.$schema, model, sort);
 
     if (Object.keys($addFields).length) $aggregate.unshift({ $addFields });
+    if (joins?.length) $aggregate.push(...MongoDriver.aggregateJoins(query, joins));
 
     if (count) {
       $aggregate.push({ $count: 'count' });
@@ -205,9 +206,6 @@ module.exports = class MongoDriver {
       //   $aggregate.push({ $addFields: { __order: { $indexOfArray: [idMatch.$in, `$${idKey}`] } } });
       //   $aggregate.push({ $sort: { __order: 1 } });
       // }
-
-      // Joins
-      if (joins?.length) $aggregate.push(...MongoDriver.aggregateJoins(query, joins));
 
       // Sort, Skip, Limit documents
       if ($sort && Object.keys($sort).length) $aggregate.push({ $sort });

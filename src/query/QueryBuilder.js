@@ -1,4 +1,5 @@
 const Query = require('./Query');
+const { getGQLReturnType } = require('../service/AppService');
 
 module.exports = class QueryBuilder {
   #config;
@@ -23,8 +24,8 @@ module.exports = class QueryBuilder {
     this.remove = this.delete;
   }
 
-  resolve() {
-    return new Query(this.#config);
+  resolve(...args) {
+    return args.length ? null : new Query(this.#config);
   }
 
   /**
@@ -87,6 +88,11 @@ module.exports = class QueryBuilder {
   sort(sort) {
     this.#propCheck('sort', 'id');
     this.#query.sort = sort;
+    return this;
+  }
+
+  meta(meta) {
+    this.#query.meta = meta;
     return this;
   }
 
@@ -164,6 +170,19 @@ module.exports = class QueryBuilder {
 
   /**
    */
+  auto(root, args, context, info) {
+    Object.assign(this.#query, args);
+
+    switch (getGQLReturnType(`${info.returnType}`)) {
+      case 'array': return this.many();
+      case 'number': return this.count();
+      case 'connection': return { count: () => this.count(), edges: () => this.many(), pageInfo: () => this.many() };
+      case 'scalar': default: return this.one();
+    }
+  }
+
+  /**
+   */
   #mutation(crud, ...args) {
     args = args.flat();
     const { id, limit } = this.#query;
@@ -173,7 +192,7 @@ module.exports = class QueryBuilder {
     return this.resolve(Object.assign(this.#query, {
       op: `${crud}${suffix}`,
       key: `${crud}${this.#query.model}`,
-      crud,
+      crud: ['push', 'pull', 'splice'].includes(crud) ? 'update' : crud,
       input,
       isMutation: true,
     }));

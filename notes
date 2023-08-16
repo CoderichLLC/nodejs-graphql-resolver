@@ -20,7 +20,6 @@ TODO:
   * Pipeline
     - arguments?
     - path, validation?
-  * Connections (.resolve())?
   * GraphQL API (or is that another module?)
   * Transactions enabled via config
 
@@ -56,6 +55,7 @@ BREAKING CHANGELOG:
     - Pipeline "toId" is now $id or $pk depending upon needs
     - Removed deserialize + transform ==> normalize
     - Merlin "transform: toArray" needed?
+  * QueryBuilder.resolve() is now .auto()
 
 ---------
 

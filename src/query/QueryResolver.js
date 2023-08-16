@@ -24,10 +24,7 @@ module.exports = class QueryResolver extends QueryBuilder {
 
     // Resolve
     switch (op) {
-      case 'findOne': case 'findMany': case 'count': {
-        return this.#resolver.resolve(query);
-      }
-      case 'createOne': {
+      case 'findOne': case 'findMany': case 'count': case 'createOne': {
         return this.#resolver.resolve(query);
       }
       case 'createMany': {
