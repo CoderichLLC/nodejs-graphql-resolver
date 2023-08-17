@@ -194,6 +194,7 @@ module.exports = class Schema {
               opts.run = opts.run ?? [];
               opts.path = opts.path ?? [];
               opts.itemize = opts.itemize ?? true;
+              // opts.transformers = opts.transformers ?? [];
 
               return Object.entries(data).reduce((prev, [key, value]) => {
                 // Find the field; remove it if not found

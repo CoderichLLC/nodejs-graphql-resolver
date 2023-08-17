@@ -80,7 +80,7 @@ module.exports = class Query {
 
     const query = this.clone({
       select: Object.values(this.#model.fields).map(field => field.key),
-      input: this.#model.walk(input, node => Object.assign(node, { key: node.field.key })),
+      input: this.#model.walk(input, node => node.value !== undefined && Object.assign(node, { key: node.field.key })),
       where: isNative ? where : this.#model.walk(where, node => Object.assign(node, { key: node.field.key })),
       sort: this.#model.walk(sort, node => Object.assign(node, { key: node.field.key })),
       before: (!isCursorPaging || !before) ? undefined : JSON.parse(Buffer.from(before, 'base64').toString('ascii')),
@@ -122,7 +122,6 @@ module.exports = class Query {
         }
 
         // Assign it back
-        if (target === 'input' && $value === undefined) return prev;
         return Object.assign(prev, { [field.name]: $value });
       }), {});
     });

@@ -191,7 +191,10 @@ module.exports = class MongoDriver {
     const $addFields = isNative ? {} : MongoDriver.convertFieldsForRegex(query.$schema, model, where);
     const $sort = MongoDriver.convertFieldsForSort(query.$schema, model, sort);
 
+    // Regex addFields
     if (Object.keys($addFields).length) $aggregate.unshift({ $addFields });
+
+    // Joins
     if (joins?.length) $aggregate.push(...MongoDriver.aggregateJoins(query, joins));
 
     if (count) {

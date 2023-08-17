@@ -225,7 +225,7 @@ module.exports = class Resolver {
         }), startValue);
 
         // If it's embedded - delegate
-        if (field.model && !field.isFKReference) {
+        if (field.model && !field.isFKReference && !field.isPrimaryKey) {
           $value = await this.#finalize(query, field.model, $value, transformers, paths.concat(field.name));
         }
 
