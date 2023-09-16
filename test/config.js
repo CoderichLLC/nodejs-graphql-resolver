@@ -13,7 +13,7 @@ Pipeline.define('email', ({ value }) => {
   if (!Validator.isEmail(value)) throw new Error('Invalid email');
 });
 
-module.exports = {
+module.exports = ({ uri }) => ({
   dataLoaders: {
     default: {
       cache: true,
@@ -33,7 +33,7 @@ module.exports = {
       },
       supports: [],
       client: new MongoClient({
-        uri: 'mongodb://127.0.0.1:27000/?replicaSet=testset',
+        uri,
         options: { useNewUrlParser: true, useUnifiedTopology: true, ignoreUndefined: false, minPoolSize: 3 },
         query: { collation: { locale: 'en', strength: 2 }, readPreference: 'primary' },
         session: { retryWrites: true, readPreference: { mode: 'primary' }, readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } },
@@ -88,6 +88,7 @@ module.exports = {
       @model
       @index(name: "uix_chapter", type: unique, on: [name, book])
     {
+      temp: String # To test sorting...
       name: String! @field(key: "chapter_name" normalize: toTitleCase)
       book: Book! @field(onDelete: restrict)
       pages: [Page] @link(by: chapter)
@@ -170,4 +171,4 @@ module.exports = {
       name: String
     }
   `,
-};
+});

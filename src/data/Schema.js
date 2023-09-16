@@ -1,7 +1,6 @@
 const Util = require('@coderich/util');
 const { Kind, parse, print, visit } = require('graphql');
 const { mergeGraphQLTypes } = require('@graphql-tools/merge');
-// const Emitter = require('./Emitter');
 const { isLeafValue, isPlainObject, isBasicObject } = require('../service/AppService');
 
 const operations = ['Query', 'Mutation', 'Subscription'];

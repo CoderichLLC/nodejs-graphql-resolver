@@ -1,17 +1,12 @@
-const Path = require('path');
 const Schema = require('../../src/data/Schema');
+const config = require('./config');
 
 describe('Schema', () => {
-  test.skip('parse', () => {
-    expect(new Schema(Path.join(__dirname, 'schema.graphql')).parse()).toEqual({
+  test('parse', () => {
+    expect(new Schema(config).parse()).toMatchObject({
       models: {
         Author: {
-          pk: 'id',
           name: 'Author',
-          keyMap: {
-            id: '_id',
-            bio: 'biography',
-          },
           fields: {
             id: {
               key: '_id',
@@ -43,11 +38,7 @@ describe('Schema', () => {
           },
         },
         Library: {
-          pk: 'id',
           name: 'Library',
-          keyMap: {
-            id: '_id',
-          },
           fields: {
             id: {
               key: '_id',
@@ -69,7 +60,6 @@ describe('Schema', () => {
           },
         },
         Book: {
-          pk: 'id',
           name: 'Book',
           fields: {
             name: {

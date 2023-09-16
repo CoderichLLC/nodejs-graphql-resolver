@@ -28,10 +28,13 @@ Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
   * query.flags.debug should not be at driver level
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
-  * Tests unable to run because of mongo memory server setup
 
 Improvement Considerations:
   * Upsert???
+  * EventEmitter
+    - Control the order (priority)
+    - Debounce a function (debounce) to prevent excessive/redundant calls
+  * Allow user-defined loaders (replacing .named?)
   * Why do you send `${model}` in query instead of the actual model object?
   * If no change in data, prevent entire operation?
   * Consider passing input to driver without merging doc (a lot of transformations happen) and then combining result in QueryResolver
@@ -65,6 +68,17 @@ BREAKING CHANGELOG:
 * Things like "ensureId" are driver-specific? (eg. A SQL driver would have a FK relationship defined)
 
 ---------
+
+[
+  'defaultValue', // Assign default value when undefined
+  'castValue', // Cast value to schema defined type
+  '$normalize', // Normalized value
+  '$instruct', // Instruct value (will define attribute even if undefined)
+  ...crudLines, // CRUD specific transformations
+  '$serialize', // input + where transformations to db driver
+  '$validate', // validation
+  '$finalize', // final input transformation
+]
 
 findOne: [select, where]
 findMany: [select, where]

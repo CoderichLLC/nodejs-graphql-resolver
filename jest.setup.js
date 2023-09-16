@@ -1,9 +1,10 @@
 const { MongoMemoryReplSet } = require('mongodb-memory-server');
 const Schema = require('./src/data/Schema');
 const Resolver = require('./src/data/Resolver');
-const config = require('./test/config');
+const Config = require('./test/config');
 
-let client, mongoServer;
+let client = { disconnect: () => Promise.resolve() };
+let mongoServer = { stop: () => Promise.resolve() };
 
 const createIndexes = (mongoClient, indexes) => {
   return Promise.all(indexes.map(({ key, name, type, on }) => {
@@ -14,11 +15,10 @@ const createIndexes = (mongoClient, indexes) => {
 
 beforeAll(async () => {
   // Start mongo server
-  mongoServer = await MongoMemoryReplSet.create({
-    instanceOpts: [{ port: 27000 }],
-    replSet: { storageEngine: 'wiredTiger' },
-  });
+  mongoServer = await MongoMemoryReplSet.create({ replSet: { storageEngine: 'wiredTiger' } });
 
+  // Config
+  const config = Config({ uri: mongoServer.getUri() });
   ({ client } = config.dataSources.default);
   const schema = new Schema(config).decorate().parse();
   const context = { network: { id: 'networkId' } };
