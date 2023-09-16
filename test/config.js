@@ -31,7 +31,7 @@ module.exports = ({ uri }) => ({
           return value;
         }
       },
-      supports: [],
+      supports: ['transactions'],
       client: new MongoClient({
         uri,
         options: { useNewUrlParser: true, useUnifiedTopology: true, ignoreUndefined: false, minPoolSize: 3 },

@@ -21,7 +21,6 @@ TODO:
     - arguments?
     - path, validation?
   * GraphQL API (or is that another module?)
-  * Transactions enabled via config
   * If you short-cut response, does it need to go through toResultSet()?
 
 Known Issues:

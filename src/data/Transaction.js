@@ -14,10 +14,15 @@ module.exports = class Transaction {
   }
 
   match(model) {
-    const { source: { client } } = this.#schema.models[model];
+    const { source: { client, supports } } = this.#schema.models[model];
 
     // Save client transaction
-    if (!this.#sourceMap.has(client)) this.#sourceMap.set(client, client.transaction());
+    if (!this.#sourceMap.has(client)) {
+      this.#sourceMap.set(client, supports.includes('transactions') ? client.transaction() : Promise.resolve({
+        commit: () => null,
+        rollback: () => null,
+      }));
+    }
 
     return new QueryResolverTransaction({
       resolver: this.#resolver,
