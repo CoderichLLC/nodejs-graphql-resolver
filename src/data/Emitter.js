@@ -22,12 +22,12 @@ class Emitter extends EventEmitter {
   }
 
   /**
-   * Syntactic sugar to listen on keys
+   * Syntactic sugar to listen on query keys
    */
   onKeys(on, keys, fn) {
     const numArgs = fn.length;
 
-    return super.on(on, async (event, next) => {
+    return this.on(on, async (event, next) => {
       if (Util.ensureArray(keys).indexOf(event.query.key) > -1) {
         if (numArgs < 2) next();
         await fn(event, next);
@@ -38,28 +38,31 @@ class Emitter extends EventEmitter {
   }
 
   /**
-   * Syntactic sugar to listen once keys
+   * Syntactic sugar to listen once on query keys
    */
   onceKeys(once, keys, fn) {
     const numArgs = fn.length;
 
-    return super.once(once, async (event, next) => {
+    const wrapper = async (event, next) => {
       if (Util.ensureArray(keys).indexOf(event.query.key) > -1) {
+        this.removeListener(once, wrapper);
         if (numArgs < 2) next();
         await fn(event, next);
       } else {
         next();
       }
-    });
+    };
+
+    return this.on(once, wrapper);
   }
 
   /**
-   * Syntactic sugar to listen on models
+   * Syntactic sugar to listen on query models
    */
   onModels(on, models, fn) {
     const numArgs = fn.length;
 
-    return super.on(on, async (event, next) => {
+    return this.on(on, async (event, next) => {
       if (Util.ensureArray(models).indexOf(`${event.query.model}`) > -1) {
         if (numArgs < 2) next();
         await fn(event, next);
@@ -70,19 +73,22 @@ class Emitter extends EventEmitter {
   }
 
   /**
-   * Syntactic sugar to listen once models
+   * Syntactic sugar to listen once on query models
    */
   onceModels(once, models, fn) {
     const numArgs = fn.length;
 
-    return super.once(once, async (event, next) => {
+    const wrapper = async (event, next) => {
       if (Util.ensureArray(models).indexOf(`${event.query.model}`) > -1) {
+        this.removeListener(once, wrapper);
         if (numArgs < 2) next();
         await fn(event, next);
       } else {
         next();
       }
-    });
+    };
+
+    return this.on(once, wrapper);
   }
 }
 
