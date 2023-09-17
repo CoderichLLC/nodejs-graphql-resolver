@@ -3,14 +3,12 @@ const { getGQLReturnType } = require('../service/AppService');
 
 module.exports = class QueryBuilder {
   #config;
-  #schema;
   #query;
 
   constructor(config) {
-    const { query, schema } = config;
+    const { query } = config;
 
     this.#config = config;
-    this.#schema = schema;
 
     this.#query = Object.defineProperties(query, {
       id: { writable: true, enumerable: true, value: query.id },
@@ -32,7 +30,7 @@ module.exports = class QueryBuilder {
    * Chainable methods
    */
   id(id) {
-    this.#propCheck('id', 'where', 'native', 'sort', 'skip', 'limit', 'before', 'after', 'first', 'last');
+    this.#propCheck('id', 'where', 'native', 'sort', 'skip', 'limit', 'before', 'after');
     this.#query.id = id;
     this.#query.where = { id };
     return this;
@@ -41,6 +39,7 @@ module.exports = class QueryBuilder {
   native(clause) {
     this.#propCheck('native', 'id', 'where');
     this.#query.isNative = true;
+    this.#query.native = clause;
     this.#query.where = clause;
     return this;
   }
@@ -137,14 +136,12 @@ module.exports = class QueryBuilder {
    * Proxy terminial commands
    */
   first(first) {
-    this.#propCheck('first', 'id', 'last');
     this.#query.isCursorPaging = true;
     this.#query.first = first + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
     return this.many();
   }
 
   last(last) {
-    this.#propCheck('last', 'id', 'first');
     this.#query.isCursorPaging = true;
     this.#query.last = last + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
     return this.many();
@@ -199,6 +196,7 @@ module.exports = class QueryBuilder {
   }
 
   #propCheck(prop, ...checks) {
+    if (this.#query[prop]) throw new Error(`Cannot redefine "${prop}"`);
     if (['skip', 'limit'].includes(prop) && this.#query.isCursorPaging) throw new Error(`Cannot use "${prop}" while using Cursor-Style Pagination`);
     if (['first', 'last', 'before', 'after'].includes(prop) && this.isClassicPaging) throw new Error(`Cannot use "${prop}" while using Classic-Style Pagination`);
     checks.forEach((check) => { if (this.#query[check]) throw new Error(`Cannot use "${prop}" while using "${check}"`); });

@@ -57,7 +57,14 @@ BREAKING CHANGELOG:
   * Revamped Pipeline
     - Pipeline "toId" is now $id or $pk depending upon needs
     - Removed deserialize + transform ==> normalize
-    - Merlin "transform: toArray" needed?
+        instruct
+        normalize
+        construct
+        restruct
+        destruct
+        serialize
+        finalize
+        validate
   * QueryBuilder.resolve() is now .auto()
 
 ---------
