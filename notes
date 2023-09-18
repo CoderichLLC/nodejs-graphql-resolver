@@ -32,7 +32,8 @@ Improvement Considerations:
   * Upsert???
   * EventEmitter
     - Control the order (priority)
-    - Debounce a function (debounce) to prevent excessive/redundant calls
+    - Debounce a function (debounce) to prevent excessive/redundant calls?
+    - Memoize a function to prevent excessive/redundant calls?
   * Allow user-defined loaders (replacing .named?)
   * Why do you send `${model}` in query instead of the actual model object?
   * If no change in data, prevent entire operation?

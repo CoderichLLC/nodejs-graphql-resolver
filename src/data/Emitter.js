@@ -1,5 +1,10 @@
 const EventEmitter = require('events');
 const Util = require('@coderich/util');
+const { AbortEarlyError } = require('../service/ErrorService');
+
+// const abortCheck = (result) => {
+//   if (result !== undefined) throw new AbortEarlyError(result);
+// };
 
 /**
  * EventEmitter.
@@ -9,28 +14,43 @@ const Util = require('@coderich/util');
  */
 class Emitter extends EventEmitter {
   emit(event, data) {
-    return Promise.all(this.rawListeners(event).map((wrapper) => {
-      return new Promise((resolve, reject) => {
-        const next = result => resolve(result); // If a result is passed this will bypass middleware thunk()
-        const numArgs = (wrapper.listener || wrapper).length;
-        Promise.resolve(wrapper(data, next)).catch(e => reject(e));
-        if (numArgs < 2) next();
+    // Here we pull out functions with "next" vs those without
+    const [basicFuncs, nextFuncs] = this.rawListeners(event).reduce((prev, wrapper) => {
+      const numArgs = (wrapper.listener || wrapper).length;
+      return prev[numArgs < 2 ? 0 : 1].push(wrapper) && prev;
+    }, [[], []]);
+
+    return new Promise((resolve, reject) => {
+      // Basic functions run first; if they return a value they abort the flow of execution
+      basicFuncs.forEach((fn) => {
+        const value = fn(data);
+        if (value !== undefined && !(value instanceof Promise)) throw new AbortEarlyError(value);
       });
-    })).then((results) => {
-      return results.find(r => r !== undefined); // There can be only one (result)
+
+      // Next functions are async and control the timing of the next phase
+      Promise.all(nextFuncs.map((fn) => {
+        return new Promise((next) => {
+          Promise.resolve(fn(data, next));
+        }).then((result) => {
+          if (result !== undefined) throw new AbortEarlyError(result);
+        }).catch(reject);
+      })).then(() => resolve()); // Resolve to undefined
+    }).catch((e) => {
+      if (e instanceof AbortEarlyError) return e.data;
+      throw e;
     });
   }
 
   /**
    * Syntactic sugar to listen on query keys
    */
-  onKeys(on, keys, fn) {
-    const numArgs = fn.length;
+  onKeys(eventName, keys, listener) {
+    const numArgs = listener.length;
 
-    return this.on(on, async (event, next) => {
+    return this.on(eventName, (event, next) => {
       if (Util.ensureArray(keys).indexOf(event.query.key) > -1) {
-        if (numArgs < 2) next();
-        await fn(event, next);
+        const val = listener(event, next);
+        if (numArgs < 2) next(val);
       } else {
         next();
       }
@@ -40,32 +60,32 @@ class Emitter extends EventEmitter {
   /**
    * Syntactic sugar to listen once on query keys
    */
-  onceKeys(once, keys, fn) {
-    const numArgs = fn.length;
+  onceKeys(eventName, keys, listener) {
+    const numArgs = listener.length;
 
-    const wrapper = async (event, next) => {
+    const wrapper = (event, next) => {
       if (Util.ensureArray(keys).indexOf(event.query.key) > -1) {
-        this.removeListener(once, wrapper);
-        if (numArgs < 2) next();
-        await fn(event, next);
+        this.removeListener(eventName, wrapper);
+        const val = listener(event, next);
+        if (numArgs < 2) next(val);
       } else {
         next();
       }
     };
 
-    return this.on(once, wrapper);
+    return this.on(eventName, wrapper);
   }
 
   /**
    * Syntactic sugar to listen on query models
    */
-  onModels(on, models, fn) {
-    const numArgs = fn.length;
+  onModels(eventName, models, listener) {
+    const numArgs = listener.length;
 
-    return this.on(on, async (event, next) => {
+    return this.on(eventName, (event, next) => {
       if (Util.ensureArray(models).indexOf(`${event.query.model}`) > -1) {
-        if (numArgs < 2) next();
-        await fn(event, next);
+        const val = listener(event, next);
+        if (numArgs < 2) next(val);
       } else {
         next();
       }
@@ -75,20 +95,20 @@ class Emitter extends EventEmitter {
   /**
    * Syntactic sugar to listen once on query models
    */
-  onceModels(once, models, fn) {
-    const numArgs = fn.length;
+  onceModels(eventName, models, listener) {
+    const numArgs = listener.length;
 
-    const wrapper = async (event, next) => {
+    const wrapper = (event, next) => {
       if (Util.ensureArray(models).indexOf(`${event.query.model}`) > -1) {
-        this.removeListener(once, wrapper);
-        if (numArgs < 2) next();
-        await fn(event, next);
+        this.removeListener(eventName, wrapper);
+        const val = listener(event, next);
+        if (numArgs < 2) next(val);
       } else {
         next();
       }
     };
 
-    return this.on(once, wrapper);
+    return this.on(eventName, wrapper);
   }
 }
 
