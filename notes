@@ -2,8 +2,9 @@ TODO:
   * Emitter: Allow the modification of query|response, prevent operation, short-circuit with new response, business logic side-effects
     - [
       'setup',
-      'query|mutation',
+      'pre-${operation}'
       'validate',
+      'post-${operation}'
       'response' ???
     ]
     - event should have getters to interesting data
