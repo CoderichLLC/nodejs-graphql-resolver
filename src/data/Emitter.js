@@ -2,10 +2,6 @@ const EventEmitter = require('events');
 const Util = require('@coderich/util');
 const { AbortEarlyError } = require('../service/ErrorService');
 
-// const abortCheck = (result) => {
-//   if (result !== undefined) throw new AbortEarlyError(result);
-// };
-
 /**
  * EventEmitter.
  *
@@ -16,8 +12,9 @@ class Emitter extends EventEmitter {
   emit(event, data) {
     // Here we pull out functions with "next" vs those without
     const [basicFuncs, nextFuncs] = this.rawListeners(event).reduce((prev, wrapper) => {
-      const numArgs = (wrapper.listener || wrapper).length;
-      return prev[numArgs < 2 ? 0 : 1].push(wrapper) && prev;
+      const listener = wrapper.listener || wrapper;
+      const isBasic = listener.length < 2;
+      return prev[isBasic ? 0 : 1].push(wrapper) && prev;
     }, [[], []]);
 
     return new Promise((resolve, reject) => {
@@ -44,67 +41,44 @@ class Emitter extends EventEmitter {
   /**
    * Syntactic sugar to listen on query keys
    */
-  onKeys(eventName, keys, listener) {
-    const numArgs = listener.length;
-
-    return this.on(eventName, (event, next) => {
-      if (Util.ensureArray(keys).indexOf(event.query.key) > -1) {
-        const val = listener(event, next);
-        if (numArgs < 2) next(val);
-      } else {
-        next();
-      }
-    });
+  onKeys(...args) {
+    return this.#createWrapper(...args, 'key');
   }
 
   /**
    * Syntactic sugar to listen once on query keys
    */
-  onceKeys(eventName, keys, listener) {
-    const numArgs = listener.length;
-
-    const wrapper = (event, next) => {
-      if (Util.ensureArray(keys).indexOf(event.query.key) > -1) {
-        this.removeListener(eventName, wrapper);
-        const val = listener(event, next);
-        if (numArgs < 2) next(val);
-      } else {
-        next();
-      }
-    };
-
-    return this.on(eventName, wrapper);
+  onceKeys(...args) {
+    return this.#createWrapper(...args, 'key', true);
   }
 
   /**
    * Syntactic sugar to listen on query models
    */
-  onModels(eventName, models, listener) {
-    const numArgs = listener.length;
-
-    return this.on(eventName, (event, next) => {
-      if (Util.ensureArray(models).indexOf(`${event.query.model}`) > -1) {
-        const val = listener(event, next);
-        if (numArgs < 2) next(val);
-      } else {
-        next();
-      }
-    });
+  onModels(...args) {
+    return this.#createWrapper(...args, 'model');
   }
 
   /**
    * Syntactic sugar to listen once on query models
    */
-  onceModels(eventName, models, listener) {
-    const numArgs = listener.length;
+  onceModels(...args) {
+    return this.#createWrapper(...args, 'model', true);
+  }
 
-    const wrapper = (event, next) => {
-      if (Util.ensureArray(models).indexOf(`${event.query.model}`) > -1) {
-        this.removeListener(eventName, wrapper);
-        const val = listener(event, next);
-        if (numArgs < 2) next(val);
-      } else {
-        next();
+  #createWrapper(eventName, arr, listener, prop, once) {
+    arr = Util.ensureArray(arr);
+
+    const wrapper = listener.length < 2 ? (event) => {
+      if (arr.includes(`${event.query[prop]}`)) {
+        if (once) this.removeListener(eventName, wrapper);
+        return listener(event);
+      }
+      return undefined;
+    } : (event, next) => {
+      if (arr.includes(`${event.query[prop]}`)) {
+        if (once) this.removeListener(eventName, wrapper);
+        next(listener(event, next));
       }
     };
 

@@ -19,60 +19,62 @@ describe('Emitter', () => {
     expect(e.emit('two', {})).toBe(2);
   });
 
-  test('on', () => {
-    const fn = jest.fn();
-    Emitter.on('on', fn);
-    Emitter.emit('on');
-    Emitter.emit('on');
-    expect(fn).toBeCalledTimes(2);
-  });
-
-  test('once', () => {
-    const fn = jest.fn();
-    Emitter.once('once', fn);
-    Emitter.emit('once');
-    Emitter.emit('once');
-    expect(fn).toBeCalledTimes(1);
-  });
-
-  test('onKeys', () => {
-    const fn = jest.fn();
-    Emitter.onKeys('onKeys', 'key', fn);
-    Emitter.emit('onKeys', { query: { key: 'key' } });
-    Emitter.emit('onKeys', { query: { key: 'miss' } });
-    Emitter.emit('onKeys', { query: { key: 'key' } });
-    setImmediate(() => {
+  describe('Basics', () => {
+    test('on', () => {
+      const fn = jest.fn();
+      Emitter.on('on', fn);
+      Emitter.emit('on');
+      Emitter.emit('on');
       expect(fn).toBeCalledTimes(2);
     });
-  });
 
-  test('onceKeys', () => {
-    const fn = jest.fn();
-    Emitter.onceKeys('onceKeys', 'key', fn);
-    Emitter.emit('onceKeys', { query: { key: 'miss' } }); // Keep this miss first in the test
-    Emitter.emit('onceKeys', { query: { key: 'key' } });
-    Emitter.emit('onceKeys', { query: { key: 'key' } });
-    setImmediate(() => {
+    test('once', () => {
+      const fn = jest.fn();
+      Emitter.once('once', fn);
+      Emitter.emit('once');
+      Emitter.emit('once');
       expect(fn).toBeCalledTimes(1);
     });
-  });
 
-  test('onModels', () => {
-    const fn = jest.fn();
-    Emitter.onModels('onModels', 'key', fn);
-    Emitter.emit('onModels', { query: { model: 'key' } });
-    Emitter.emit('onModels', { query: { model: 'miss' } });
-    Emitter.emit('onModels', { query: { model: 'key' } });
-    expect(fn).toBeCalledTimes(2);
-  });
+    test('onKeys', () => {
+      const fn = jest.fn();
+      Emitter.onKeys('onKeys', 'key', fn);
+      Emitter.emit('onKeys', { query: { key: 'key' } });
+      Emitter.emit('onKeys', { query: { key: 'miss' } });
+      Emitter.emit('onKeys', { query: { key: 'key' } });
+      setImmediate(() => {
+        expect(fn).toBeCalledTimes(2);
+      });
+    });
 
-  test('onceModels', () => {
-    const fn = jest.fn();
-    Emitter.onceModels('onceModels', 'key', fn);
-    Emitter.emit('onceModels', { query: { model: 'miss' } }); // Keep this miss first in the test
-    Emitter.emit('onceModels', { query: { model: 'key' } });
-    Emitter.emit('onceModels', { query: { model: 'key' } });
-    expect(fn).toBeCalledTimes(1);
+    test('onceKeys', () => {
+      const fn = jest.fn();
+      Emitter.onceKeys('onceKeys', 'key', fn);
+      Emitter.emit('onceKeys', { query: { key: 'miss' } }); // Keep this miss first in the test
+      Emitter.emit('onceKeys', { query: { key: 'key' } });
+      Emitter.emit('onceKeys', { query: { key: 'key' } });
+      setImmediate(() => {
+        expect(fn).toBeCalledTimes(1);
+      });
+    });
+
+    test('onModels', () => {
+      const fn = jest.fn();
+      Emitter.onModels('onModels', 'key', fn);
+      Emitter.emit('onModels', { query: { model: 'key' } });
+      Emitter.emit('onModels', { query: { model: 'miss' } });
+      Emitter.emit('onModels', { query: { model: 'key' } });
+      expect(fn).toBeCalledTimes(2);
+    });
+
+    test('onceModels', () => {
+      const fn = jest.fn();
+      Emitter.onceModels('onceModels', 'key', fn);
+      Emitter.emit('onceModels', { query: { model: 'miss' } }); // Keep this miss first in the test
+      Emitter.emit('onceModels', { query: { model: 'key' } });
+      Emitter.emit('onceModels', { query: { model: 'key' } });
+      expect(fn).toBeCalledTimes(1);
+    });
   });
 
   describe('Early return', () => {
@@ -80,10 +82,10 @@ describe('Emitter', () => {
       const fn1 = jest.fn(() => ({ abort: 'abort' }));
       const fn2 = jest.fn();
       const fn3 = jest.fn((event, next) => next());
-      Emitter.on('basicAbort', fn3);
-      Emitter.on('basicAbort', fn1);
+      Emitter.onKeys('basicAbort', 'key', fn1);
       Emitter.on('basicAbort', fn2);
-      const value = await Emitter.emit('basicAbort');
+      Emitter.on('basicAbort', fn3);
+      const value = await Emitter.emit('basicAbort', { query: { key: 'key' } });
       expect(fn1).toBeCalledTimes(1);
       expect(fn2).toBeCalledTimes(0);
       expect(fn3).toBeCalledTimes(0);
