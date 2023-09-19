@@ -258,15 +258,15 @@ module.exports = class Resolver {
       if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$validate']);
       if (query.isMutation) await Emitter.emit('validate', event);
       return thunk().then((result) => {
-        query.result = result;
+        event.result = result;
         return Emitter.emit(`post${type}`, event);
       });
-    }).then((result = query.result) => {
-      query.result = result;
+    }).then((result = event.result) => {
+      event.result = result;
       return Emitter.emit('preResponse', event);
-    }).then((result = query.result) => {
-      query.result = result;
+    }).then((result = event.result) => {
+      event.result = result;
       return Emitter.emit('postResponse', event);
-    }).then((result = query.result) => result);
+    }).then((result = event.result) => result);
   }
 };

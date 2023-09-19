@@ -13,6 +13,20 @@ const createIndexes = (mongoClient, indexes) => {
   }));
 };
 
+// Extend jest!
+expect.extend({
+  multiplex: (val, ...expectations) => {
+    try {
+      expectations.flat().forEach((expectation) => {
+        expectation(val);
+      });
+      return { pass: true };
+    } catch (e) {
+      return { message: e.message, pass: false };
+    }
+  },
+});
+
 beforeAll(async () => {
   // Start mongo server
   mongoServer = await MongoMemoryReplSet.create({ replSet: { storageEngine: 'wiredTiger' } });
@@ -26,20 +40,6 @@ beforeAll(async () => {
   global.schema = schema;
   global.resolver = new Resolver({ schema, context });
   global.mongoClient = client;
-
-  // Extend jest!
-  expect.extend({
-    multiplex: (val, ...expectations) => {
-      try {
-        expectations.flat().forEach((expectation) => {
-          expectation(val);
-        });
-        return { pass: true };
-      } catch (e) {
-        return { message: e.message, pass: false };
-      }
-    },
-  });
 });
 
 afterAll(() => {

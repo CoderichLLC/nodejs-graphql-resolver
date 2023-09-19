@@ -2,6 +2,7 @@ const Emitter = require('../../src/data/Emitter');
 
 describe('Resolver', () => {
   let resolver, context;
+  let doc, result;
   const mocks = {};
 
   beforeAll(() => {
@@ -25,25 +26,18 @@ describe('Resolver', () => {
   describe('System Events', () => {
     test('create', async () => {
       await resolver.match('Person').save({ name: 'Rich', emailAddress: 'email@gmail.com' });
-      const event = expect.objectContaining({
-        context,
-        resolver,
-        args: expect.multiplex(
-          val => expect(val).toMatchObject({
-            input: expect.objectContaining({
+
+      const matcher = expect.multiplex(
+        val => expect(val).toMatchObject({
+          context,
+          resolver,
+          args: expect.objectContaining({
+            input: {
               name: 'Rich',
               emailAddress: 'email@gmail.com',
-            }),
+            },
           }),
-          ({ input }) => {
-            expect(input.id).toBeUndefined();
-            expect(input.telephone).toBeUndefined();
-            expect(input.updatedAt).toBeUndefined();
-            expect(input.createdAt).toBeUndefined();
-          },
-        ),
-        query: expect.multiplex(
-          val => expect(val).toMatchObject({
+          query: expect.objectContaining({
             isMutation: true,
             op: 'createOne',
             key: 'createPerson',
@@ -53,22 +47,29 @@ describe('Resolver', () => {
               name: 'rich',
               emailAddress: 'email@gmail.com',
               telephone: '###-###-####',
+              createdAt: expect.anything(),
+              updatedAt: expect.anything(),
             }),
           }),
-          ({ doc, result }) => {
-            expect(doc).toBeUndefined();
-            expect(result).toBeUndefined();
-          },
-        ),
-      });
+        }),
+        (event) => {
+          expect(event.args.input.id).toBeUndefined();
+          expect(event.args.input.telephone).toBeUndefined();
+          expect(event.args.input.updatedAt).toBeUndefined();
+          expect(event.args.input.createdAt).toBeUndefined();
+          expect(event.doc).toEqual(doc);
+          expect(event.result).toEqual(result);
+        },
+      );
+
       expect(mocks.preQuery).toHaveBeenCalledTimes(0);
       expect(mocks.preQueryNext).toHaveBeenCalledTimes(0);
       expect(mocks.postQuery).toHaveBeenCalledTimes(0);
       expect(mocks.postQueryNext).toHaveBeenCalledTimes(0);
       expect(mocks.preMutation).toHaveBeenCalledTimes(1);
-      expect(mocks.preMutation).toHaveBeenCalledWith(event);
+      expect(mocks.preMutation).toHaveBeenCalledWith(matcher);
       expect(mocks.preMutationNext).toHaveBeenCalledTimes(1);
-      expect(mocks.preMutationNext).toHaveBeenCalledWith(event, expect.any(Function));
+      expect(mocks.preMutationNext).toHaveBeenCalledWith(matcher, expect.any(Function));
       expect(mocks.validate).toHaveBeenCalledTimes(1);
       expect(mocks.validateNext).toHaveBeenCalledTimes(1);
       expect(mocks.preResponse).toHaveBeenCalledTimes(1);
