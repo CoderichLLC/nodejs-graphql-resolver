@@ -251,15 +251,20 @@ module.exports = class Resolver {
     const type = query.isMutation ? 'Mutation' : 'Query';
     const event = { context: this.#context, resolver: this, query, args };
 
-    return Emitter.emit(`pre${type}`, event).then(async (result) => {
+    return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
+      if (resultEarly !== undefined) return resultEarly;
       if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$validate']);
-      return query.isMutation ? Emitter.emit('validate', event).then(() => result) : result;
-    }).then(async (result) => {
-      if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$finalize']);
-      return result === undefined ? thunk() : result; // It's possible to by-pass thunk
-    }).then((result) => {
+      if (query.isMutation) await Emitter.emit('validate', event);
+      return thunk().then((result) => {
+        event.result = result;
+        return Emitter.emit(`post${type}`, event);
+      });
+    }).then((result = event.result) => {
       event.result = result;
-      return Emitter.emit(`post${type}`, event);
-    }).then(() => event.result);
+      return Emitter.emit('preResponse', event);
+    }).then((result = event.result) => {
+      event.result = result;
+      return Emitter.emit('postResponse', event);
+    }).then((result = event.result) => result);
   }
 };

@@ -1,28 +1,32 @@
 TODO:
-  * Emitter: Allow the modification of query|response, prevent operation, short-circuit with new response, business logic side-effects
+  * Emitter
+    - Allow the modification of query|response
+    - Prevent operation entirely (early return | throw)
+    - Short-circuit with new response (early return)
+    - Business logic side-effects
     - [
       'setup',
-      'pre-${operation}'
-      'validate',
-      'post-${operation}'
-      'response' ???
+      'pre${operation}'
+      'validate', (only when mutation)
+      'post${operation}'
+      'preResponse'
+      'postResponse'
     ]
     - event should have getters to interesting data
-    {
-      context,
-      resolver,
-      query,
-      args,
-      doc?, // Document from the db or query.input
-      merged?, // merge(doc, query.input)
-      result?, // The result...
-      changeset?,
-    }
+      {
+        context,
+        resolver,
+        query,
+        args,
+        doc?, // Document from the db or query.input
+        merged?, // merge(doc, query.input)
+        result?, // The result...
+        changeset?,
+      }
   * Pipeline
     - arguments?
     - path, validation?
   * GraphQL API (or is that another module?)
-  * If you short-cut response, does it need to go through toResultSet()?
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
@@ -32,7 +36,6 @@ Known Issues:
 Improvement Considerations:
   * Upsert???
   * EventEmitter
-    - Control the order (priority)
     - Debounce a function (debounce) to prevent excessive/redundant calls?
     - Memoize a function to prevent excessive/redundant calls?
   * Allow user-defined loaders (replacing .named?)
@@ -65,8 +68,10 @@ BREAKING CHANGELOG:
         restruct
         destruct
         serialize
-        finalize
         validate
+  * Revamped Emitter
+    - "Basic" functions are hoisted to the top for execution; RETURNING a value will bypass thunk()
+    - "Next" functions are run next, next() must ALWAYS be called; passing a value to next() will bypass thunk()
   * QueryBuilder.resolve() is now .auto()
 
 ---------
@@ -85,7 +90,6 @@ BREAKING CHANGELOG:
   ...crudLines, // CRUD specific transformations
   '$serialize', // input + where transformations to db driver
   '$validate', // validation
-  '$finalize', // final input transformation
 ]
 
 findOne: [select, where]

@@ -66,7 +66,6 @@ module.exports = class Pipeline {
     Pipeline.define('$restruct', params => Pipeline.#resolve(params, 'restruct'), { ignoreNull: false });
     Pipeline.define('$destruct', params => Pipeline.#resolve(params, 'destruct'), { ignoreNull: false });
     Pipeline.define('$serialize', params => Pipeline.#resolve(params, 'serialize'), { ignoreNull: false });
-    Pipeline.define('$finalize', params => Pipeline.#resolve(params, 'finalize'), { ignoreNull: false });
     Pipeline.define('$validate', params => Pipeline.#resolve(params, 'validate'), { ignoreNull: false });
 
     //
