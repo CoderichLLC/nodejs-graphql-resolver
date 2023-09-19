@@ -21,11 +21,25 @@ beforeAll(async () => {
   const config = Config({ uri: mongoServer.getUri() });
   ({ client } = config.dataSources.default);
   const schema = new Schema(config).decorate().parse();
-  const context = { network: { id: 'networkId' } };
+  const context = global.context = { network: { id: 'networkId' } };
   await createIndexes(client, schema.indexes);
   global.schema = schema;
   global.resolver = new Resolver({ schema, context });
   global.mongoClient = client;
+
+  // Extend jest!
+  expect.extend({
+    multiplex: (val, ...expectations) => {
+      try {
+        expectations.flat().forEach((expectation) => {
+          expectation(val);
+        });
+        return { pass: true };
+      } catch (e) {
+        return { message: e.message, pass: false };
+      }
+    },
+  });
 });
 
 afterAll(() => {

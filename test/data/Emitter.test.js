@@ -75,6 +75,23 @@ describe('Emitter', () => {
       Emitter.emit('onceModels', { query: { model: 'key' } });
       expect(fn).toBeCalledTimes(1);
     });
+
+    test('order', () => {
+      const fn1 = jest.fn();
+      const fn2 = jest.fn((event, next) => null);
+      const fn3 = jest.fn();
+      Emitter.on('order', fn1);
+      Emitter.on('order', fn2);
+      Emitter.on('order', fn3);
+      Emitter.emit('order');
+      const [[order1], [order2], [order3]] = [fn1.mock.invocationCallOrder, fn2.mock.invocationCallOrder, fn3.mock.invocationCallOrder];
+      expect(order1).toBeLessThan(order2);
+      expect(order1).toBeLessThan(order3);
+      expect(order2).toBeGreaterThan(order1);
+      expect(order2).toBeGreaterThan(order3);
+      expect(order3).toBeGreaterThan(order1);
+      expect(order3).toBeLessThan(order2);
+    });
   });
 
   describe('Early return', () => {
@@ -146,21 +163,4 @@ describe('Emitter', () => {
       expect(fn3).toBeCalledTimes(1);
     });
   });
-
-  // test('order', () => {
-  //   const fn1 = jest.fn();
-  //   const fn2 = jest.fn((event, next) => null);
-  //   const fn3 = jest.fn();
-  //   Emitter.on('order', fn1);
-  //   Emitter.on('order', fn2);
-  //   Emitter.on('order', fn3);
-  //   Emitter.emit('order');
-  //   const [[order1], [order2], [order3]] = [fn1.mock.invocationCallOrder, fn2.mock.invocationCallOrder, fn3.mock.invocationCallOrder];
-  //   expect(order1).toBeLessThan(order2);
-  //   expect(order1).toBeLessThan(order3);
-  //   expect(order2).toBeGreaterThan(order1);
-  //   expect(order2).toBeGreaterThan(order3);
-  //   expect(order3).toBeGreaterThan(order1);
-  //   expect(order3).toBeLessThan(order2);
-  // });
 });

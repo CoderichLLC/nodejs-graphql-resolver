@@ -22,8 +22,11 @@ module.exports = class QueryBuilder {
     this.remove = this.delete;
   }
 
-  resolve(...args) {
-    return args.length ? null : new Query(this.#config);
+  /**
+   * When a termnial command is called resolve() returns the Query object
+   */
+  resolve() {
+    return new Query(this.#config);
   }
 
   /**

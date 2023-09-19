@@ -178,9 +178,11 @@ module.exports = class Resolver {
       thunk = () => this.#loaders[model].resolve(tquery);
     }
 
-    return this.#createSystemEvent(query, tquery, thunk).then((result) => {
-      if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
-      return this.toResultSet(model, result, tquery.toObject());
+    return this.#createSystemEvent(query, tquery, () => {
+      return thunk().then((result) => {
+        if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
+        return this.toResultSet(model, result, tquery.toObject());
+      });
     });
   }
 
@@ -256,15 +258,15 @@ module.exports = class Resolver {
       if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$validate']);
       if (query.isMutation) await Emitter.emit('validate', event);
       return thunk().then((result) => {
-        event.result = result;
+        query.result = result;
         return Emitter.emit(`post${type}`, event);
       });
-    }).then((result = event.result) => {
-      event.result = result;
+    }).then((result = query.result) => {
+      query.result = result;
       return Emitter.emit('preResponse', event);
-    }).then((result = event.result) => {
-      event.result = result;
+    }).then((result = query.result) => {
+      query.result = result;
       return Emitter.emit('postResponse', event);
-    }).then((result = event.result) => result);
+    }).then((result = query.result) => result);
   }
 };

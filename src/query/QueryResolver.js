@@ -6,12 +6,14 @@ const { mergeDeep } = require('../service/AppService');
 module.exports = class QueryResolver extends QueryBuilder {
   #model;
   #schema;
+  #config;
   #context;
   #resolver;
 
   constructor(config) {
     const { schema, context, resolver, query } = config;
     super(config);
+    this.#config = config;
     this.#schema = schema;
     this.#context = context;
     this.#resolver = resolver;

@@ -1,32 +1,13 @@
 TODO:
   * Emitter
-    - Allow the modification of query|response
-    - Prevent operation entirely (early return | throw)
-    - Short-circuit with new response (early return)
-    - Business logic side-effects
-    - [
-      'setup',
-      'pre${operation}'
-      'validate', (only when mutation)
-      'post${operation}'
-      'preResponse'
-      'postResponse'
-    ]
-    - event should have getters to interesting data
-      {
-        context,
-        resolver,
-        query,
-        args,
-        doc?, // Document from the db or query.input
-        merged?, // merge(doc, query.input)
-        result?, // The result...
-        changeset?,
-      }
+    - args.input does not look correct (args is altered?)
+    - tests
   * Pipeline
     - arguments?
     - path, validation?
   * GraphQL API (or is that another module?)
+  * Magic methods? $lookup?
+  * I don't like resolver.auto(); can it be done in the GraphQL API layer?
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
@@ -38,6 +19,7 @@ Improvement Considerations:
   * EventEmitter
     - Debounce a function (debounce) to prevent excessive/redundant calls?
     - Memoize a function to prevent excessive/redundant calls?
+    - changeset?
   * Allow user-defined loaders (replacing .named?)
   * Why do you send `${model}` in query instead of the actual model object?
   * If no change in data, prevent entire operation?
@@ -72,6 +54,14 @@ BREAKING CHANGELOG:
   * Revamped Emitter
     - "Basic" functions are hoisted to the top for execution; RETURNING a value will bypass thunk()
     - "Next" functions are run next, next() must ALWAYS be called; passing a value to next() will bypass thunk()
+    - Event arguments refactored (no more merged!):
+      {
+        context,
+        resolver,
+        args { crud, key, doc, input ... }, // Original values
+        query { crud, key, doc, input, result }, // Transformed values
+        changeset?,
+      }
   * QueryBuilder.resolve() is now .auto()
 
 ---------
