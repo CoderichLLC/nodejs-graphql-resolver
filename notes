@@ -20,7 +20,6 @@ Improvement Considerations:
   * Allow user-defined loaders (replacing .named?)
   * Why do you send `${model}` in query instead of the actual model object?
   * If no change in data, prevent entire operation?
-  * Consider passing input to driver without merging doc (a lot of transformations happen) and then combining result in QueryResolver
   * Need to consider if mutationMany really needs to be spread into individual mutationOnes
     - Validation performed on each doc post mutation
     - Audit trail per record

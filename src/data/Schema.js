@@ -231,7 +231,6 @@ module.exports = class Schema {
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
             if ($field.isFKReference) $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
-            // if ($field.isPrimaryKey || $field.isFKReference) $field.pipelines.serialize.unshift('$id');
 
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
             if ($field.isFKReference) {

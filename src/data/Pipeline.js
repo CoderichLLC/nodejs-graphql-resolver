@@ -55,7 +55,7 @@ module.exports = class Pipeline {
     Pipeline.define('toArray', ({ value }) => (Array.isArray(value) ? value : [value]), { itemize: false });
     Pipeline.define('toDate', ({ value }) => new Date(value), { configurable: true });
     Pipeline.define('timestamp', ({ value }) => Date.now(), { ignoreNull: false });
-    Pipeline.define('createdAt', ({ value }) => value || Date.now(), { ignoreNull: false });
+    Pipeline.define('createdAt', ({ query, value }) => query.doc?.createdAt || value || Date.now(), { ignoreNull: false });
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
     Pipeline.define('defaultValue', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
 
@@ -69,16 +69,8 @@ module.exports = class Pipeline {
     Pipeline.define('$validate', params => Pipeline.#resolve(params, 'validate'), { ignoreNull: false });
 
     //
-    Pipeline.define('$pk', ({ model, value }) => model.source.idValue(value?.id || value), { ignoreNull: false });
+    Pipeline.define('$pk', ({ query, model, value, path }) => model.source.idValue(get(query.doc, path) || value?.id || value), { ignoreNull: false });
     Pipeline.define('$fk', ({ model, value }) => model.source.idValue(value.id || value));
-    // Pipeline.define('$id', ({ query, model, field, value }) => {
-    //   if (field.isPrimaryKey) {
-    //     if (model.isEmbedded || ['create', 'push'].includes(query.crud)) return model.source.idValue(value?.id || value);
-    //     return value ? model.source.idValue(value.id || value) : value;
-    //   }
-    //   if (field.isFKReference && value) return model.source.idValue(value.id || value);
-    //   return value;
-    // }, { ignoreNull: false });
 
     //
     Pipeline.define('ensureId', ({ query, resolver, model, field, value }) => {
