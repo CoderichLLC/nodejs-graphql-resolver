@@ -21,8 +21,8 @@ expect.extend({
         expectation(val);
       });
       return { pass: true };
-    } catch (e) {
-      return { message: e.message, pass: false };
+    } catch ({ message }) {
+      return { message, pass: false };
     }
   },
 });

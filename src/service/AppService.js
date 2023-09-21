@@ -28,3 +28,9 @@ exports.getGQLReturnType = (returnType) => {
   const typeMap = { array: /^\[.+\].?$/, connection: /.+Connection!?$/, number: /^(Int|Float)!?$/, scalar: /.*/ };
   return Object.entries(typeMap).find(([type, pattern]) => returnType.match(pattern))[0];
 };
+
+exports.removeUndefinedDeep = (obj) => {
+  return Util.unflatten(Object.entries(Util.flatten(obj)).reduce((prev, [key, value]) => {
+    return value === undefined ? prev : Object.assign(prev, { [key]: value });
+  }, {}));
+};

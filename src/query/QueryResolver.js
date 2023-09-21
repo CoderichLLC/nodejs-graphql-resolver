@@ -99,7 +99,7 @@ module.exports = class QueryResolver extends QueryBuilder {
   }
 
   #get(query) {
-    return this.#resolver.match(this.#model.name).where(query.toObject().where).one({ required: true });
+    return this.#resolver.match(this.#model.name).id(query.toObject().id).one({ required: true });
   }
 
   #find(query) {

@@ -12,6 +12,7 @@ module.exports = class QueryBuilder {
 
     this.#query = Object.defineProperties(query, {
       id: { writable: true, enumerable: true, value: query.id },
+      args: { writable: true, enumerable: true, value: query.args || {} },
       flags: { writable: true, enumerable: true, value: query.flags || {} },
       options: { writable: true, enumerable: true, value: query.options || {} },
     });
@@ -36,6 +37,7 @@ module.exports = class QueryBuilder {
     this.#propCheck('id', 'where', 'native', 'sort', 'skip', 'limit', 'before', 'after');
     this.#query.id = id;
     this.#query.where = { id };
+    this.#query.args.id = id;
     return this;
   }
 
@@ -44,18 +46,22 @@ module.exports = class QueryBuilder {
     this.#query.isNative = true;
     this.#query.native = clause;
     this.#query.where = clause;
+    this.#query.args.native = clause;
     return this;
   }
 
   where(clause) {
     this.#propCheck('where', 'id', 'native');
     this.#query.where = clause;
+    this.#query.args.where = clause;
     return this;
   }
 
   select(...select) {
     this.#propCheck('select');
-    this.#query.select = select.flat();
+    select = select.flat();
+    this.#query.select = select;
+    this.#query.args.select = select;
     return this;
   }
 
@@ -63,6 +69,7 @@ module.exports = class QueryBuilder {
     this.#propCheck('skip', 'id');
     this.isClassicPaging = true;
     this.#query.skip = skip;
+    this.#query.args.skip = skip;
     return this;
   }
 
@@ -70,6 +77,7 @@ module.exports = class QueryBuilder {
     this.#propCheck('limit', 'id');
     this.isClassicPaging = true;
     this.#query.limit = limit;
+    this.#query.args.limit = limit;
     return this;
   }
 
@@ -77,6 +85,7 @@ module.exports = class QueryBuilder {
     this.#propCheck('before', 'id');
     this.#query.isCursorPaging = true;
     this.#query.before = before;
+    this.#query.args.before = before;
     return this;
   }
 
@@ -84,17 +93,20 @@ module.exports = class QueryBuilder {
     this.#propCheck('after', 'id');
     this.#query.isCursorPaging = true;
     this.#query.after = after;
+    this.#query.args.after = after;
     return this;
   }
 
   sort(sort) {
     this.#propCheck('sort', 'id');
     this.#query.sort = sort;
+    this.#query.args.sort = sort;
     return this;
   }
 
   meta(meta) {
     this.#query.meta = meta;
+    this.#query.args.meta = meta;
     return this;
   }
 
@@ -141,12 +153,14 @@ module.exports = class QueryBuilder {
   first(first) {
     this.#query.isCursorPaging = true;
     this.#query.first = first + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
+    this.#query.args.first = first;
     return this.many();
   }
 
   last(last) {
     this.#query.isCursorPaging = true;
     this.#query.last = last + 2; // Adding 2 for pagination meta info (hasNext hasPrev)
+    this.#query.args.last = last;
     return this.many();
   }
 
@@ -189,6 +203,7 @@ module.exports = class QueryBuilder {
     const suffix = id || limit === 1 || (crud === 'create' && args.length < 2) ? 'One' : 'Many';
     let input = suffix === 'One' ? args[0] : args;
     if (input === undefined) input = {};
+    this.#query.args.input = input;
     return this.resolve(Object.assign(this.#query, {
       op: `${crud}${suffix}`,
       key: `${crud}${this.#query.model}`,

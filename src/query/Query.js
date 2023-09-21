@@ -69,7 +69,7 @@ module.exports = class Query {
       this.pipeline('input', this.#query.input),
       this.#query.isNative ? this.#query.where : this.pipeline('where', this.#query.where),
       this.pipeline('sort', this.#query.sort),
-    ]).then(([input, where, sort]) => this.clone({ input, where, sort, args: this.#query }));
+    ]).then(([input, where, sort]) => this.clone({ input, where, sort }));
   }
 
   /**
