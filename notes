@@ -1,7 +1,4 @@
 TODO:
-  * Emitter
-    - args.input does not look correct (args is altered?)
-    - tests
   * Pipeline
     - arguments?
     - path, validation?
@@ -58,9 +55,7 @@ BREAKING CHANGELOG:
       {
         context,
         resolver,
-        args { crud, key, doc, input ... }, // Original values
-        query { crud, key, doc, input, result }, // Transformed values
-        changeset?,
+        query { args, id, model, crud, key, doc, input, sort, result }, // Transformed values
       }
   * QueryBuilder.resolve() is now .auto()
 

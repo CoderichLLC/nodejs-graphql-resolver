@@ -103,7 +103,7 @@ module.exports = class QueryResolver extends QueryBuilder {
   }
 
   #find(query) {
-    return this.#resolver.resolve(query.clone({ op: 'findMany' }));
+    return this.#resolver.resolve(query.clone({ op: 'findMany', key: `find${this.#model.name}`, crud: 'read', isMutation: false }));
   }
 
   #resolveReferentialIntegrity(query) {

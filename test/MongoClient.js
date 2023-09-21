@@ -16,10 +16,10 @@ module.exports = class MongoDriver {
 
   resolve(query) {
     query.options = { ...this.#config.query, ...query.options };
-    if (query.flags?.debug) console.log(inspect(query, { showHidden: false, colors: true, depth: 3 }));
+    if (query.flags.debug) console.log(inspect(query, { showHidden: false, colors: true, depth: 3 }));
 
     return Util.promiseRetry(() => this[query.op](query).then((result) => {
-      if (query.flags?.debug) console.log(inspect(result, { showHidden: false, colors: true }));
+      if (query.flags.debug) console.log(inspect(result, { showHidden: false, colors: true }));
       return result;
     }), 5, 5, e => e.hasErrorLabel && e.hasErrorLabel('TransientTransactionError'));
   }
@@ -48,8 +48,9 @@ module.exports = class MongoDriver {
   }
 
   updateOne(query) {
+    query.options.returnDocument = 'after';
     const $update = { $set: Util.flatten(query.input, { safe: true }) };
-    return this.collection(query.model).updateOne(query.where, $update, query.options).then(() => query.input);
+    return this.collection(query.model).findOneAndUpdate(query.where, $update, query.options).then(({ value }) => value);
   }
 
   deleteOne(query) {
@@ -224,7 +225,7 @@ module.exports = class MongoDriver {
       if (select?.length) $aggregate.push({ $project: select.reduce((prev, key) => Object.assign(prev, { [key]: 1 }), {}) });
     }
 
-    if (query.flags?.debug) console.log(inspect($aggregate, { depth: null, showHidden: false, colors: true }));
+    if (query.flags.debug) console.log(inspect($aggregate, { depth: null, showHidden: false, colors: true }));
 
     return $aggregate;
   }

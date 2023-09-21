@@ -64,6 +64,10 @@ describe('Resolver', () => {
     });
   });
 
+  afterEach(() => {
+    Emitter.removeAllListeners();
+  });
+
   describe('System Events', () => {
     test('create', async () => {
       query = { model: 'Person', op: 'createOne', key: 'createPerson', crud: 'create', isMutation: true };
@@ -113,6 +117,44 @@ describe('Resolver', () => {
 
       // Response
       asserter(['preResponse', 'postResponse'], 2, false); // Once for Query once for Mutation!
+
+      person = updatedPerson;
+    });
+
+    test('hijack query output', async () => {
+      Emitter.cloneData = false; // The default, we can't clone otherwise we lose reference!
+      Emitter.onceKeys('preQuery', ['getPerson'], () => ({ id: 1, name: 'hijacked' }));
+      expect(await resolver.match('Person').where({ name: 'rich' }).one()).toEqual({ id: 1, name: 'hijacked' });
+      expect(await resolver.match('Person').where({ name: 'rich' }).one()).toEqual(person);
+      Emitter.onceKeys('preQuery', ['getPerson'], (e, next) => next({ id: 1, name: 'hijacked again' }));
+      expect(await resolver.match('Person').where({ name: 'rich' }).one()).toEqual({ id: 1, name: 'hijacked again' });
+      expect(await resolver.match('Person').where({ name: 'rich' }).one()).toEqual(person);
+    });
+
+    test('hijack mutation output', async () => {
+      Emitter.cloneData = false; // The default, we can't clone otherwise we lose reference!
+      Emitter.onceKeys('preMutation', ['updatePerson'], () => ({ id: 1, name: 'hijacked' }));
+      expect(await resolver.match('Person').where({ name: 'rich' }).save({ age: 60 })).toEqual([{ id: 1, name: 'hijacked' }]);
+      Emitter.onceKeys('preMutation', ['updatePerson'], (e, next) => next({ id: 1, name: 'hijacked again' }));
+      expect(await resolver.match('Person').where({ name: 'rich' }).save({ age: 60 })).toEqual([{ id: 1, name: 'hijacked again' }]);
+      expect(await resolver.match('Person').where({ name: 'rich' }).one()).toEqual(person);
+    });
+
+    test('hijack where clause', async () => {
+      let counter = 0;
+      Emitter.cloneData = false; // The default, we can't clone otherwise we lose reference!
+      expect(await resolver.match('Person').where({ name: '$magic' }).one()).toBeNull();
+      Emitter.onKeys('preQuery', ['getPerson'], (ev) => {
+        if (ev.query.args.where.name === '$magic' && counter++) ev.query.where = { name: 'rich' };
+      });
+      expect(await resolver.match('Person').where({ name: '$magic' }).one()).toBeNull();
+      expect(await resolver.match('Person').where({ name: '$magic' }).one()).not.toBeNull();
+    });
+
+    test('hijack input', async () => {
+      Emitter.cloneData = false; // The default, we can't clone otherwise we lose reference!
+      Emitter.onKeys('preMutation', ['updatePerson'], (ev) => { ev.query.input = { age: 45 }; });
+      expect(await resolver.match('Person').id(person.id).save({ age: 65 })).toEqual(person); // Because we clobbered all input transformations!
     });
   });
 });
