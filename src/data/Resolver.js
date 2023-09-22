@@ -250,7 +250,7 @@ module.exports = class Resolver {
   #createSystemEvent(tquery, thunk = () => {}) {
     const query = tquery.toObject();
     const type = query.isMutation ? 'Mutation' : 'Query';
-    const event = { context: this.#context, resolver: this, query };
+    const event = { schema: this.#schema, context: this.#context, resolver: this, query };
 
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly;

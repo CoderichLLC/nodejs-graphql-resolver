@@ -112,7 +112,7 @@ module.exports = class Query {
 
         // Transform value
         let $value = await Util.pipeline(transformers.map(t => async (value) => {
-          const v = await t({ query, path: paths.concat(key), model, field, value, startValue, resolver: this.#resolver, context: this.#context });
+          const v = await t({ query, model, field, value, path: paths.concat(key), startValue, resolver: this.#resolver, context: this.#context });
           return v === undefined ? value : v;
         }), startValue);
 

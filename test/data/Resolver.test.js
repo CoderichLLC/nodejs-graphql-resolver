@@ -3,13 +3,13 @@ const Util = require('@coderich/util');
 const Emitter = require('../../src/data/Emitter');
 
 describe('Resolver', () => {
-  let resolver, context, query, event, $event, person;
+  let schema, resolver, context, query, event, $event, person;
 
   // Dynamic Jest Matching
   const mocks = {};
   const hooks = ['preQuery', 'postQuery', 'preMutation', 'postMutation', 'validate', 'preResponse', 'postResponse'];
   const matcher = expect.multiplex(
-    val => expect(val).toMatchObject({ context, resolver, query: event }),
+    val => expect(val).toMatchObject({ schema, resolver, context, query: event }),
     (e) => {
       Object.entries(Util.flatten($event)).forEach(([key, value]) => {
         try {
@@ -36,7 +36,7 @@ describe('Resolver', () => {
   };
 
   beforeAll(() => {
-    ({ context, resolver } = global);
+    ({ schema, resolver, context } = global);
     Emitter.cloneData = true;
   });
 
@@ -71,12 +71,12 @@ describe('Resolver', () => {
   describe('System Events', () => {
     test('create', async () => {
       query = { model: 'Person', op: 'createOne', key: 'createPerson', crud: 'create', isMutation: true };
-      query.args = { input: { name: 'Rich', emailAddress: 'email@gmail.com' } };
+      query.args = { input: { name: 'Rich', emailAddress: 'email@gmail.com' }, meta: { id: 1 } };
       query.input = { id: expect.anything(), name: 'rich', emailAddress: 'email@gmail.com', telephone: '###-###-####', createdAt: expect.anything(), updatedAt: expect.anything() };
       $event['args.input.telephone'] = undefined; // Test that defaultValue is not applied here
 
       // Create person
-      person = await resolver.match('Person').save(query.args.input);
+      person = await resolver.match('Person').meta({ id: 1 }).save(query.args.input);
 
       // No Query hooks should have been called
       asserter(['preQuery', 'postQuery'], 0);
