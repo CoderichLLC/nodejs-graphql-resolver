@@ -1,4 +1,5 @@
 const get = require('lodash.get');
+const ObjectId = require('bson-objectid');
 const Util = require('@coderich/util');
 const Emitter = require('../../src/data/Emitter');
 
@@ -72,7 +73,7 @@ describe('Resolver', () => {
     test('create', async () => {
       query = { model: 'Person', op: 'createOne', key: 'createPerson', crud: 'create', isMutation: true };
       query.args = { input: { name: 'Rich', emailAddress: 'email@gmail.com' }, meta: { id: 1 } };
-      query.input = { id: expect.anything(), name: 'rich', emailAddress: 'email@gmail.com', telephone: '###-###-####', createdAt: expect.anything(), updatedAt: expect.anything() };
+      query.input = { id: expect.thunk(ObjectId.isValid), name: 'rich', emailAddress: 'email@gmail.com', telephone: '###-###-####', createdAt: expect.any(Date), updatedAt: expect.any(Date) };
       $event['args.input.telephone'] = undefined; // Test that defaultValue is not applied here
 
       // Create person

@@ -74,7 +74,7 @@ describe('Query', () => {
         key: 'createPerson',
         model: 'Person',
         input: {
-          id: expect.anything(),
+          id: expect.thunk(ObjectId.isValid),
           name: 'richard',
           network: 'network',
           telephone: '###-###-####', // Create will set default input

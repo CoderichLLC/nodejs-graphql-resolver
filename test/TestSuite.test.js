@@ -149,11 +149,11 @@ describe('TestSuite', () => {
       artsy = await resolver.match('Art').save({ name: 'My Find Art', sections: [{ name: 'Section1', person: richard.id }] });
       expect(artsy.id).toBeDefined();
       expect(artsy.sections).toMatchObject([{
-        id: expect.anything(),
+        id: expect.thunk(ObjectId.isValid),
         name: 'section1',
         frozen: 'frozen',
-        createdAt: expect.anything(),
-        updatedAt: expect.anything(),
+        createdAt: expect.any(Date),
+        updatedAt: expect.any(Date),
       }]);
     });
   });
@@ -231,7 +231,7 @@ describe('TestSuite', () => {
 
       // Auto (Connection)
       const resolution = await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).auto(null, null, null, { returnType: 'MyConnection' });
-      expect(resolution).toMatchObject({ count: expect.anything(), edges: expect.anything(), pageInfo: expect.anything() });
+      expect(resolution).toMatchObject({ count: expect.any(Function), edges: expect.any(Function), pageInfo: expect.any(Function) });
       expect(await resolution.count()).toBe(2);
       expect((await resolution.edges()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'Christie' }, { id: richard.id, name: 'Richard' }].sort(sorter));
     });
@@ -491,7 +491,7 @@ describe('TestSuite', () => {
 
       // Auto (Connection)
       const resolution = await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).auto(null, null, null, { returnType: 'MyConnection' });
-      expect(resolution).toMatchObject({ count: expect.anything(), edges: expect.anything(), pageInfo: expect.anything() });
+      expect(resolution).toMatchObject({ count: expect.any(Function), edges: expect.any(Function), pageInfo: expect.any(Function) });
       expect(await resolution.count()).toBe(1);
       expect(await resolution.edges()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
     });
@@ -547,7 +547,7 @@ describe('TestSuite', () => {
       const { id, sections } = artsy;
       sections.push({ name: 'New Section' });
       expect(await resolver.match('Art').id(id).save({ sections })).toMatchObject({
-        sections: [{ ...sections[0], updatedAt: expect.anything() }, { id: expect.anything(), name: 'new section', createdAt: expect.anything(), updatedAt: expect.anything() }],
+        sections: [{ ...sections[0], updatedAt: expect.any(Date) }, { id: expect.thunk(ObjectId.isValid), name: 'new section', createdAt: expect.any(Date), updatedAt: expect.any(Date) }],
       });
     });
 
@@ -656,8 +656,8 @@ describe('TestSuite', () => {
       const txn = resolver.transaction();
       const person1$1 = await txn.match('Person').save({ name: 'person1', emailAddress: 'person1@gmail.com' });
       const person2$1 = await txn.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' });
-      expect(person1$1).toMatchObject({ id: expect.anything(), name: 'Person1' });
-      expect(person2$1).toMatchObject({ id: expect.anything(), name: 'Person2' });
+      expect(person1$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'Person1' });
+      expect(person2$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'Person2' });
       expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
       await txn.commit();
       expect(await resolver.match('Person').id(person1$1.id).one()).not.toBeNull();
@@ -667,8 +667,8 @@ describe('TestSuite', () => {
       const txn = resolver.transaction();
       const person1$1 = await txn.match('Person').save({ name: 'person3', emailAddress: 'person3@gmail.com' });
       const person2$1 = await txn.match('Person').save({ name: 'person4', emailAddress: 'person4@gmail.com' });
-      expect(person1$1).toMatchObject({ id: expect.anything(), name: 'Person3' });
-      expect(person2$1).toMatchObject({ id: expect.anything(), name: 'Person4' });
+      expect(person1$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'Person3' });
+      expect(person2$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'Person4' });
       expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
       await txn.rollback();
       expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
@@ -840,17 +840,17 @@ describe('TestSuite', () => {
     test('update should not clobber unknown attributes', async () => {
       await resolver.raw('Person').findOneAndUpdate({ _id: christie.id }, { $set: { section: { name: 'sec', unknown: 'unknown' } } });
       const person = await resolver.match('Person').id(christie.id).save({ section: { name: 'section' } });
-      expect(person.section).toEqual(expect.objectContaining({ id: expect.anything(), name: 'section', frozen: 'frozen' }));
+      expect(person.section).toEqual(expect.objectContaining({ id: expect.thunk(ObjectId.isValid), name: 'section', frozen: 'frozen' }));
       const dbPerson = await resolver.raw('Person').findOne({ _id: christie.id });
-      expect(dbPerson.section).toEqual(expect.objectContaining({ _id: expect.anything(), name: 'section', frozen: 'frozen', unknown: 'unknown' }));
+      expect(dbPerson.section).toEqual(expect.objectContaining({ _id: expect.thunk(ObjectId.isValid), name: 'section', frozen: 'frozen', unknown: 'unknown' }));
     });
 
     test('update with brand new embedded attributes are correct', async () => {
       const person = await resolver.match('Person').save({ name: 'new', emailAddress: 'new@new.com' });
       const updated = await resolver.match('Person').id(person.id).save({ section: { name: 'section1' } });
-      expect(updated.section).toMatchObject({ id: expect.anything(), name: 'section1' });
+      expect(updated.section).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'section1' });
       const sanity = await resolver.match('Person').id(person.id).one();
-      expect(sanity.section).toMatchObject({ id: expect.anything(), name: 'section1' });
+      expect(sanity.section).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'section1' });
     });
 
     test('where clause with one(required) should throw', async () => {

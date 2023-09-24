@@ -1,3 +1,4 @@
+const ObjectId = require('bson-objectid');
 const Pipeline = require('../../src/data/Pipeline');
 
 describe('Pipeline', () => {
@@ -35,13 +36,13 @@ describe('Pipeline', () => {
 
       // Sanity test the object was created as expected
       expect(person).toMatchObject({
-        id: expect.anything(),
+        id: expect.thunk(ObjectId.isValid),
         name: 'Rich',
         emailAddress: 'email@gmail.com',
         sections: [
-          expect.objectContaining({ id: expect.anything(), name: 'section1', updatedAt: expect.anything(), createdAt: expect.anything() }),
-          expect.objectContaining({ id: expect.anything(), name: 'section2', updatedAt: expect.anything(), createdAt: expect.anything() }),
-          expect.objectContaining({ id: expect.anything(), name: 'section3', updatedAt: expect.anything(), createdAt: expect.anything() }),
+          expect.objectContaining({ id: expect.thunk(ObjectId.isValid), name: 'section1', updatedAt: expect.any(Date), createdAt: expect.any(Date) }),
+          expect.objectContaining({ id: expect.thunk(ObjectId.isValid), name: 'section2', updatedAt: expect.any(Date), createdAt: expect.any(Date) }),
+          expect.objectContaining({ id: expect.thunk(ObjectId.isValid), name: 'section3', updatedAt: expect.any(Date), createdAt: expect.any(Date) }),
         ],
       });
 

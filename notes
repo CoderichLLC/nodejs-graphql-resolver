@@ -3,7 +3,6 @@ TODO:
     - arguments?
     - path, validation?
   * There are more transformations happening on Query (vs Mutation) than you need
-  * expect.any(Constructor) (eg. ObjectID, Date)
   * You need proper events on embedded documents so that "construct": "createdBy" would work!
   * GraphQL API (or is that another module?)
   * Magic methods? $lookup?
