@@ -2,11 +2,14 @@ TODO:
   * Pipeline
     - arguments?
     - path, validation?
-  * 'setup' SystemEvent
+  * There are more transformations happening on Query (vs Mutation) than you need
+  * expect.any(Constructor) (eg. ObjectID, Date)
+  * You need proper events on embedded documents so that "construct": "createdBy" would work!
   * GraphQL API (or is that another module?)
   * Magic methods? $lookup?
   * I don't like resolver.auto(); can it be done in the GraphQL API layer?
   * Why do you send `${model}` in query instead of the actual model object?
+  * 'setup' SystemEvent
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
@@ -42,13 +45,14 @@ BREAKING CHANGELOG:
   * Revamped how initial setup works (config.js)
   * Revamped Pipeline
     - Pipeline "toId" is now $id or $pk depending upon needs
-    - Removed deserialize + transform ==> normalize
+    - Pipelines:
         instruct
-        normalize
+        normalize (formerly transform)
         construct
         restruct
         destruct
         serialize
+        deserialize
         validate
   * Revamped Emitter
     - "Basic" functions are hoisted to the top for execution; RETURNING a value will bypass thunk()

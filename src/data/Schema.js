@@ -6,6 +6,8 @@ const { isLeafValue, isPlainObject, isBasicObject } = require('../service/AppSer
 const operations = ['Query', 'Mutation', 'Subscription'];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
 const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
+const pipelines = ['validate', 'construct', 'restruct', 'destruct', 'instruct', 'normalize', 'serialize', 'deserialize'];
+const inputPipelines = ['validate', 'construct', 'instruct', 'normalize', 'serialize'];
 
 module.exports = class Schema {
   #config;
@@ -74,7 +76,7 @@ module.exports = class Schema {
             key: name,
             dalScope: 'crud',
             gqlScope: 'cruds',
-            pipelines: { normalize: [], validate: [], serialize: [], construct: [] },
+            pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
             toString: () => name,
           };
         } else if (node.kind === Kind.NON_NULL_TYPE) {
@@ -148,8 +150,7 @@ module.exports = class Schema {
                 break;
               }
               default: {
-                if (['validate', 'construct', 'restruct', 'destruct', 'instruct', 'normalize', 'serialize'].includes(key)) {
-                  target.pipelines[key] = target.pipelines[key] || [];
+                if (pipelines.includes(key)) {
                   target.pipelines[key] = target.pipelines[key].concat(value).filter(Boolean);
                 }
                 break;
@@ -212,6 +213,12 @@ module.exports = class Schema {
                 const $value = opts.itemize && $field.model && isBasicObject($node.value) ? Util.map($node.value, el => $field.model.walk(el, fn, { ...opts, path, run })) : $node.value;
                 return Object.assign(prev, { [$node.key]: $value });
               }, {});
+            };
+
+            // Pre-processing
+            $model.pipelineFields = {
+              input: Object.values($model.fields).filter(f => f.defaultValue !== undefined || inputPipelines.some(k => f.pipelines[k].length)).reduce((prev, f) => Object.assign(prev, { [f.name]: undefined }), {}),
+              where: Object.values($model.fields).filter(f => f.pipelines.instruct.length).reduce((prev, f) => Object.assign(prev, { [f.name]: undefined }), {}),
             };
           });
         } else if (node.kind === Kind.FIELD_DEFINITION) {

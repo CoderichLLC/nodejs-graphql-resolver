@@ -21,6 +21,11 @@ describe('Query', () => {
           id: expect.anything(),
           network: 'network',
         },
+        args: {
+          input: {
+            id: 1,
+          },
+        },
       });
     });
 
@@ -54,7 +59,7 @@ describe('Query', () => {
             id: expect.anything(),
             name: 'richard',
             network: 'network',
-            telephone: '###-###-####',
+            telephone: undefined, // Update does not set input as default
             updatedAt: expect.anything(),
             createdAt: expect.anything(),
           }),
@@ -62,7 +67,7 @@ describe('Query', () => {
       });
     });
 
-    test('save', async () => {
+    test('create', async () => {
       expect((await factory('Person').save({ name: 'RiChArD' }).transform()).toObject()).toMatchObject({
         id: undefined,
         crud: 'create',
@@ -73,7 +78,7 @@ describe('Query', () => {
           id: expect.anything(),
           name: 'richard',
           network: 'network',
-          telephone: '###-###-####',
+          telephone: '###-###-####', // Create will set default input
           updatedAt: expect.anything(),
           createdAt: expect.anything(),
         },

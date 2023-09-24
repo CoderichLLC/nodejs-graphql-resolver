@@ -450,6 +450,10 @@ describe('TestSuite', () => {
       expect(richard.name).toEqual('Richard');
       expect(richard.telephone).toEqual('1234567890');
       expect(richard.friends).toEqual([christie.id]);
+
+      // Sanity test to make sure telephone does not get undone
+      const sanity = await resolver.match('Person').id(richard.id).save({});
+      expect(sanity.telephone).toEqual(richard.telephone);
     });
   });
 
@@ -838,7 +842,7 @@ describe('TestSuite', () => {
       const person = await resolver.match('Person').id(christie.id).save({ section: { name: 'section' } });
       expect(person.section).toEqual(expect.objectContaining({ id: expect.anything(), name: 'section', frozen: 'frozen' }));
       const dbPerson = await resolver.raw('Person').findOne({ _id: christie.id });
-      expect(dbPerson.section).toEqual(expect.objectContaining({ name: 'section', unknown: 'unknown' }));
+      expect(dbPerson.section).toEqual(expect.objectContaining({ _id: expect.anything(), name: 'section', frozen: 'frozen', unknown: 'unknown' }));
     });
 
     test('update with brand new embedded attributes are correct', async () => {

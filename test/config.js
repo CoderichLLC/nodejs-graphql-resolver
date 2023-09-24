@@ -44,7 +44,7 @@ module.exports = ({ uri }) => ({
   decorators: {
     default: `
       id: ID! @field(key: "_id")
-      createdAt: String @field(serialize: createdAt, gqlScope: r)
+      createdAt: String @field(construct: timestamp, gqlScope: r)
       updatedAt: String @field(serialize: timestamp, gqlScope: r)
     `,
   },
@@ -58,7 +58,7 @@ module.exports = ({ uri }) => ({
       @index(name: "uix_person_name", type: unique, on: [name])
     {
       age: Int @field(key: "my_age")
-      name: String! @field(normalize: toTitleCase, serialize: toLowerCase)
+      name: String! @field(deserialize: toTitleCase, serialize: toLowerCase)
       authored: [Book] @link(by: author) @field(connection: true)
       emailAddress: String! @field(key: "email_address", validate: email)
       friends: [Person] @field(normalize: dedupe, validate: selfless, onDelete: cascade, connection: true)
@@ -78,7 +78,7 @@ module.exports = ({ uri }) => ({
     {
       name: String! @field(normalize: toTitleCase, validate: bookName)
       price: Float! @field(validate: bookPrice)
-      author: Person! @field(validate: immutable, onDelete: cascade)
+      author: Person! @field(restruct: immutable, onDelete: cascade)
       bestSeller: Boolean
       bids: [Float]
       chapters: [Chapter] @link(by: book)
@@ -161,7 +161,7 @@ module.exports = ({ uri }) => ({
 
     type Section @model(embed: true) {
       name: String! @field(normalize: toLowerCase)
-      frozen: String! @field(default: "frozen", validate: immutable)
+      frozen: String! @field(default: "frozen", restruct: immutable)
       description: String
       person: Person
     }

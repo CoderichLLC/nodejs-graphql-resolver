@@ -187,10 +187,8 @@ module.exports = class Resolver {
   }
 
   toResultSet(model, result, query = {}) {
-    const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
-    const crudLines = crudMap[query.crud] || [];
     const $model = this.#schema.models[model];
-    return this.#finalize(query, $model, result, ['defaultValue', 'castValue', '$normalize', '$instruct', ...crudLines].map(el => Pipeline[el]));
+    return this.#finalize(query, $model, result, ['$default', '$cast', '$normalize', '$instruct', '$deserialize'].map(el => Pipeline[el]));
   }
 
   toModel(model) {
@@ -215,20 +213,23 @@ module.exports = class Resolver {
     if (data == null) return data;
     if (typeof data !== 'object') return data;
 
-    return Util.mapPromise(data, (doc) => {
+    return Util.mapPromise(data, (doc, index) => {
+      const path = [...paths];
+      if (Array.isArray(data)) path.push(index);
+
       return Util.pipeline(Object.entries(doc).map(([key, startValue]) => async (prev) => {
         const field = Object.values(model.fields).find(el => el.key === key);
         if (!field) return prev; // Remove fields not defined in schema
 
         // Transform value
         let $value = await Util.pipeline(transformers.map(t => async (value) => {
-          const v = await t({ query, model, field, value, path: paths.concat(field.name), startValue, resolver: this, context: this.#context });
+          const v = await t({ query, model, field, value, path: path.concat(field.name), startValue, resolver: this, context: this.#context, schema: this.#schema });
           return v === undefined ? value : v;
         }), startValue);
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference && !field.isPrimaryKey) {
-          $value = await this.#finalize(query, field.model, $value, transformers, paths.concat(field.name));
+          $value = await this.#finalize(query, field.model, $value, transformers, path.concat(field.name));
         }
 
         return Object.assign(prev, { [field.name]: $value });

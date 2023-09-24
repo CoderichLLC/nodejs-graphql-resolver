@@ -17,17 +17,21 @@ module.exports = class Pipeline {
     const { ignoreNull = true, itemize = true, configurable = false } = { ...factory.options, ...options };
 
     const wrapper = Object.defineProperty((args) => {
-      if (ignoreNull && args.value == null) return args.value;
+      try {
+        if (ignoreNull && args.value == null) return args.value;
 
-      if (ignoreNull && itemize) {
-        return Util.map(args.value, (val, index) => {
-          const v = factory({ ...args, value: val });
-          return v === undefined ? val : v;
-        });
+        if (ignoreNull && itemize) {
+          return Util.map(args.value, (val, index) => {
+            const v = factory({ ...args, value: val });
+            return v === undefined ? val : v;
+          });
+        }
+
+        const val = factory(args);
+        return val === undefined ? args.value : val;
+      } catch (e) {
+        throw e;
       }
-
-      const val = factory(args);
-      return val === undefined ? args.value : val;
     }, 'name', { value: name });
 
     // Attach enumerable method to the Pipeline
@@ -54,35 +58,26 @@ module.exports = class Pipeline {
     Pipeline.define('toSentenceCase', ({ value }) => value.charAt(0).toUpperCase() + value.slice(1));
     Pipeline.define('toArray', ({ value }) => (Array.isArray(value) ? value : [value]), { itemize: false });
     Pipeline.define('toDate', ({ value }) => new Date(value), { configurable: true });
-    Pipeline.define('timestamp', ({ value }) => Date.now(), { ignoreNull: false });
-    Pipeline.define('createdAt', ({ query, value }) => query.doc?.createdAt || value || Date.now(), { ignoreNull: false });
+    Pipeline.define('timestamp', () => Date.now(), { ignoreNull: false });
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
-    Pipeline.define('defaultValue', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
 
     // Structures
-    Pipeline.define('$instruct', params => Pipeline.#resolve(params, 'instruct'), { ignoreNull: false });
-    Pipeline.define('$normalize', params => Pipeline.#resolve(params, 'normalize'), { ignoreNull: false });
-    Pipeline.define('$construct', params => Pipeline.#resolve(params, 'construct'), { ignoreNull: false });
-    Pipeline.define('$restruct', params => Pipeline.#resolve(params, 'restruct'), { ignoreNull: false });
-    Pipeline.define('$destruct', params => Pipeline.#resolve(params, 'destruct'), { ignoreNull: false });
-    Pipeline.define('$serialize', params => Pipeline.#resolve(params, 'serialize'), { ignoreNull: false });
-    Pipeline.define('$validate', params => Pipeline.#resolve(params, 'validate'), { ignoreNull: false });
+    Pipeline.define('$instruct', params => Pipeline.resolve(params, 'instruct'), { ignoreNull: false });
+    Pipeline.define('$normalize', params => Pipeline.resolve(params, 'normalize'), { ignoreNull: false });
+    Pipeline.define('$construct', params => Pipeline.resolve(params, 'construct'), { ignoreNull: false });
+    Pipeline.define('$restruct', params => Pipeline.resolve(params, 'restruct'), { ignoreNull: false });
+    Pipeline.define('$destruct', params => Pipeline.resolve(params, 'destruct'), { ignoreNull: false });
+    Pipeline.define('$serialize', params => Pipeline.resolve(params, 'serialize'), { ignoreNull: false });
+    Pipeline.define('$deserialize', params => Pipeline.resolve(params, 'deserialize'), { ignoreNull: false });
+    Pipeline.define('$validate', params => Pipeline.resolve(params, 'validate'), { ignoreNull: false });
 
     //
     Pipeline.define('$pk', ({ query, model, value, path }) => model.source.idValue(get(query.doc, path) || value?.id || value), { ignoreNull: false });
     Pipeline.define('$fk', ({ model, value }) => model.source.idValue(value.id || value));
+    Pipeline.define('$default', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
 
     //
-    Pipeline.define('ensureId', ({ query, resolver, model, field, value }) => {
-      const { type } = field;
-      const ids = Util.filterBy(Util.ensureArray(value), (a, b) => `${a}` === `${b}`);
-      return resolver.match(type).flags(query.flags).where({ id: ids }).count().then((count) => {
-        if (count !== ids.length) throw Boom.notFound(`${type} Not Found`);
-      });
-    }, { itemize: false });
-
-    //
-    Pipeline.define('castValue', ({ field, value }) => {
+    Pipeline.define('$cast', ({ field, value }) => {
       const { type, isEmbedded } = field;
       if (isEmbedded) return value;
 
@@ -110,6 +105,15 @@ module.exports = class Pipeline {
         }
       }
     });
+
+    //
+    Pipeline.define('ensureId', ({ query, resolver, model, field, value }) => {
+      const { type } = field;
+      const ids = Util.filterBy(Util.ensureArray(value), (a, b) => `${a}` === `${b}`);
+      return resolver.match(type).flags(query.flags).where({ id: ids }).count().then((count) => {
+        if (count !== ids.length) throw Boom.notFound(`${type} Not Found`);
+      });
+    }, { itemize: false });
 
     // Required fields
     Pipeline.define('required', ({ query, model, field, value }) => {
@@ -150,8 +154,8 @@ module.exports = class Pipeline {
     }, { itemize: false });
   }
 
-  static #resolve(params, pipeline) {
-    const transformers = params.field.pipelines?.[pipeline] || [];
+  static resolve(params, pipeline) {
+    const transformers = params.field.pipelines[pipeline] || [];
 
     return Util.pipeline(transformers.map(t => async (value) => {
       return Pipeline[t]({ ...params, value });

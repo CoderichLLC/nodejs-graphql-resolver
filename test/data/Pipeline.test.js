@@ -1,19 +1,21 @@
 const Pipeline = require('../../src/data/Pipeline');
 
 describe('Pipeline', () => {
-  let resolver;
-  let email, immutable, toTitleCase, toLowerCase;
+  let schema, resolver, context;
+  let $cast, $default, email, immutable, toTitleCase, toLowerCase;
 
   beforeAll(() => {
-    ({ resolver } = global);
+    ({ schema, resolver, context } = global);
   });
 
-  // beforeEach(() => {
-  //   email = jest.spyOn(Pipeline, 'email');
-  //   immutable = jest.spyOn(Pipeline, 'immutable');
-  //   toTitleCase = jest.spyOn(Pipeline, 'toTitleCase');
-  //   toLowerCase = jest.spyOn(Pipeline, 'toLowerCase');
-  // });
+  beforeEach(() => {
+    $cast = jest.spyOn(Pipeline, '$cast');
+    $default = jest.spyOn(Pipeline, '$default');
+    email = jest.spyOn(Pipeline, 'email');
+    immutable = jest.spyOn(Pipeline, 'immutable');
+    toTitleCase = jest.spyOn(Pipeline, 'toTitleCase');
+    toLowerCase = jest.spyOn(Pipeline, 'toLowerCase');
+  });
 
   afterEach(() => {
     jest.resetAllMocks();
@@ -44,9 +46,53 @@ describe('Pipeline', () => {
       });
 
       // Spys
-      // expect(email).toHaveBeenCalledTimes(1);
-      // expect(immutable).toHaveBeenCalledTimes(1);
-      // expect(toLowerCase).toHaveBeenCalledTimes(1);
+      expect(email).toHaveBeenCalledTimes(1);
+      expect(immutable).toHaveBeenCalledTimes(0); // Only called on restruct
+      expect($cast).toHaveBeenCalledTimes(51); // A lot (but we're invoking the wrapper)
+      expect($default).toHaveBeenCalledTimes(51); // // A lot (but we're invoking the wrapper)
+      expect(toTitleCase).toHaveBeenCalledTimes(1); // Name during deserialize
+      expect(toLowerCase).toHaveBeenCalledTimes(7); // Twice for each section (normalize) and once for name (deserialize)
+
+      // Email payload
+      expect(email).toHaveBeenCalledWith(expect.objectContaining({
+        schema,
+        context,
+        resolver,
+        value: 'email@gmail.com',
+        startValue: 'email@gmail.com',
+        query: expect.objectContaining({ model: 'Person' }),
+        model: expect.objectContaining({ name: 'Person' }),
+        field: expect.objectContaining({ name: 'emailAddress' }),
+        path: ['emailAddress'],
+      }));
+
+      // Check path of embedded array
+      expect(toLowerCase).toHaveBeenCalledWith(expect.objectContaining({
+        value: 'section1',
+        startValue: 'section1',
+        query: expect.objectContaining({ model: 'Person' }),
+        model: expect.objectContaining({ name: 'Section' }),
+        field: expect.objectContaining({ name: 'name' }),
+        path: ['sections', 0, 'name'],
+      }));
+
+      expect(toLowerCase).toHaveBeenCalledWith(expect.objectContaining({
+        value: 'section2',
+        startValue: 'section2',
+        query: expect.objectContaining({ model: 'Person' }),
+        model: expect.objectContaining({ name: 'Section' }),
+        field: expect.objectContaining({ name: 'name' }),
+        path: ['sections', 1, 'name'],
+      }));
+
+      expect(toLowerCase).toHaveBeenCalledWith(expect.objectContaining({
+        value: 'section3',
+        startValue: 'section3',
+        query: expect.objectContaining({ model: 'Person' }),
+        model: expect.objectContaining({ name: 'Section' }),
+        field: expect.objectContaining({ name: 'name' }),
+        path: ['sections', 2, 'name'],
+      }));
     });
   });
 });

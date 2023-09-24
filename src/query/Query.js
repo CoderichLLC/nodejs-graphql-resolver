@@ -52,10 +52,11 @@ module.exports = class Query {
     const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
     const crudLines = crudMap[this.#query.crud] || [];
     const transformerMap = {
-      input: ['defaultValue', 'castValue', '$normalize', '$instruct', ...crudLines, '$serialize'],
-      where: ['castValue', '$instruct', '$serialize'],
-      sort: ['castValue'],
+      input: ['$cast', '$normalize', '$instruct', ...crudLines, '$serialize'],
+      where: ['$cast', '$instruct', '$serialize'],
+      sort: ['$cast'],
     };
+    if (this.#query.crud === 'create') transformerMap.input.unshift('$default');
     transformers = transformers || transformerMap[target];
 
     return this.#pipeline(this.#query, target, this.#model, data, transformers.map(el => Pipeline[el]));
@@ -97,14 +98,12 @@ module.exports = class Query {
    * Recursive pipeline function
    */
   #pipeline(query, target, model, data, transformers = [], paths = []) {
-    const allFields = Object.values(model.fields).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
-    const instructFields = Object.values(model.fields).filter(field => field.pipelines?.instruct).reduce((prev, field) => Object.assign(prev, { [field.name]: undefined }), {});
-
     // Next we transform the $data
     return Util.mapPromise(data, (doc, index) => {
-      if (Array.isArray(data)) paths = paths.concat(index);
-      if (target === 'input') doc = mergeDeep(allFields, doc);
-      else if (target === 'where') doc = mergeDeep(instructFields, doc);
+      const path = [...paths];
+      if (Array.isArray(data)) path.push(index);
+      if (target === 'input') doc = mergeDeep(model.pipelineFields.input, doc);
+      else if (target === 'where') doc = mergeDeep(model.pipelineFields.where, doc);
 
       return Util.pipeline(Object.entries(doc).map(([key, startValue]) => async (prev) => {
         const field = model.fields[key];
@@ -112,13 +111,13 @@ module.exports = class Query {
 
         // Transform value
         let $value = await Util.pipeline(transformers.map(t => async (value) => {
-          const v = await t({ query, model, field, value, path: paths.concat(key), startValue, resolver: this.#resolver, context: this.#context });
+          const v = await t({ query, model, field, value, path: path.concat(key), startValue, resolver: this.#resolver, context: this.#context, schema: this.#schema });
           return v === undefined ? value : v;
         }), startValue);
 
         // If it's embedded - delegate
         if (field.model && !field.isFKReference && !field.isPrimaryKey) {
-          $value = await this.#pipeline(query, target, field.model, $value, transformers, paths.concat(key));
+          $value = await this.#pipeline(query, target, field.model, $value, transformers, path.concat(key));
         }
 
         // Assign it back
