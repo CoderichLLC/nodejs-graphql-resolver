@@ -16,7 +16,7 @@ describe('Resolver', () => {
         try {
           expect(get(e, key)).toEqual(value);
         } catch ({ message }) {
-          console.log(key, message);
+          console.log(key, e, value);
           throw new Error(message);
         }
       });
@@ -108,6 +108,7 @@ describe('Resolver', () => {
       query = { id: person.id, model: 'Person', op: 'updateOne', key: 'updatePerson', crud: 'update', isMutation: true };
       query.args = { id: person.id, input: { age: 45 } };
       query.input = { age: 45 };
+      query.changeset = { added: { age: 45 }, updated: {}, deleted: {} };
       $event['query.doc'] = person;
       $event['query.result'] = undefined;
       asserter(['preMutation', 'validate'], 1);

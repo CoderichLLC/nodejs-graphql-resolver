@@ -267,6 +267,9 @@ module.exports = class Resolver {
     }).then((result = query.result) => {
       query.result = result;
       return Emitter.emit('postResponse', event);
-    }).then((result = query.result) => result);
+    }).then((result = query.result) => result).catch((e) => {
+      const { data = {} } = e;
+      throw Boom.boomify(e, { data: { ...event, ...data } });
+    });
   }
 };

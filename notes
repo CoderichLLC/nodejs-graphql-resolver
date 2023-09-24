@@ -1,8 +1,5 @@
 TODO:
-  * Pipeline
-    - arguments?
-    - path, validation?
-  * There are more transformations happening on Query (vs Mutation) than you need
+  * Is "validate" pipeline event needed?
   * You need proper events on embedded documents so that "construct": "createdBy" would work!
   * GraphQL API (or is that another module?)
   * Magic methods? $lookup?
@@ -20,7 +17,6 @@ Improvement Considerations:
   * EventEmitter
     - Debounce a function (debounce) to prevent excessive/redundant calls?
     - Memoize a function to prevent excessive/redundant calls?
-    - changeset?
   * Allow user-defined loaders (replacing .named?)
   * If no change in data, prevent entire operation?
   * Need to consider if mutationMany really needs to be spread into individual mutationOnes
@@ -43,6 +39,7 @@ BREAKING CHANGELOG:
   * Revamped how transactions work
   * Revamped how initial setup works (config.js)
   * Revamped Pipeline
+    { query, model, field, value, path, startValue, resolver, context, schema }
     - Pipeline "toId" is now $id or $pk depending upon needs
     - Pipelines:
         normalize (formerly transform)

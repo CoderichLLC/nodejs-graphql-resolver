@@ -30,7 +30,8 @@ module.exports = class Pipeline {
         const val = factory(args);
         return val === undefined ? args.value : val;
       } catch (e) {
-        throw e;
+        const { data = {} } = e;
+        throw Boom.boomify(e, { data: { ...args, ...data } });
       }
     }, 'name', { value: name });
 
