@@ -1,3 +1,4 @@
+const ObjectId = require('bson-objectid');
 const QueryBuilder = require('../../src/query/QueryBuilder');
 
 describe('Query', () => {
@@ -18,13 +19,11 @@ describe('Query', () => {
         model: 'Person',
         input: undefined,
         where: {
-          id: expect.anything(),
+          id: expect.thunk(ObjectId.isValid),
           network: 'network',
         },
         args: {
-          input: {
-            id: 1,
-          },
+          id: 1,
         },
       });
     });
@@ -56,12 +55,12 @@ describe('Query', () => {
         model: 'Person',
         input: [
           expect.objectContaining({
-            id: expect.anything(),
+            id: expect.thunk(ObjectId.isValid),
             name: 'richard',
             network: 'network',
-            telephone: undefined, // Update does not set input as default
-            updatedAt: expect.anything(),
-            createdAt: expect.anything(),
+            // telephone: undefined, // Update does not set input as default
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
           }),
         ],
       });
@@ -79,8 +78,8 @@ describe('Query', () => {
           name: 'richard',
           network: 'network',
           telephone: '###-###-####', // Create will set default input
-          updatedAt: expect.anything(),
-          createdAt: expect.anything(),
+          updatedAt: expect.any(Date),
+          createdAt: expect.any(Date),
         },
       });
     });

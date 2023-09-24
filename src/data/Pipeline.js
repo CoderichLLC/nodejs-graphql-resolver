@@ -58,6 +58,8 @@ module.exports = class Pipeline {
     Pipeline.define('toSentenceCase', ({ value }) => value.charAt(0).toUpperCase() + value.slice(1));
     Pipeline.define('toArray', ({ value }) => (Array.isArray(value) ? value : [value]), { itemize: false });
     Pipeline.define('toDate', ({ value }) => new Date(value), { configurable: true });
+    Pipeline.define('updatedAt', () => new Date(), { ignoreNull: false });
+    Pipeline.define('createdAt', ({ value }) => value || new Date(), { ignoreNull: false });
     Pipeline.define('timestamp', () => Date.now(), { ignoreNull: false });
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
 
@@ -66,7 +68,6 @@ module.exports = class Pipeline {
     Pipeline.define('$normalize', params => Pipeline.resolve(params, 'normalize'), { ignoreNull: false });
     Pipeline.define('$construct', params => Pipeline.resolve(params, 'construct'), { ignoreNull: false });
     Pipeline.define('$restruct', params => Pipeline.resolve(params, 'restruct'), { ignoreNull: false });
-    Pipeline.define('$destruct', params => Pipeline.resolve(params, 'destruct'), { ignoreNull: false });
     Pipeline.define('$serialize', params => Pipeline.resolve(params, 'serialize'), { ignoreNull: false });
     Pipeline.define('$deserialize', params => Pipeline.resolve(params, 'deserialize'), { ignoreNull: false });
     Pipeline.define('$validate', params => Pipeline.resolve(params, 'validate'), { ignoreNull: false });

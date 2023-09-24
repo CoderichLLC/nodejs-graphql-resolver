@@ -6,7 +6,7 @@ const { isLeafValue, isPlainObject, isBasicObject } = require('../service/AppSer
 const operations = ['Query', 'Mutation', 'Subscription'];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
 const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
-const pipelines = ['validate', 'construct', 'restruct', 'destruct', 'instruct', 'normalize', 'serialize', 'deserialize'];
+const pipelines = ['validate', 'construct', 'restruct', 'instruct', 'normalize', 'serialize', 'deserialize'];
 const inputPipelines = ['validate', 'construct', 'instruct', 'normalize', 'serialize'];
 
 module.exports = class Schema {

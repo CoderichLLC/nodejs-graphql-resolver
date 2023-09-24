@@ -15,6 +15,10 @@ const createIndexes = (mongoClient, indexes) => {
 
 // Extend jest!
 expect.extend({
+  thunk: (val, fn) => {
+    const pass = Boolean(fn(val));
+    return { pass };
+  },
   multiplex: (val, ...expectations) => {
     try {
       expectations.flat().forEach((expectation) => {

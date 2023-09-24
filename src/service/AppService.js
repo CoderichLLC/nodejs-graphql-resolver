@@ -4,9 +4,7 @@ const FillRange = require('fill-range');
 const ObjectHash = require('object-hash');
 const ObjectId = require('bson-objectid');
 const DeepMerge = require('deepmerge');
-const { detailedDiff } = require('deep-object-diff');
 
-exports.detailedDiff = detailedDiff;
 exports.isGlob = str => PicoMatch.scan(str).isGlob;
 exports.globToRegex = (glob, options = {}) => PicoMatch.makeRe(glob, { nocase: true, ...options, expandRange: (a, b) => `(${FillRange(a, b, { toRegex: true })})` });
 

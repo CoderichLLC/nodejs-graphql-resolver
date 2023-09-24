@@ -46,14 +46,8 @@ BREAKING CHANGELOG:
   * Revamped Pipeline
     - Pipeline "toId" is now $id or $pk depending upon needs
     - Pipelines:
-        instruct
         normalize (formerly transform)
-        construct
-        restruct
-        destruct
-        serialize
-        deserialize
-        validate
+        destruct (removed completely)
   * Revamped Emitter
     - "Basic" functions are hoisted to the top for execution; RETURNING a value will bypass thunk()
     - "Next" functions are run next, next() must ALWAYS be called; passing a value to next() will bypass thunk()
@@ -75,11 +69,12 @@ BREAKING CHANGELOG:
 ---------
 
 [
-  'defaultValue', // Assign default value when undefined
-  'castValue', // Cast value to schema defined type
-  '$normalize', // Normalized value
-  '$instruct', // Instruct value (will define attribute even if undefined)
-  ...crudLines, // CRUD specific transformations
-  '$serialize', // input + where transformations to db driver
-  '$validate', // validation
+  '$default', [result, input] - Assign default value when undefined
+  '$cast', [result, input, where, sort] - Cast value to schema defined type
+  '$normalize', [result, input] - Normalized value
+  '$instruct', [result, input, where] - Instruct value (will define attribute even if undefined)
+  ...crudLines, [input] - specific CRUD transformations
+  '$serialize', [input, where] - transformations to db driver
+  '$deserialize', [result] - transformations from db driver
+  '$validate', [] - validation step...
 ]

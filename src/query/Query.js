@@ -49,16 +49,11 @@ module.exports = class Query {
    */
   pipeline(target, data, transformers) {
     data = Util.unflatten(data);
-    const crudMap = { create: ['$construct'], update: ['$restruct'], delete: ['$destruct'] };
+    const crudMap = { create: ['$construct', '$serialize'], update: ['$restruct', '$serialize'] };
     const crudLines = crudMap[this.#query.crud] || [];
-    const transformerMap = {
-      input: ['$cast', '$normalize', '$instruct', ...crudLines, '$serialize'],
-      where: ['$cast', '$instruct', '$serialize'],
-      sort: ['$cast'],
-    };
-    if (this.#query.crud === 'create') transformerMap.input.unshift('$default');
+    const transformerMap = { where: ['$cast', '$instruct', '$serialize'], sort: ['$cast'], input: [] };
+    if (this.#query.isMutation) transformerMap.input = ['$default', '$cast', '$normalize', '$instruct', ...crudLines];
     transformers = transformers || transformerMap[target];
-
     return this.#pipeline(this.#query, target, this.#model, data, transformers.map(el => Pipeline[el]));
   }
 
@@ -98,7 +93,6 @@ module.exports = class Query {
    * Recursive pipeline function
    */
   #pipeline(query, target, model, data, transformers = [], paths = []) {
-    // Next we transform the $data
     return Util.mapPromise(data, (doc, index) => {
       const path = [...paths];
       if (Array.isArray(data)) path.push(index);
