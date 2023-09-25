@@ -187,8 +187,14 @@ module.exports = class Resolver {
   }
 
   toResultSet(model, result, query = {}) {
-    const $model = this.#schema.models[model];
-    return this.#finalize(query, $model, result, ['$default', '$cast', '$normalize', '$instruct', '$deserialize'].map(el => Pipeline[el]));
+    if (result == null) return result;
+    if (typeof result !== 'object') return result;
+    return Util.map(result, (doc) => {
+      return Object.defineProperties(this.#schema.models[model].walk(doc, node => node.value !== undefined && Object.assign(node, { key: node.field.name }), { key: 'key' }), {
+        $cursor: { value: doc.$cursor },
+        $pageInfo: { value: doc.$pageInfo },
+      });
+    });
   }
 
   toModel(model) {
@@ -207,37 +213,6 @@ module.exports = class Resolver {
     if (!entity) throw new Error(`${model} is not defined in schema`);
     if (!entity.isEntity) throw new Error(`${model} is not an entity`);
     return entity;
-  }
-
-  #finalize(query, model, data, transformers = [], paths = []) {
-    if (data == null) return data;
-    if (typeof data !== 'object') return data;
-
-    return Util.mapPromise(data, (doc, index) => {
-      const path = [...paths];
-      if (Array.isArray(data)) path.push(index);
-
-      return Util.pipeline(Object.entries(doc).map(([key, startValue]) => async (prev) => {
-        const field = Object.values(model.fields).find(el => el.key === key);
-        if (!field) return prev; // Remove fields not defined in schema
-
-        // Transform value
-        let $value = await Util.pipeline(transformers.map(t => async (value) => {
-          const v = await t({ query, model, field, value, path: path.concat(field.name), startValue, resolver: this, context: this.#context, schema: this.#schema });
-          return v === undefined ? value : v;
-        }), startValue);
-
-        // If it's embedded - delegate
-        if (field.model && !field.isFKReference && !field.isPrimaryKey) {
-          $value = await this.#finalize(query, field.model, $value, transformers, path.concat(field.name));
-        }
-
-        return Object.assign(prev, { [field.name]: $value });
-      }), Object.defineProperties({}, {
-        $pageInfo: { value: doc.$pageInfo },
-        $cursor: { value: doc.$cursor },
-      }));
-    });
   }
 
   #createNewLoaders() {

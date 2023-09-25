@@ -58,7 +58,7 @@ module.exports = ({ uri }) => ({
       @index(name: "uix_person_name", type: unique, on: [name])
     {
       age: Int @field(key: "my_age")
-      name: String! @field(deserialize: toTitleCase, serialize: toLowerCase)
+      name: String! @field(serialize: toLowerCase)
       authored: [Book] @link(by: author) @field(connection: true)
       emailAddress: String! @field(key: "email_address", validate: email)
       friends: [Person] @field(normalize: dedupe, validate: selfless, onDelete: cascade, connection: true)

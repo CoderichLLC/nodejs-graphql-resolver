@@ -3,7 +3,7 @@ const Pipeline = require('../../src/data/Pipeline');
 
 describe('Pipeline', () => {
   let schema, resolver, context;
-  let $cast, $default, email, immutable, toTitleCase, toLowerCase;
+  let $cast, $default, email, immutable, toLowerCase;
 
   beforeAll(() => {
     ({ schema, resolver, context } = global);
@@ -14,7 +14,6 @@ describe('Pipeline', () => {
     $default = jest.spyOn(Pipeline, '$default');
     email = jest.spyOn(Pipeline, 'email');
     immutable = jest.spyOn(Pipeline, 'immutable');
-    toTitleCase = jest.spyOn(Pipeline, 'toTitleCase');
     toLowerCase = jest.spyOn(Pipeline, 'toLowerCase');
   });
 
@@ -37,7 +36,7 @@ describe('Pipeline', () => {
       // Sanity test the object was created as expected
       expect(person).toMatchObject({
         id: expect.thunk(ObjectId.isValid),
-        name: 'Rich',
+        name: 'rich',
         emailAddress: 'email@gmail.com',
         sections: [
           expect.objectContaining({ id: expect.thunk(ObjectId.isValid), name: 'section1', updatedAt: expect.any(Date), createdAt: expect.any(Date) }),
@@ -49,10 +48,9 @@ describe('Pipeline', () => {
       // Spys
       expect(email).toHaveBeenCalledTimes(1);
       expect(immutable).toHaveBeenCalledTimes(0); // Only called on restruct
-      expect($cast).toHaveBeenCalledTimes(51); // A lot (but we're invoking the wrapper)
-      expect($default).toHaveBeenCalledTimes(51); // // A lot (but we're invoking the wrapper)
-      expect(toTitleCase).toHaveBeenCalledTimes(1); // Name during deserialize
-      expect(toLowerCase).toHaveBeenCalledTimes(7); // Twice for each section (normalize) and once for name (deserialize)
+      expect($cast).toHaveBeenCalledTimes(28); // A lot (but we're invoking the wrapper)
+      expect($default).toHaveBeenCalledTimes(28); // A lot (but we're invoking the wrapper)
+      expect(toLowerCase).toHaveBeenCalledTimes(4); // names
 
       // Email payload
       expect(email).toHaveBeenCalledWith(expect.objectContaining({

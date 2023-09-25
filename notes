@@ -38,22 +38,17 @@ Improvement Considerations:
 BREAKING CHANGELOG:
   * Revamped how transactions work
   * Revamped how initial setup works (config.js)
-  * Revamped Pipeline
-    { query, model, field, value, path, startValue, resolver, context, schema }
+  * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }
+    - No more pipeline on result!
     - Pipeline "toId" is now $id or $pk depending upon needs
     - Pipelines:
         normalize (formerly transform)
+        deserialize (removed completely)
         destruct (removed completely)
-  * Revamped Emitter
+  * Revamped Emitter { schema, context, resolver, query { args, id, model, crud, key, doc, input, sort, result } }
     - "Basic" functions are hoisted to the top for execution; RETURNING a value will bypass thunk()
     - "Next" functions are run next, next() must ALWAYS be called; passing a value to next() will bypass thunk()
     - Event arguments refactored (no more merged! use query.input):
-      {
-        schema,
-        context,
-        resolver,
-        query { args, id, model, crud, key, doc, input, sort, result }, // Transformed values
-      }
   * QueryBuilder.resolve() is now .auto()
 
 ---------
@@ -66,11 +61,10 @@ BREAKING CHANGELOG:
 
 [
   '$default', [result, input] - Assign default value when undefined
-  '$cast', [result, input, where, sort] - Cast value to schema defined type
+  '$cast', [input, where, sort] - Cast value to schema defined type
   '$normalize', [result, input] - Normalized value
   '$instruct', [result, input, where] - Instruct value (will define attribute even if undefined)
   ...crudLines, [input] - specific CRUD transformations
   '$serialize', [input, where] - transformations to db driver
-  '$deserialize', [result] - transformations from db driver
   '$validate', [] - validation step...
 ]

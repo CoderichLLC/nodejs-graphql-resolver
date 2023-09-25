@@ -42,7 +42,7 @@ describe('TestSuite', () => {
       richard = await resolver.match('Person').save({ age: 40, name: 'Richard', status: 'alive', state: 'NJ', emailAddress: 'rich@coderich.com', network: 'network', strip: 'mall', multiLang: 'lang', 'multiLang.en': 'en', 'multiLang.es': 'es' });
       expect(richard.id).toBeDefined();
       expect(richard._id).not.toBeDefined(); // eslint-disable-line
-      expect(richard.name).toBe('Richard');
+      expect(richard.name).toBe('richard');
       expect(richard.telephone).toBe('###-###-####'); // Default value
 
       christie = await resolver.match('Person').save({ name: 'Christie', emailAddress: 'christie@gmail.com', friends: [richard.id], telephone: 1112223333, network: 'network', nonsense: 'nonsense', section: { name: 'rich', person: richard.id } });
@@ -213,17 +213,17 @@ describe('TestSuite', () => {
     test('Person', async () => {
       expect((await resolver.match('Person').many()).length).toBe(2);
       expect(await resolver.match('Person').where({ name: 'nooneatall' }).many()).toMatchObject([]);
-      expect(await resolver.match('Person').where({ name: 'richard' }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect(await resolver.match('Person').where({ name: 'Christie' }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ emailAddress: 'rich@coderich.com' }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect(await resolver.match('Person').where({ emailAddress: 'Rich@CodeRich.com' }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect((await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'Christie' }, { id: richard.id, name: 'Richard' }].sort(sorter));
-      expect((await resolver.match('Person').where({ name: '*' }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'Christie' }, { id: richard.id, name: 'Richard' }].sort(sorter));
-      expect(await resolver.match('Person').where({ authored: mobyDick.id }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect(await resolver.match('Person').where({ id: richard.id }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect(await resolver.match('Person').where({ id: richard.id }).one()).toMatchObject({ id: richard.id, name: 'Richard' });
-      expect(await resolver.match('Person').where({ id: `${richard.id}` }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect(await resolver.match('Person').where({ id: `${richard.id}` }).one()).toMatchObject({ id: richard.id, name: 'Richard' });
+      expect(await resolver.match('Person').where({ name: 'richard' }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect(await resolver.match('Person').where({ name: 'Christie' }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ emailAddress: 'rich@coderich.com' }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect(await resolver.match('Person').where({ emailAddress: 'Rich@CodeRich.com' }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect((await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'christie' }, { id: richard.id, name: 'richard' }].sort(sorter));
+      expect((await resolver.match('Person').where({ name: '*' }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'christie' }, { id: richard.id, name: 'richard' }].sort(sorter));
+      expect(await resolver.match('Person').where({ authored: mobyDick.id }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect(await resolver.match('Person').where({ id: richard.id }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect(await resolver.match('Person').where({ id: richard.id }).one()).toMatchObject({ id: richard.id, name: 'richard' });
+      expect(await resolver.match('Person').where({ id: `${richard.id}` }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect(await resolver.match('Person').where({ id: `${richard.id}` }).one()).toMatchObject({ id: richard.id, name: 'richard' });
       expect(await resolver.match('Person').where({ name: 'absolutelyNoone' }).many()).toEqual([]);
       expect(await resolver.match('Person').where({ name: undefined }).many()).toEqual([]);
       expect(await resolver.match('Person').where({ id: undefined }).many()).toEqual([]);
@@ -233,7 +233,7 @@ describe('TestSuite', () => {
       const resolution = await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).auto(null, null, null, { returnType: 'MyConnection' });
       expect(resolution).toMatchObject({ count: expect.any(Function), edges: expect.any(Function), pageInfo: expect.any(Function) });
       expect(await resolution.count()).toBe(2);
-      expect((await resolution.edges()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'Christie' }, { id: richard.id, name: 'Richard' }].sort(sorter));
+      expect((await resolution.edges()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'christie' }, { id: richard.id, name: 'richard' }].sort(sorter));
     });
 
     test('Book', async () => {
@@ -329,7 +329,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ id: [] }).count()).toBe(0);
       expect(await resolver.match('Person').where({ id: [richard.id, `${christie.id}`] }).count()).toBe(2);
       expect(await resolver.match('Person').where({ name: 'richard' }).count()).toBe(1);
-      expect(await resolver.match('Person').where({ name: 'Christie' }).count()).toBe(1);
+      expect(await resolver.match('Person').where({ name: 'christie' }).count()).toBe(1);
     });
 
     test('Book', async () => {
@@ -447,7 +447,7 @@ describe('TestSuite', () => {
   describe('Data Normalization', () => {
     test('uniq', async () => {
       richard = await resolver.match('Person').id(richard.id).save({ name: 'richard', friends: [christie.id, christie.id, christie.id], telephone: 1234567890 });
-      expect(richard.name).toEqual('Richard');
+      expect(richard.name).toEqual('richard');
       expect(richard.telephone).toEqual('1234567890');
       expect(richard.friends).toEqual([christie.id]);
 
@@ -459,41 +459,41 @@ describe('TestSuite', () => {
 
   describe('Find (Deep)', () => {
     test('Person', async () => {
-      expect(await resolver.match('Person').where({ authored: { name: 'Moby Dick' } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect(await resolver.match('Person').where({ authored: { author: { name: 'ChRist??' } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ friends: { name: 'Christie' } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect(await resolver.match('Person').where({ friends: { authored: { name: 'Health*' } } }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
+      expect(await resolver.match('Person').where({ authored: { name: 'Moby Dick' } }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect(await resolver.match('Person').where({ authored: { author: { name: 'ChRist??' } } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ friends: { name: 'Christie' } }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect(await resolver.match('Person').where({ friends: { authored: { name: 'Health*' } } }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
       expect(await resolver.match('Person').where({ friends: { authored: { name: 'Cray Cray*' } } }).many()).toMatchObject([]);
       expect(await resolver.match('Person').where({ authored: { chapters: { pages: { verbage: 'city lust' } } } }).many()).toMatchObject([]);
-      expect(await resolver.match('Person').where({ authored: { chapters: { pages: { verbage: 'the end.' } } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ authored: { chapters: { pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
+      expect(await resolver.match('Person').where({ authored: { chapters: { pages: { verbage: 'the end.' } } } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ authored: { chapters: { pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
       expect(await resolver.match('Person').where({ authored: { chapters: { name: 'citizen', pages: { verbage: '*intro*' } } } }).many()).toMatchObject([]);
-      expect(await resolver.match('Person').where({ authored: { chapters: { name: 'chapter*', pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ authored: { chapters: { name: '{citizen,chap*}' } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ authored: { chapters: { name: ['citizen', 'chap*'], pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ section: { person: { name: 'richard' } } }).one()).toMatchObject({ id: christie.id, name: 'Christie' });
+      expect(await resolver.match('Person').where({ authored: { chapters: { name: 'chapter*', pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ authored: { chapters: { name: '{citizen,chap*}' } } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ authored: { chapters: { name: ['citizen', 'chap*'], pages: { verbage: '*intro*' } } } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ section: { person: { name: 'richard' } } }).one()).toMatchObject({ id: christie.id, name: 'christie' });
 
       // Covenience counterparts
-      expect(await resolver.match('Person').where({ 'authored.name': 'Moby Dick' }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect(await resolver.match('Person').where({ 'authored.author.name': 'ChRist??' }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ 'friends.name': 'Christie' }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
-      expect(await resolver.match('Person').where({ 'friends.authored.name': 'Health*' }).many()).toMatchObject([{ id: richard.id, name: 'Richard' }]);
+      expect(await resolver.match('Person').where({ 'authored.name': 'Moby Dick' }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect(await resolver.match('Person').where({ 'authored.author.name': 'ChRist??' }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ 'friends.name': 'Christie' }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
+      expect(await resolver.match('Person').where({ 'friends.authored.name': 'Health*' }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
       expect(await resolver.match('Person').where({ 'friends.authored.name': 'Cray Cray*' }).many()).toMatchObject([]);
       expect(await resolver.match('Person').where({ 'authored.chapters.pages.verbage': 'city lust' }).many()).toMatchObject([]);
-      expect(await resolver.match('Person').where({ 'authored.chapters.pages.verbage': 'the end.' }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ 'authored.chapters.pages.verbage': '*intro*' }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
+      expect(await resolver.match('Person').where({ 'authored.chapters.pages.verbage': 'the end.' }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ 'authored.chapters.pages.verbage': '*intro*' }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
       expect(await resolver.match('Person').where({ 'authored.chapters.name': 'citizen', 'authored.chapters.pages.verbage': '*intro*' }).many()).toMatchObject([]);
-      expect(await resolver.match('Person').where({ 'authored.chapters.name': 'chapter*', 'authored.chapters.pages.verbage': '*intro*' }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ 'authored.chapters.name': '{citizen,chap*}', 'authored.chapters.pages.verbage': '*intro*' }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
+      expect(await resolver.match('Person').where({ 'authored.chapters.name': 'chapter*', 'authored.chapters.pages.verbage': '*intro*' }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ 'authored.chapters.name': '{citizen,chap*}', 'authored.chapters.pages.verbage': '*intro*' }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
       expect(await resolver.match('Person').where({ 'authored.chapters': { name: 'citizen', 'pages.verbage': '*intro*' } }).many()).toMatchObject([]);
-      expect(await resolver.match('Person').where({ 'authored.chapters': { name: 'chapter*', 'pages.verbage': '*intro*' } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
-      expect(await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).many()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
+      expect(await resolver.match('Person').where({ 'authored.chapters': { name: 'chapter*', 'pages.verbage': '*intro*' } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
+      expect(await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
 
       // Auto (Connection)
       const resolution = await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).auto(null, null, null, { returnType: 'MyConnection' });
       expect(resolution).toMatchObject({ count: expect.any(Function), edges: expect.any(Function), pageInfo: expect.any(Function) });
       expect(await resolution.count()).toBe(1);
-      expect(await resolution.edges()).toMatchObject([{ id: christie.id, name: 'Christie' }]);
+      expect(await resolution.edges()).toMatchObject([{ id: christie.id, name: 'christie' }]);
     });
 
     test('Book', async () => {
@@ -524,11 +524,11 @@ describe('TestSuite', () => {
       const updated = await resolver.match('Person').id(richard.id).save({ name: 'Rich' });
       expect(updated.createdAt).toEqual(richard.createdAt);
       expect(updated.updatedAt).not.toEqual(richard.updatedAt);
-      expect(updated).toMatchObject({ id: richard.id, name: 'Rich' });
-      expect(await resolver.match('Person').id(richard.id).save({ name: 'richard' })).toMatchObject({ id: richard.id, name: 'Richard' });
-      expect(await resolver.match('Person').id(richard.id).save({ status: 'active' })).toMatchObject({ id: richard.id, name: 'Richard', status: 'active' });
-      expect(await resolver.match('Person').id(richard.id).save({ status: null })).toMatchObject({ id: richard.id, name: 'Richard', status: null });
-      expect(await resolver.match('Person').id(richard.id).save({ id: `${richard.id}` })).toMatchObject({ id: richard.id, name: 'Richard', status: null, network: 'networkId' });
+      expect(updated).toMatchObject({ id: richard.id, name: 'rich' });
+      expect(await resolver.match('Person').id(richard.id).save({ name: 'richard' })).toMatchObject({ id: richard.id, name: 'richard' });
+      expect(await resolver.match('Person').id(richard.id).save({ status: 'active' })).toMatchObject({ id: richard.id, name: 'richard', status: 'active' });
+      expect(await resolver.match('Person').id(richard.id).save({ status: null })).toMatchObject({ id: richard.id, name: 'richard', status: null });
+      expect(await resolver.match('Person').id(richard.id).save({ id: `${richard.id}` })).toMatchObject({ id: richard.id, name: 'richard', status: null, network: 'networkId' });
     });
 
     test('Book', async () => {
@@ -656,8 +656,8 @@ describe('TestSuite', () => {
       const txn = resolver.transaction();
       const person1$1 = await txn.match('Person').save({ name: 'person1', emailAddress: 'person1@gmail.com' });
       const person2$1 = await txn.match('Person').save({ name: 'person2', emailAddress: 'person2@gmail.com' });
-      expect(person1$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'Person1' });
-      expect(person2$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'Person2' });
+      expect(person1$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'person1' });
+      expect(person2$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'person2' });
       expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
       await txn.commit();
       expect(await resolver.match('Person').id(person1$1.id).one()).not.toBeNull();
@@ -667,8 +667,8 @@ describe('TestSuite', () => {
       const txn = resolver.transaction();
       const person1$1 = await txn.match('Person').save({ name: 'person3', emailAddress: 'person3@gmail.com' });
       const person2$1 = await txn.match('Person').save({ name: 'person4', emailAddress: 'person4@gmail.com' });
-      expect(person1$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'Person3' });
-      expect(person2$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'Person4' });
+      expect(person1$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'person3' });
+      expect(person2$1).toMatchObject({ id: expect.thunk(ObjectId.isValid), name: 'person4' });
       expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
       await txn.rollback();
       expect(await resolver.match('Person').id(person1$1.id).one()).toBeNull();
@@ -696,9 +696,9 @@ describe('TestSuite', () => {
         txn.match('Person').id(richard.id).one(),
         ...Array.from(new Array(1000)).map((el, i) => txn.match('Person').save({ name: `write${i}`, emailAddress: `write${i}@gmail.com` })),
       ]);
-      expect(richie.name).toBe('Richard');
+      expect(richie.name).toBe('richard');
       expect(group1.length).toBe(1000);
-      expect(group1[0].name).toBe('Write0');
+      expect(group1[0].name).toBe('write0');
       await txn.rollback();
     });
 
@@ -720,8 +720,8 @@ describe('TestSuite', () => {
     test('multi-txn (duplicate key with rollback OK)', async () => {
       const txn1 = resolver.transaction(false);
       const [person1$1, person2$1] = await txn1.match('Person').save([{ name: 'person10', emailAddress: 'person10@gmail.com' }, { name: 'person11', emailAddress: 'person11@gmail.com' }]);
-      expect(person1$1.name).toBe('Person10');
-      expect(person2$1.name).toBe('Person11');
+      expect(person1$1.name).toBe('person10');
+      expect(person2$1.name).toBe('person11');
       expect(await resolver.match('Person').id(person1$1).one()).not.toBeNull();
 
       // Rolling this back should also rollback nested create transaction
@@ -751,7 +751,7 @@ describe('TestSuite', () => {
       expect(() => resolver.match('Person').remove()).toThrow(/delete requires/gi);
       await expect(resolver.match('Person').id(christie.id).remove()).rejects.toThrow(/restricted/gi);
       await resolver.match('Chapter').id(chapter3.id).remove(); // Need to delete chapter to remove Author....
-      expect(await resolver.match('Person').id(richard.id).remove()).toMatchObject({ id: richard.id, name: 'Richard' });
+      expect(await resolver.match('Person').id(richard.id).remove()).toMatchObject({ id: richard.id, name: 'richard' });
       expect(await resolver.match('Person').where({ name: '{christie,richard}' }).many()).toMatchObject([{ id: christie.id }]);
       expect(await resolver.match('Book').many()).toMatchObject([{ id: healthBook.id }]);
       expect(await resolver.match('Chapter').sortBy({ name: 'asc' }).many()).toMatchObject([{ id: chapter1.id }, { id: chapter2.id }]);
@@ -772,8 +772,8 @@ describe('TestSuite', () => {
 
   describe('Native Queries', () => {
     test('get', async () => {
-      expect(await resolver.match('Person').native({ name: 'Christie' }).one()).toMatchObject({ id: christie.id, name: 'Christie', emailAddress: 'christie@gmail.com' }); // case insensitive
-      expect(await resolver.match('Person').native({ name: 'christie' }).one()).toMatchObject({ id: christie.id, name: 'Christie', emailAddress: 'christie@gmail.com' });
+      expect(await resolver.match('Person').native({ name: 'Christie' }).one()).toMatchObject({ id: christie.id, name: 'christie', emailAddress: 'christie@gmail.com' }); // case insensitive
+      expect(await resolver.match('Person').native({ name: 'christie' }).one()).toMatchObject({ id: christie.id, name: 'christie', emailAddress: 'christie@gmail.com' });
       expect(await resolver.match('Person').native({ name: 'Christie' }).count()).toBe(1); // case insensitive
       expect(await resolver.match('Person').native({ name: 'christie' }).count()).toBe(1);
       const count = await resolver.match('Person').native({ name: { $ne: 'chard' } }).count();

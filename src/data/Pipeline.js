@@ -21,14 +21,14 @@ module.exports = class Pipeline {
         if (ignoreNull && args.value == null) return args.value;
 
         if (ignoreNull && itemize) {
-          return Util.map(args.value, (val, index) => {
-            const v = factory({ ...args, value: val });
-            return v === undefined ? val : v;
+          return Util.map(args.value, (value) => {
+            const v = factory({ ...args, value });
+            return v === undefined ? value : v;
           });
         }
 
-        const val = factory(args);
-        return val === undefined ? args.value : val;
+        const value = factory(args);
+        return value === undefined ? args.value : value;
       } catch (e) {
         const { data = {} } = e;
         throw Boom.boomify(e, { data: { ...args, ...data } });
@@ -70,7 +70,6 @@ module.exports = class Pipeline {
     Pipeline.define('$construct', params => Pipeline.resolve(params, 'construct'), { ignoreNull: false });
     Pipeline.define('$restruct', params => Pipeline.resolve(params, 'restruct'), { ignoreNull: false });
     Pipeline.define('$serialize', params => Pipeline.resolve(params, 'serialize'), { ignoreNull: false });
-    Pipeline.define('$deserialize', params => Pipeline.resolve(params, 'deserialize'), { ignoreNull: false });
     Pipeline.define('$validate', params => Pipeline.resolve(params, 'validate'), { ignoreNull: false });
 
     //
