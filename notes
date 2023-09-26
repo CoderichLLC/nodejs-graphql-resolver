@@ -61,11 +61,9 @@ BREAKING CHANGELOG:
 [
   '$default', [input] - Assign default value when undefined
   '$cast', [input, where] - Cast value to schema defined type
-  '$normalize', [input] - Normalized value
   '$instruct', [input, where] - Instruct value (will define attribute even if undefined)
   '$construct', [input] - On Create
   '$restruct', [input] - On Update
   '$serialize', [input, where] - transformations to db driver
-
   '$finalize', [input] - After preMutation Before postMutation (old validation step)
 ]

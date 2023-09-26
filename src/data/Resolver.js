@@ -158,11 +158,17 @@ module.exports = class Resolver {
   async resolve(query) {
     let thunk;
     const tquery = await query.transform();
-    const { model: modelName, isMutation, flags } = tquery.toObject();
-    const model = this.#schema.models[modelName];
+    const oquery = Object.defineProperties(tquery.toObject(), {
+      changeset: {
+        get: function get() {
+          return oquery.crud === 'update' ? Util.changeset(this.doc, this.input) : undefined;
+        },
+      },
+    });
+    const model = this.#schema.models[oquery.model];
     const currSession = this.#sessions.slice(-1).pop();
 
-    if (isMutation) {
+    if (oquery.isMutation) {
       thunk = () => model.source.client.resolve(tquery.toDriver().toObject()).then((results) => {
         // We clear the cache immediately (regardless if we're in transaction or not)
         this.clear(model);
@@ -179,7 +185,7 @@ module.exports = class Resolver {
 
     return this.#createSystemEvent(tquery, () => {
       return thunk().then((result) => {
-        if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
+        if (oquery.flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
         return this.toResultSet(model, result, tquery.toObject());
       });
     });
@@ -229,10 +235,7 @@ module.exports = class Resolver {
 
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly;
-      if (query.crud === 'update') {
-        query.changeset = Util.changeset(query.doc, query.input);
-        if (Util.isEqual(query.changeset, { added: {}, updated: {}, deleted: {} })) return query.doc;
-      }
+      if (Util.isEqual(query.changeset, { added: {}, updated: {}, deleted: {} })) return query.doc;
       if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$finalize']);
       if (query.isMutation) await Emitter.emit('finalize', event);
       return thunk().then((result) => {
