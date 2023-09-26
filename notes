@@ -1,11 +1,8 @@
 TODO:
-  * Is "validate" pipeline event needed?
-  * You need proper events on embedded documents so that "construct": "createdBy" would work!
   * GraphQL API (or is that another module?)
   * Magic methods? $lookup?
   * I don't like resolver.auto(); can it be done in the GraphQL API layer?
   * Why do you send `${model}` in query instead of the actual model object?
-  * 'setup' SystemEvent
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
@@ -18,7 +15,8 @@ Improvement Considerations:
     - Debounce a function (debounce) to prevent excessive/redundant calls?
     - Memoize a function to prevent excessive/redundant calls?
   * Allow user-defined loaders (replacing .named?)
-  * If no change in data, prevent entire operation?
+  * You need proper events on embedded documents so that "construct": "createdBy" would work!
+  * If no change in data, prevent entire operation? (How about validation, externals?)
   * Need to consider if mutationMany really needs to be spread into individual mutationOnes
     - Validation performed on each doc post mutation
     - Audit trail per record
@@ -39,7 +37,7 @@ BREAKING CHANGELOG:
   * Revamped how transactions work
   * Revamped how initial setup works (config.js)
   * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }
-    - No more pipeline on result!
+    - No more pipeline on result! (check default, transform/normalize, deserialize)
     - Pipeline "toId" is now $id or $pk depending upon needs
     - Pipelines:
         normalize (formerly transform)
@@ -50,6 +48,7 @@ BREAKING CHANGELOG:
     - "Next" functions are run next, next() must ALWAYS be called; passing a value to next() will bypass thunk()
     - Event arguments refactored (no more merged! use query.input):
   * QueryBuilder.resolve() is now .auto()
+  * Emitter.on('setup') now passed object: { schema }
 
 ---------
 
@@ -60,11 +59,13 @@ BREAKING CHANGELOG:
 ---------
 
 [
-  '$default', [result, input] - Assign default value when undefined
-  '$cast', [input, where, sort] - Cast value to schema defined type
-  '$normalize', [result, input] - Normalized value
-  '$instruct', [result, input, where] - Instruct value (will define attribute even if undefined)
-  ...crudLines, [input] - specific CRUD transformations
+  '$default', [input] - Assign default value when undefined
+  '$cast', [input, where] - Cast value to schema defined type
+  '$normalize', [input] - Normalized value
+  '$instruct', [input, where] - Instruct value (will define attribute even if undefined)
+  '$construct', [input] - On Create
+  '$restruct', [input] - On Update
   '$serialize', [input, where] - transformations to db driver
-  '$validate', [] - validation step...
+
+  '$finalize', [input] - After preMutation Before postMutation (old validation step)
 ]

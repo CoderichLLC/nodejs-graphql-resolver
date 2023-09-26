@@ -1,4 +1,3 @@
-const ObjectId = require('bson-objectid');
 const { query1, query2 } = require('./service');
 const { isGlob, hashObject } = require('../../src/service/AppService');
 

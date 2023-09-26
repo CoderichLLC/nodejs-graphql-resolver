@@ -51,14 +51,14 @@ module.exports = class Query {
     data = Util.unflatten(data);
     const crudMap = { create: ['$construct', '$serialize'], update: ['$restruct', '$serialize'] };
     const crudLines = crudMap[this.#query.crud] || [];
-    const transformerMap = { where: ['$cast', '$instruct', '$serialize'], sort: ['$cast'], input: [] };
+    const transformerMap = { where: ['$cast', '$instruct', '$serialize'], sort: [], input: [] };
     if (this.#query.isMutation) transformerMap.input = ['$default', '$cast', '$normalize', '$instruct', ...crudLines];
     transformers = transformers || transformerMap[target];
     return this.#pipeline(this.#query, target, this.#model, data, transformers.map(el => Pipeline[el]));
   }
 
   /**
-   * Transform entire query via pipeline
+   * Transform entire query via pipeline. At minimum, pipeline is needed to unflatten the data...
    */
   transform() {
     return Promise.all([
@@ -110,11 +110,10 @@ module.exports = class Query {
         }), startValue);
 
         // If it's embedded - delegate
-        if (field.model && !field.isFKReference && !field.isPrimaryKey) {
-          $value = await this.#pipeline(query, target, field.model, $value, transformers, path.concat(key));
-        }
+        if (field.isEmbedded) $value = await this.#pipeline(query, target, field.model, $value, transformers, path.concat(key));
 
         // Assign it back
+        if (target === 'input' && $value === undefined) return prev;
         return Object.assign(prev, { [field.name]: $value });
       }), {});
     });

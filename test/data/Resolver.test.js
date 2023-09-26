@@ -8,7 +8,7 @@ describe('Resolver', () => {
 
   // Dynamic Jest Matching
   const mocks = {};
-  const hooks = ['preQuery', 'postQuery', 'preMutation', 'postMutation', 'validate', 'preResponse', 'postResponse'];
+  const hooks = ['preQuery', 'postQuery', 'preMutation', 'postMutation', 'finalize', 'preResponse', 'postResponse'];
   const matcher = expect.multiplex(
     val => expect(val).toMatchObject({ schema, resolver, context, query: event }),
     (e) => {
@@ -73,7 +73,7 @@ describe('Resolver', () => {
     test('create', async () => {
       query = { model: 'Person', op: 'createOne', key: 'createPerson', crud: 'create', isMutation: true };
       query.args = { input: { name: 'Rich', emailAddress: 'email@gmail.com' }, meta: { id: 1 } };
-      query.input = { id: expect.thunk(ObjectId.isValid), name: 'rich', emailAddress: 'email@gmail.com', telephone: '###-###-####', createdAt: expect.any(Date), updatedAt: expect.any(Date) };
+      query.input = { id: expect.thunk(ObjectId.isValid), name: 'rich', emailAddress: 'email@gmail.com', telephone: '###-###-####' };
       $event['args.input.telephone'] = undefined; // Test that defaultValue is not applied here
 
       // Create person
@@ -82,10 +82,11 @@ describe('Resolver', () => {
       // No Query hooks should have been called
       asserter(['preQuery', 'postQuery'], 0);
 
-      // Pre Mutation + validate
-      asserter(['preMutation', 'validate'], 1);
+      // Pre Mutation + finalize
+      asserter(['preMutation', 'finalize'], 1);
 
       // Post Mutation + Responses
+      query.input.createdAt = query.input.updatedAt = expect.any(Date);
       $event['query.result'] = person; // There is only a result (no doc on create)
       asserter(['postMutation', 'preResponse', 'postResponse'], 1);
     });
@@ -104,14 +105,14 @@ describe('Resolver', () => {
       $event['query.result'] = person;
       asserter(['postQuery'], 1);
 
-      // Pre Mutation + validate
+      // Pre Mutation + finalize
       query = { id: person.id, model: 'Person', op: 'updateOne', key: 'updatePerson', crud: 'update', isMutation: true };
       query.args = { id: person.id, input: { age: 45 } };
       query.input = { age: 45 };
-      query.changeset = { added: { age: 45 }, updated: {}, deleted: {} };
+      // query.changeset = { added: { age: 45 }, updated: {}, deleted: {} };
       $event['query.doc'] = person;
       $event['query.result'] = undefined;
-      asserter(['preMutation', 'validate'], 1);
+      asserter(['preMutation', 'finalize'], 1);
 
       // Post Mutation + Responses
       $event['query.result'] = updatedPerson;
@@ -121,6 +122,21 @@ describe('Resolver', () => {
       asserter(['preResponse', 'postResponse'], 2, false); // Once for Query once for Mutation!
 
       person = updatedPerson;
+    });
+
+    test('update with no changes', async () => {
+      // Saving name (but should be no change)
+      await resolver.match('Person').id(person.id).save({ name: 'Rich' });
+      asserter(['preQuery'], 1);
+
+      $event['query.result'] = person;
+      asserter(['postQuery'], 1);
+
+      $event['query.doc'] = person;
+      $event['query.result'] = undefined;
+      asserter(['preMutation'], 1);
+
+      asserter(['postMutation'], 0); // Not called! (no data changes)
     });
 
     test('hijack query output', async () => {
@@ -155,7 +171,7 @@ describe('Resolver', () => {
 
     test('hijack input', async () => {
       Emitter.cloneData = false; // The default, we can't clone otherwise we lose reference!
-      Emitter.onKeys('preMutation', ['updatePerson'], (ev) => { ev.query.input = { age: 45 }; });
+      Emitter.onKeys('preMutation', ['updatePerson'], (ev) => { ev.query.input.age = 45; });
       expect(await resolver.match('Person').id(person.id).save({ age: 65 })).toEqual(person); // Because we clobbered all input transformations!
     });
   });

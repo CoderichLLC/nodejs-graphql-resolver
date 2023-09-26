@@ -59,8 +59,8 @@ describe('Query', () => {
             name: 'richard',
             network: 'network',
             // telephone: undefined, // Update does not set input as default
-            updatedAt: expect.any(Date),
-            createdAt: expect.any(Date),
+            // updatedAt: expect.any(Date),
+            // createdAt: expect.any(Date),
           }),
         ],
       });
@@ -78,8 +78,8 @@ describe('Query', () => {
           name: 'richard',
           network: 'network',
           telephone: '###-###-####', // Create will set default input
-          updatedAt: expect.any(Date),
-          createdAt: expect.any(Date),
+          // updatedAt: expect.any(Date),
+          // createdAt: expect.any(Date),
         },
       });
     });

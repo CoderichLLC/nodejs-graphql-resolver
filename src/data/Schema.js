@@ -2,12 +2,13 @@ const Util = require('@coderich/util');
 const { Kind, parse, print, visit } = require('graphql');
 const { mergeGraphQLTypes } = require('@graphql-tools/merge');
 const { isLeafValue, isPlainObject, isBasicObject } = require('../service/AppService');
+const Emitter = require('./Emitter');
 
 const operations = ['Query', 'Mutation', 'Subscription'];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
 const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
-const pipelines = ['validate', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
-const inputPipelines = ['validate', 'construct', 'instruct', 'normalize', 'serialize'];
+const pipelines = ['finalize', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
+const inputPipelines = ['finalize', 'construct', 'instruct', 'normalize', 'serialize'];
 
 module.exports = class Schema {
   #config;
@@ -234,19 +235,20 @@ module.exports = class Schema {
             $field.linkBy = $field.linkBy || $field.model?.idField;
             $field.linkFrom = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
+            $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
 
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
             if ($field.isFKReference) $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
 
-            if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
+            if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.finalize.push('required');
             if ($field.isFKReference) {
               const to = $field.model.key;
               const on = $field.model.fields[$field.linkBy].key;
               const from = $field.linkFrom;
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
-              $field.pipelines.validate.push('ensureId'); // Absolute Last
+              $field.pipelines.finalize.push('ensureId'); // Absolute Last
             }
           });
 
@@ -280,6 +282,9 @@ module.exports = class Schema {
       if (!$model || !fieldKeys.length) return $model;
       return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
     };
+
+    // Emit event now that we're set up
+    Emitter.emit('setup', { schema });
 
     // Return schema
     return schema;

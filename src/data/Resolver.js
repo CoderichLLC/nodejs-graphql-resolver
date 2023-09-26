@@ -2,7 +2,6 @@ const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const Loader = require('./Loader');
 const Emitter = require('./Emitter');
-const Pipeline = require('./Pipeline');
 const Transaction = require('./Transaction');
 const QueryResolver = require('../query/QueryResolver');
 
@@ -230,8 +229,12 @@ module.exports = class Resolver {
 
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly;
-      if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$validate']);
-      if (query.isMutation) await Emitter.emit('validate', event);
+      if (query.crud === 'update') {
+        query.changeset = Util.changeset(query.doc, query.input);
+        if (Util.isEqual(query.changeset, { added: {}, updated: {}, deleted: {} })) return query.doc;
+      }
+      if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$finalize']);
+      if (query.isMutation) await Emitter.emit('finalize', event);
       return thunk().then((result) => {
         query.result = result;
         return Emitter.emit(`post${type}`, event);

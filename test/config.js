@@ -44,8 +44,8 @@ module.exports = ({ uri }) => ({
   decorators: {
     default: `
       id: ID! @field(key: "_id")
-      createdAt: Date @field(serialize: createdAt, gqlScope: r)
-      updatedAt: Date @field(serialize: [timestamp, toDate], gqlScope: r)
+      createdAt: Date @field(finalize: createdAt, gqlScope: r)
+      updatedAt: Date @field(finalize: [timestamp, toDate], gqlScope: r)
     `,
   },
   typeDefs: `
@@ -60,8 +60,8 @@ module.exports = ({ uri }) => ({
       age: Int @field(key: "my_age")
       name: String! @field(serialize: toLowerCase)
       authored: [Book] @link(by: author) @field(connection: true)
-      emailAddress: String! @field(key: "email_address", validate: email)
-      friends: [Person] @field(normalize: dedupe, validate: selfless, onDelete: cascade, connection: true)
+      emailAddress: String! @field(key: "email_address", finalize: email)
+      friends: [Person] @field(normalize: dedupe, finalize: selfless, onDelete: cascade, connection: true)
       status: String @field(key: "state")
       state: String @field(key: "address_state")
       telephone: String @field(default: "###-###-####")
@@ -76,8 +76,8 @@ module.exports = ({ uri }) => ({
       @model
       @index(name: "uix_book", type: unique, on: [name, author])
     {
-      name: String! @field(normalize: toTitleCase, validate: bookName)
-      price: Float! @field(validate: bookPrice)
+      name: String! @field(normalize: toTitleCase, finalize: bookName)
+      price: Float! @field(finalize: bookPrice)
       author: Person! @field(restruct: immutable, onDelete: cascade)
       bestSeller: Boolean
       bids: [Float]
@@ -137,7 +137,7 @@ module.exports = ({ uri }) => ({
     type Building
     {
       year: Int @field(key: "year_built")
-      type: String! @field(validate: buildingType)
+      type: String! @field(finalize: buildingType)
       tenants: [Person] @field(onDelete: cascade)
       landlord: Person @field(onDelete: nullify)
       description: String @field(default: "A building from the bloom")
@@ -146,7 +146,7 @@ module.exports = ({ uri }) => ({
     type Color
       @model
     {
-      type: String! @field(validate: colors)
+      type: String! @field(finalize: colors)
       isDefault: Boolean
     }
 
@@ -155,7 +155,7 @@ module.exports = ({ uri }) => ({
     {
       name: String! @field(normalize: toTitleCase)
       bids: [Float]
-      comments: [String] @field(validate: artComment)
+      comments: [String] @field(finalize: artComment)
       sections: [Section]
     }
 
