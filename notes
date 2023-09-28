@@ -1,8 +1,11 @@
 TODO:
-  * GraphQL API (or is that another module?)
+  * GraphQL API
+    - I don't like resolver.auto()...
+    - Resolver.graphql()? This requires executableSchema...
   * Magic methods? $lookup?
-  * I don't like resolver.auto(); can it be done in the GraphQL API layer?
   * Why do you send `${model}` in query instead of the actual model object?
+  * Ability to trigger validation/finalize?
+  * Schema.validate()? Do you need/want schema definitions for Directives and Enums?
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
@@ -16,12 +19,6 @@ Improvement Considerations:
     - Memoize a function to prevent excessive/redundant calls?
   * Allow user-defined loaders (replacing .named?)
   * You need proper events on embedded documents so that "construct": "createdBy" would work!
-  * If no change in data, prevent entire operation? (How about validation, externals?)
-  * Need to consider if mutationMany really needs to be spread into individual mutationOnes
-    - Validation performed on each doc post mutation
-    - Audit trail per record
-    - Inherit address currently implemented as cascade logic
-    - onDelete
   * config.dataSources to determine if supports
     - Joins
     - Transactions
@@ -31,36 +28,37 @@ Improvement Considerations:
   * onDelete defer - could probably be done dynamically instead
   * DataLoader - rewrite for batch queries
   * EnsureId - inline query?
-  * Do you need "doc" hydrated or could it be lazy-loaded on demand?
+  * Allow @field(key: "some.path") in order to hoist
 
 BREAKING CHANGELOG:
   * Revamped how transactions work
   * Revamped how initial setup works (config.js)
   * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }
-    - No more pipeline on result! (check default, transform/normalize, deserialize)
+    - No more pipeline on database result! (check default, transform/normalize, deserialize)
     - Pipeline "toId" is now $id or $pk depending upon needs
-    - Pipelines:
-        normalize (formerly transform)
-        deserialize (removed completely)
-        destruct (removed completely)
+    - Removed Pipelines [transform, deserialize, destruct, validate]
+      - transform -> normalize
+      - validate -> finalize
   * Revamped Emitter { schema, context, resolver, query { args, id, model, crud, key, doc, input, sort, result } }
     - "Basic" functions are hoisted to the top for execution; RETURNING a value will bypass thunk()
     - "Next" functions are run next, next() must ALWAYS be called; passing a value to next() will bypass thunk()
-    - Event arguments refactored (no more merged! use query.input):
+    - Event arguments refactored (no more merged! use query.input)
+    - Getter to "changeset" on update
   * QueryBuilder.resolve() is now .auto()
   * Emitter.on('setup') now passed object: { schema }
+  * No more gqlScope, dalScope, fieldScope (use crud + scope)
 
 ---------
 
 * select('author.*') // populate/hydrate (left join)
 * where('author.name') // join
-* Things like "ensureId" are driver-specific? (eg. A SQL driver would have a FK relationship defined)
 
 ---------
 
 [
   '$default', [input] - Assign default value when undefined
   '$cast', [input, where] - Cast value to schema defined type
+  '$normalize', [input] - Normalize the input
   '$instruct', [input, where] - Instruct value (will define attribute even if undefined)
   '$construct', [input] - On Create
   '$restruct', [input] - On Update

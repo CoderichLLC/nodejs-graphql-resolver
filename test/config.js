@@ -44,8 +44,8 @@ module.exports = ({ uri }) => ({
   decorators: {
     default: `
       id: ID! @field(key: "_id")
-      createdAt: Date @field(finalize: createdAt, gqlScope: r)
-      updatedAt: Date @field(finalize: [timestamp, toDate], gqlScope: r)
+      createdAt: Date @field(finalize: createdAt, crud: r)
+      updatedAt: Date @field(finalize: [timestamp, toDate], crud: r)
     `,
   },
   typeDefs: `
@@ -171,4 +171,9 @@ module.exports = ({ uri }) => ({
       name: String
     }
   `,
+  resolvers: {
+    Query: {
+      getPerson: () => 'getPerson',
+    },
+  },
 });

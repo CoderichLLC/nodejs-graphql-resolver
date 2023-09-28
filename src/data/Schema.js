@@ -17,6 +17,9 @@ module.exports = class Schema {
     this.#config = config;
   }
 
+  /**
+   * Decorate each marked @model with config-driven decorators
+   */
   decorate() {
     this.#config.typeDefs = print(visit(parse(this.#config.typeDefs), {
       enter: (node) => {
@@ -30,7 +33,7 @@ module.exports = class Schema {
 
             if (decorator) {
               const name = node.name.value;
-              const [merged] = mergeGraphQLTypes([`type ${name} { ${decorator} }`, print(node)], { noLocation: true });
+              const [merged] = mergeGraphQLTypes([print(node), `type ${name} { ${decorator} }`], { noLocation: true, onFieldTypeConflict: a => a });
               node.fields = merged.fields;
               return node;
             }
@@ -46,6 +49,9 @@ module.exports = class Schema {
     return this;
   }
 
+  /**
+   * Parse the schema definition; returning a schema POJO
+   */
   parse() {
     let model, field, isField, isList;
     const thunks = [];
@@ -63,11 +69,12 @@ module.exports = class Schema {
             key: name,
             fields: {},
             idField: 'id',
-            dalScope: 'crud',
-            gqlScope: 'cruds',
+            crud: 'crud',
+            scope: 'crud',
             isPersistable: true,
             source: this.#config.dataSources?.default,
             loader: this.#config.dataLoaders?.default,
+            directives: {},
             toString: () => name,
           };
         } else if (node.kind === Kind.FIELD_DEFINITION) {
@@ -75,9 +82,9 @@ module.exports = class Schema {
           field = model.fields[name] = {
             name,
             key: name,
-            dalScope: 'crud',
-            gqlScope: 'cruds',
+            crud: 'crud',
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
+            directives: {},
             toString: () => name,
           };
         } else if (node.kind === Kind.NON_NULL_TYPE) {
@@ -89,6 +96,7 @@ module.exports = class Schema {
           isList = true;
         } else if (node.kind === Kind.DIRECTIVE) {
           const target = isField ? field : model;
+          target.directives[name] = target.directives[name] || {};
 
           if (name === 'model') model.isMarkedModel = true;
           else if (name === 'index') schema.indexes.push({ model });
@@ -97,16 +105,14 @@ module.exports = class Schema {
             const key = arg.name.value;
             const { value: val, values } = arg.value;
             const value = values ? values.map(n => n.value) : val;
+            target.directives[name][key] = value;
 
             if (name === 'index') schema.indexes[schema.indexes.length - 1][key] = value;
 
             switch (`${name}-${key}`) {
+              // Model specific directives
               case 'model-id': {
                 model.idField = value;
-                break;
-              }
-              case 'model-key': {
-                model.key = value;
                 break;
               }
               case 'model-source': {
@@ -121,33 +127,27 @@ module.exports = class Schema {
                 model.isEmbedded = value;
                 break;
               }
-              case 'model-persist': {
-                model.isPersistable = value;
-                break;
-              }
-              case 'model-gqlScope': case 'model-dalScope': {
-                model[key] = Util.nvl(value, '');
-                break;
-              }
-              case 'field-key': {
-                field.key = value;
-                break;
-              }
+              // Field specific directives
               case 'field-default': {
                 field.defaultValue = value;
-                break;
-              }
-              case 'field-persist': {
-                field.isPersistable = value;
-                break;
-              }
-              case 'field-onDelete': {
-                field.onDelete = value;
                 break;
               }
               case 'link-by': {
                 field.linkBy = value;
                 field.isVirtual = true;
+                break;
+              }
+              // Generic by target directives
+              case 'model-persist': case 'field-persist': {
+                target.isPersistable = value;
+                break;
+              }
+              case 'model-crud': case 'model-scope': case 'field-crud': {
+                target[key] = Util.nvl(value, '');
+                break;
+              }
+              case 'model-key': case 'model-meta': case 'field-key': case 'field-onDelete': {
+                target[key] = value;
                 break;
               }
               default: {
@@ -170,9 +170,8 @@ module.exports = class Schema {
 
           // Model resolution after field resolution (push)
           thunks.push(($schema) => {
-            $model.gqlScope = $model.isMarkedModel ? $model.gqlScope : '';
-            $model.dalScope = $model.isMarkedModel ? $model.dalScope : '';
-            $model.isEntity = Boolean($model.dalScope !== '' && !$model.isEmbedded);
+            $model.crud = $model.isMarkedModel ? $model.crud : '';
+            $model.isEntity = Boolean($model.isMarkedModel && !$model.isEmbedded);
 
             // Utility functions
             $model.resolvePath = (path, prop = 'name') => schema.resolvePath(`${$model[prop]}.${path}`, prop);
@@ -195,7 +194,6 @@ module.exports = class Schema {
               opts.run = opts.run ?? [];
               opts.path = opts.path ?? [];
               opts.itemize = opts.itemize ?? true;
-              // opts.transformers = opts.transformers ?? [];
 
               return Object.entries(data).reduce((prev, [key, value]) => {
                 // Find the field; remove it if not found
@@ -289,6 +287,14 @@ module.exports = class Schema {
     // Return schema
     return schema;
   }
+
+  // toAPI(parsedSchema) {
+  //   const { typeDefs, resolvers } = this.#makeAPISchema(parsedSchema);
+  // }
+
+  // static #makeAPISchema(parsedSchema) {
+  //   return
+  // }
 
   static #identifyOnDeletes(models, parentName) {
     return models.reduce((prev, model) => {

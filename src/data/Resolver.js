@@ -1,3 +1,4 @@
+// const { graphql } = require('graphql');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const Loader = require('./Loader');
@@ -42,6 +43,15 @@ module.exports = class Resolver {
   raw(model) {
     return this.toModel(model)?.source?.client?.driver(model);
   }
+
+  // graphql(args) {
+  //   args.schema = args.schema || this.#schema;
+  //   args.contextValue = args.contextValue || this.#context;
+  //   return graphql(args);
+  //   // const { schema } = this;
+  //   // const variableValues = JSON.parse(JSON.stringify(variables));
+  //   // return graphql({ schema, source, variableValues, contextValue });
+  // }
 
   /**
    * Create and execute a query for a provided model.
@@ -206,19 +216,19 @@ module.exports = class Resolver {
     return typeof model === 'string' ? this.#schema.models[model] : model;
   }
 
-  toModelMarked(model) {
-    const marked = this.toModel(model);
-    if (!marked) throw new Error(`${model} is not defined in schema`);
-    if (!marked.isMarkedModel) throw new Error(`${model} is not a marked model`);
-    return marked;
-  }
+  // toModelMarked(model) {
+  //   const marked = this.toModel(model);
+  //   if (!marked) throw new Error(`${model} is not defined in schema`);
+  //   if (!marked.isMarkedModel) throw new Error(`${model} is not a marked model`);
+  //   return marked;
+  // }
 
-  toModelEntity(model) {
-    const entity = this.toModel(model);
-    if (!entity) throw new Error(`${model} is not defined in schema`);
-    if (!entity.isEntity) throw new Error(`${model} is not an entity`);
-    return entity;
-  }
+  // toModelEntity(model) {
+  //   const entity = this.toModel(model);
+  //   if (!entity) throw new Error(`${model} is not defined in schema`);
+  //   if (!entity.isEntity) throw new Error(`${model} is not an entity`);
+  //   return entity;
+  // }
 
   #createNewLoaders() {
     return Object.entries(this.#schema.models).filter(([key, value]) => {
