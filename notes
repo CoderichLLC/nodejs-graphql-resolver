@@ -2,10 +2,14 @@ TODO:
   * GraphQL API
     - I don't like resolver.auto()...
     - Resolver.graphql()? This requires executableSchema...
+    - autograph.legacyMode (move to config)
+    - Do you need schema on the context?
+  * MongoClient
+  * Schema.createNamedQuery - what to do?
   * Magic methods? $lookup?
-  * Why do you send `${model}` in query instead of the actual model object?
   * Ability to trigger validation/finalize?
   * Schema.validate()? Do you need/want schema definitions for Directives and Enums?
+  * CAN YOU USE STICH SCHEMA TO PIECEMEAL REFACTOR TO THIS NEW MODULE???
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
@@ -17,6 +21,7 @@ Improvement Considerations:
   * EventEmitter
     - Debounce a function (debounce) to prevent excessive/redundant calls?
     - Memoize a function to prevent excessive/redundant calls?
+  * Why do you send `${model}` in query instead of the actual model object?
   * Allow user-defined loaders (replacing .named?)
   * You need proper events on embedded documents so that "construct": "createdBy" would work!
   * config.dataSources to determine if supports

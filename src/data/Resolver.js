@@ -17,6 +17,7 @@ module.exports = class Resolver {
     this.#context = config.context;
     this.#loaders = this.#createNewLoaders();
     this.driver = this.raw; // Alias
+    Util.set(this.#context, 'autograph.resolver', this);
   }
 
   getContext() {

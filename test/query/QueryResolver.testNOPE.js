@@ -1,9 +1,9 @@
-const Schema = require('../../src/data/Schema');
+const Schema = require('../../src/schema/Schema');
 const QueryResolver = require('../../src/query/QueryResolver');
 const config = require('./config');
 
 describe('QueryResolver', () => {
-  const schema = new Schema(config).parse();
+  const schema = new Schema(config).toObject();
   const resolver = { resolve: query => query };
   const factory = query => new QueryResolver({ resolver, schema, query });
 

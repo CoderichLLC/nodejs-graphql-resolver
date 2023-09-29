@@ -1,7 +1,8 @@
 const { MongoMemoryReplSet } = require('mongodb-memory-server');
-const Schema = require('./src/data/Schema');
+const Schema = require('./src/schema/Schema');
 const Resolver = require('./src/data/Resolver');
 const Config = require('./test/config');
+const schemaDef = require('./test/schema');
 
 let client = { disconnect: () => Promise.resolve() };
 let mongoServer = { stop: () => Promise.resolve() };
@@ -38,7 +39,19 @@ beforeAll(async () => {
   // Config
   const config = Config({ uri: mongoServer.getUri() });
   ({ client } = config.dataSources.default);
-  const schema = new Schema(config).decorate().parse();
+  const schema = new Schema(config)
+    .merge(schemaDef)
+    .decorate()
+    .merge({
+      typeDefs: `
+        type Library {
+          id: ID
+        }
+      `,
+    })
+    .toObject();
+  // const api = new API(schema).decorate().toObject();
+  // const xschema = makeExecutableSchema(schema.merge(api).toObject());
   const context = global.context = { network: { id: 'networkId' } };
   await createIndexes(client, schema.indexes);
   global.schema = schema;

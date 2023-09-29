@@ -1,8 +1,9 @@
 const Util = require('@coderich/util');
-const { Kind, parse, print, visit } = require('graphql');
-const { mergeGraphQLTypes } = require('@graphql-tools/merge');
-const { isLeafValue, isPlainObject, isBasicObject } = require('../service/AppService');
-const Emitter = require('./Emitter');
+const { Kind, parse, visit } = require('graphql');
+const { mergeTypeDefs, mergeFields } = require('@graphql-tools/merge');
+const { isLeafValue, isPlainObject, isBasicObject, mergeDeep } = require('../service/AppService');
+const Pipeline = require('../data/Pipeline');
+const Emitter = require('../data/Emitter');
 
 const operations = ['Query', 'Mutation', 'Subscription'];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
@@ -12,16 +13,19 @@ const inputPipelines = ['finalize', 'construct', 'instruct', 'normalize', 'seria
 
 module.exports = class Schema {
   #config;
+  #typeDefs;
+  #resolvers = {};
 
   constructor(config) {
     this.#config = config;
+    this.#typeDefs = Schema.#gqlFramework();
   }
 
   /**
-   * Decorate each marked @model with config-driven decorators
+   * Decorate each marked @model with config-driven field decorators
    */
   decorate() {
-    this.#config.typeDefs = print(visit(parse(this.#config.typeDefs), {
+    this.#typeDefs = visit(this.#typeDefs, {
       enter: (node) => {
         if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
           const directive = node.directives.find(({ name }) => name.value === 'model');
@@ -32,9 +36,8 @@ module.exports = class Schema {
             const decorator = this.#config.decorators?.[value];
 
             if (decorator) {
-              const name = node.name.value;
-              const [merged] = mergeGraphQLTypes([print(node), `type ${name} { ${decorator} }`], { noLocation: true, onFieldTypeConflict: a => a });
-              node.fields = merged.fields;
+              const { fields } = parse(`type decorator { ${decorator} }`).definitions[0];
+              node.fields = mergeFields(node, node.fields, fields, { noLocation: true, onFieldTypeConflict: a => a });
               return node;
             }
           }
@@ -44,21 +47,32 @@ module.exports = class Schema {
 
         return undefined;
       },
-    }));
+    });
 
     return this;
   }
 
   /**
-   * Parse the schema definition; returning a schema POJO
+   * Merge typeDefs and resolvers
    */
-  parse() {
+  merge(schema) {
+    if (typeof schema === 'string') schema = { typeDefs: schema };
+    const { typeDefs, resolvers = {} } = schema;
+    this.#typeDefs = mergeTypeDefs([parse(typeDefs), this.#typeDefs], { noLocation: true, reverseDirectives: true, onFieldTypeConflict: a => a });
+    this.#resolvers = mergeDeep(this.#resolvers, resolvers);
+    return this;
+  }
+
+  /**
+   * Parse typeDefs; returning a schema POJO
+   */
+  toObject() {
     let model, field, isField, isList;
     const thunks = [];
     const schema = { models: {}, indexes: [] };
 
     // Parse AST
-    visit(parse(this.#config.typeDefs), {
+    visit(this.#typeDefs, {
       enter: (node) => {
         const name = node.name?.value;
         if (!allowedKinds.includes(node.kind)) return false;
@@ -288,13 +302,103 @@ module.exports = class Schema {
     return schema;
   }
 
-  // toAPI(parsedSchema) {
-  //   const { typeDefs, resolvers } = this.#makeAPISchema(parsedSchema);
-  // }
+  toExecutableSchema() {
+    return {
+      typeDefs: this.#config.typeDefs,
+      resolvers: this.#config.resolvers,
+    };
+  }
 
-  // static #makeAPISchema(parsedSchema) {
-  //   return
-  // }
+  makeExecutableSchema() {
+    return this.#config.makeExecutableSchema(this.toObject());
+  }
+
+  static #gqlFramework() {
+    return parse(`
+      scalar AutoGraphMixed
+
+      enum AutoGraphIndexEnum { unique }
+      enum AutoGraphOnDeleteEnum { cascade nullify restrict defer }
+      enum AutoGraphPipelineEnum { ${Object.keys(Pipeline).filter(k => !k.startsWith('$')).join(' ')} }
+
+      directive @model(
+        id: String # Specify the ID/PK field (default "id")
+        key: String # Specify db table/collection name
+        crud: AutoGraphMixed # CRUD API
+        scope: AutoGraphMixed #
+        meta: AutoGraphMixed # Custom input "meta" field for mutations
+        source: AutoGraphMixed # Data source (default: "default")
+        embed: Boolean # Mark this an embedded model (default false)
+        persist: Boolean # Persist this model (default true)
+      ) on OBJECT | INTERFACE
+
+      directive @field(
+        key: String # Specify db key
+        persist: Boolean # Persist this field (default true)
+        connection: Boolean # Treat this field as a connection type (default false - rolling this out slowly)
+        default: AutoGraphMixed # Define a default value
+        crud: AutoGraphMixed # CRUD API
+        onDelete: AutoGraphOnDeleteEnum # onDelete behavior
+
+        # Pipeline Structure
+        normalize: [AutoGraphPipelineEnum!]
+        instruct: [AutoGraphPipelineEnum!]
+        construct: [AutoGraphPipelineEnum!]
+        restruct: [AutoGraphPipelineEnum!]
+        serialize: [AutoGraphPipelineEnum!]
+        finalize: [AutoGraphPipelineEnum!]
+      ) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION | SCALAR
+
+      directive @link(
+        to: AutoGraphMixed  # The MODEL to link to (default's to modelRef)
+        by: AutoGraphMixed! # The FIELD to match yourself by
+        use: AutoGraphMixed # The VALUE to use (default's to @link'd value); useful for many-to-many relationships
+      ) on FIELD_DEFINITION
+
+      directive @index(
+        name: String
+        on: [AutoGraphMixed!]!
+        type: AutoGraphIndexEnum!
+      ) repeatable on OBJECT
+    `);
+  }
+
+  static #gqlAPI(schema) {
+    return {
+      typeDefs: `
+        interface Node { id: ID! }
+
+        enum SortOrderEnum { asc desc }
+        enum SubscriptionCrudEnum { create update delete }
+        enum SubscriptionWhenEnum { preEvent postEvent }
+
+        type PageInfo {
+          startCursor: String!
+          endCursor: String!
+          hasPreviousPage: Boolean!
+          hasNextPage: Boolean!
+        }
+
+        type Query {
+          node(id: ID!): Node
+          entityModels.map(model => makeReadAPI(model.getName(), model))}
+        }
+
+        type Mutation {
+          entityModels.map(model => makeCreateAPI(model.getName(), model))}
+          entityModels.map(model => makeUpdateAPI(model.getName(), model))}
+          entityModels.map(model => makeDeleteAPI(model.getName(), model))}
+        }
+
+        type Subscription {
+          entityModels.map(model => makeSubscriptionAPI(model.getName(), model))}
+        }
+      `,
+      resolvers: {
+
+      },
+    };
+  }
 
   static #identifyOnDeletes(models, parentName) {
     return models.reduce((prev, model) => {
