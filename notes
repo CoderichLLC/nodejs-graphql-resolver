@@ -3,7 +3,6 @@ TODO:
     - I don't like resolver.auto()...
     - Resolver.graphql()? This requires executableSchema...
     - autograph.legacyMode (move to config)
-    - Do you need schema on the context?
   * MongoClient
   * Schema.createNamedQuery - what to do?
   * Magic methods? $lookup?
@@ -36,6 +35,7 @@ Improvement Considerations:
   * Allow @field(key: "some.path") in order to hoist
 
 BREAKING CHANGELOG:
+  * PageInfo and cursor no longer required (only usable when cursorPaginating...)
   * Revamped how transactions work
   * Revamped how initial setup works (config.js)
   * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }

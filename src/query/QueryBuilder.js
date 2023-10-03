@@ -41,6 +41,11 @@ module.exports = class QueryBuilder {
     return this;
   }
 
+  args(args) {
+    Object.entries(args).forEach(([key, value]) => { if (this[key]) this[key](value); }); // Call method only if exists
+    return this;
+  }
+
   native(clause) {
     this.#propCheck('native', 'id', 'where');
     this.#query.isNative = true;

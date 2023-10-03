@@ -1,7 +1,9 @@
+/* eslint-disable indent */
+
 const Util = require('@coderich/util');
 const { Kind, parse, visit } = require('graphql');
 const { mergeTypeDefs, mergeFields } = require('@graphql-tools/merge');
-const { isLeafValue, isPlainObject, isBasicObject, mergeDeep } = require('../service/AppService');
+const { isLeafValue, isPlainObject, isBasicObject, mergeDeep, fromGUID } = require('../service/AppService');
 const Pipeline = require('../data/Pipeline');
 const Emitter = require('../data/Emitter');
 
@@ -10,15 +12,17 @@ const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kin
 const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
 const pipelines = ['finalize', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
 const inputPipelines = ['finalize', 'construct', 'instruct', 'normalize', 'serialize'];
+const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
 
 module.exports = class Schema {
   #config;
+  #schema;
   #typeDefs;
   #resolvers = {};
 
   constructor(config) {
     this.#config = config;
-    this.#typeDefs = Schema.#gqlFramework();
+    this.#typeDefs = Schema.#framework();
   }
 
   /**
@@ -57,6 +61,7 @@ module.exports = class Schema {
    */
   merge(schema) {
     if (typeof schema === 'string') schema = { typeDefs: schema };
+    else if (schema instanceof Schema) schema = schema.toObject();
     const { typeDefs, resolvers = {} } = schema;
     this.#typeDefs = mergeTypeDefs([parse(typeDefs), this.#typeDefs], { noLocation: true, reverseDirectives: true, onFieldTypeConflict: a => a });
     this.#resolvers = mergeDeep(this.#resolvers, resolvers);
@@ -66,10 +71,12 @@ module.exports = class Schema {
   /**
    * Parse typeDefs; returning a schema POJO
    */
-  toObject() {
+  parse() {
+    if (this.#schema) return this.#schema;
+
+    this.#schema = { models: {}, indexes: [] };
     let model, field, isField, isList;
     const thunks = [];
-    const schema = { models: {}, indexes: [] };
 
     // Parse AST
     visit(this.#typeDefs, {
@@ -78,7 +85,7 @@ module.exports = class Schema {
         if (!allowedKinds.includes(node.kind)) return false;
 
         if (modelKinds.includes(node.kind) && !operations.includes(name)) {
-          model = schema.models[name] = {
+          model = this.#schema.models[name] = {
             name,
             key: name,
             fields: {},
@@ -113,7 +120,7 @@ module.exports = class Schema {
           target.directives[name] = target.directives[name] || {};
 
           if (name === 'model') model.isMarkedModel = true;
-          else if (name === 'index') schema.indexes.push({ model });
+          else if (name === 'index') this.#schema.indexes.push({ model });
 
           node.arguments.forEach((arg) => {
             const key = arg.name.value;
@@ -121,7 +128,7 @@ module.exports = class Schema {
             const value = values ? values.map(n => n.value) : val;
             target.directives[name][key] = value;
 
-            if (name === 'index') schema.indexes[schema.indexes.length - 1][key] = value;
+            if (name === 'index') this.#schema.indexes[this.#schema.indexes.length - 1][key] = value;
 
             switch (`${name}-${key}`) {
               // Model specific directives
@@ -144,6 +151,10 @@ module.exports = class Schema {
               // Field specific directives
               case 'field-default': {
                 field.defaultValue = value;
+                break;
+              }
+              case 'field-connection': {
+                field.isConnection = value;
                 break;
               }
               case 'link-by': {
@@ -184,11 +195,10 @@ module.exports = class Schema {
 
           // Model resolution after field resolution (push)
           thunks.push(($schema) => {
-            $model.crud = $model.isMarkedModel ? $model.crud : '';
             $model.isEntity = Boolean($model.isMarkedModel && !$model.isEmbedded);
 
             // Utility functions
-            $model.resolvePath = (path, prop = 'name') => schema.resolvePath(`${$model[prop]}.${path}`, prop);
+            $model.resolvePath = (path, prop = 'name') => this.#schema.resolvePath(`${$model[prop]}.${path}`, prop);
 
             $model.isJoinPath = (path, prop = 'name') => {
               let foundJoin = false;
@@ -248,6 +258,7 @@ module.exports = class Schema {
             $field.linkFrom = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
+            $field.isScalar = Boolean(!$field.model || scalars.includes($field.type));
 
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
@@ -272,10 +283,10 @@ module.exports = class Schema {
     });
 
     // Resolve data thunks
-    thunks.forEach(thunk => thunk(schema));
+    thunks.forEach(thunk => thunk(this.#schema));
 
     // Resolve indexes
-    schema.indexes = schema.indexes.map((index) => {
+    this.#schema.indexes = this.#schema.indexes.map((index) => {
       const { key } = index.model;
       const { name, type } = index;
       const on = index.on.map(f => index.model.fields[f].key);
@@ -283,29 +294,33 @@ module.exports = class Schema {
     });
 
     // Resolve referential integrity
-    Object.values(schema.models).forEach(($model) => {
-      $model.referentialIntegrity = Schema.#identifyOnDeletes(Object.values(schema.models), $model.name);
+    Object.values(this.#schema.models).forEach(($model) => {
+      $model.referentialIntegrity = Schema.#identifyOnDeletes(Object.values(this.#schema.models), $model.name);
     });
 
     // Helper methods
-    schema.resolvePath = (path, prop = 'key') => {
+    this.#schema.resolvePath = (path, prop = 'key') => {
       const [modelKey, ...fieldKeys] = path.split('.');
-      const $model = Object.values(schema.models).find(el => el[prop] === modelKey);
+      const $model = Object.values(this.#schema.models).find(el => el[prop] === modelKey);
       if (!$model || !fieldKeys.length) return $model;
       return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
     };
 
     // Emit event now that we're set up
-    Emitter.emit('setup', { schema });
+    Emitter.emit('setup', { schema: this.#schema });
 
     // Return schema
-    return schema;
+    return this.#schema;
   }
 
-  toExecutableSchema() {
+  api() {
+    return this.merge(Schema.#api(this.parse()));
+  }
+
+  toObject() {
     return {
-      typeDefs: this.#config.typeDefs,
-      resolvers: this.#config.resolvers,
+      typeDefs: this.#typeDefs,
+      resolvers: this.#resolvers,
     };
   }
 
@@ -313,7 +328,7 @@ module.exports = class Schema {
     return this.#config.makeExecutableSchema(this.toObject());
   }
 
-  static #gqlFramework() {
+  static #framework() {
     return parse(`
       scalar AutoGraphMixed
 
@@ -363,9 +378,22 @@ module.exports = class Schema {
     `);
   }
 
-  static #gqlAPI(schema) {
+  static #api(schema) {
+    // These models are for creating types
+    const readModels = Object.values(schema.models).filter(model => model.crud.includes('r'));
+    const createModels = Object.values(schema.models).filter(model => model.crud.includes('c'));
+    const updateModels = Object.values(schema.models).filter(model => model.crud.includes('u'));
+
+    // These are for defining schema queries/mutations
+    const entityModels = Object.values(schema.models).filter(model => model.isEntity);
+    const queryModels = entityModels.filter(model => model.crud.includes('r'));
+    const mutationModels = entityModels.filter(model => ['c', 'u', 'd'].some(el => model.crud.includes(el)));
+    const subscriptionModels = entityModels.filter(model => model.crud.includes('s'));
+
     return {
       typeDefs: `
+        scalar AutoGraphMixed
+
         interface Node { id: ID! }
 
         enum SortOrderEnum { asc desc }
@@ -379,25 +407,144 @@ module.exports = class Schema {
           hasNextPage: Boolean!
         }
 
+        ${entityModels.map(model => `
+          extend type ${model} implements Node {
+            id: ID!
+          }
+        `)}
+
+        ${readModels.map((model) => {
+          const fields = Object.values(model.fields).filter(field => field.crud.includes('r'));
+
+          return `
+            input ${model}InputWhere {
+              ${fields.map(field => `${field}: ${field.model?.isEntity ? `${field.model}InputWhere` : 'AutoGraphMixed'}`)}
+            }
+            input ${model}InputSort {
+              ${fields.map(field => `${field}: ${field.model?.isEntity ? `${field.model}InputSort` : 'SortOrderEnum'}`)}
+            }
+            type ${model}Connection {
+              count: Int!
+              pageInfo: PageInfo
+              edges: [${model}Edge]
+            }
+            type ${model}Edge {
+              node: ${model}
+              cursor: String
+            }
+          `;
+        })}
+
+        ${createModels.map((model) => {
+          const fields = Object.values(model.fields).filter(field => field.crud.includes('c') && !field.isVirtual);
+
+          return `
+            input ${model}InputCreate {
+              ${fields.map(field => `${field}: ${Schema.#getGQLType(field, 'InputCreate')}`)}
+            }
+          `;
+        })}
+
+        ${updateModels.map((model) => {
+          const fields = Object.values(model.fields).filter(field => field.crud.includes('u') && !field.isVirtual);
+
+          return `
+            input ${model}InputUpdate {
+              ${fields.map(field => `${field}: ${Schema.#getGQLType(field, 'InputUpdate')}`)}
+            }
+          `;
+        })}
+
         type Query {
           node(id: ID!): Node
-          entityModels.map(model => makeReadAPI(model.getName(), model))}
+          ${queryModels.map(model => `
+            get${model}(id: ID!): ${model}
+            find${model}(
+              where: ${model}InputWhere
+              sortBy: ${model}InputSort
+              limit: Int
+              skip: Int
+              first: Int
+              after: String
+              last: Int
+              before: String
+            ): ${model}Connection!
+          `)}
         }
 
-        type Mutation {
-          entityModels.map(model => makeCreateAPI(model.getName(), model))}
-          entityModels.map(model => makeUpdateAPI(model.getName(), model))}
-          entityModels.map(model => makeDeleteAPI(model.getName(), model))}
-        }
+        ${mutationModels.length ? `
+          type Mutation {
+            ${mutationModels.map((model) => {
+              const api = [];
+              const meta = model.meta ? `meta: ${model.meta}` : '';
+              if (model.crud.includes('c')) api.push(`create${model}(input: ${model}InputCreate! ${meta}): ${model}!`);
+              if (model.crud.includes('u')) api.push(`update${model}(id: ID! input: ${model}InputUpdate ${meta}): ${model}!`);
+              if (model.crud.includes('d')) api.push(`delete${model}(id: ID! ${meta}): ${model}!`);
+              return api.join('\n');
+            })}
+          }
+        ` : ''}
 
-        type Subscription {
-          entityModels.map(model => makeSubscriptionAPI(model.getName(), model))}
-        }
+        ${subscriptionModels.length ? `
+          type Subscription {
+            ${subscriptionModels.map(model => `
+              ${model}(
+                on: [SubscriptionCrudEnum!]! = [create, update, delete]
+                filter: ${model}SubscriptionInputFilter
+              ): ${model}SubscriptionPayload!
+            `)}
+          }
+        ` : ''}
       `,
       resolvers: {
-
+        Node: {
+          __resolveType: (doc, args, context, info) => doc.__typename, // eslint-disable-line no-underscore-dangle
+        },
+        ...queryModels.reduce((prev, model) => {
+          return Object.assign(prev, {
+            [`${model}Connection`]: {
+              count: ({ count }) => count(),
+              edges: ({ edges }) => edges().then(rs => rs.map(node => ({ cursor: node.$cursor, node }))),
+              pageInfo: ({ pageInfo }) => pageInfo().then(rs => rs?.$pageInfo),
+            },
+          });
+        }, {}),
+        Query: queryModels.reduce((prev, model) => {
+          return Object.assign(prev, {
+            [`get${model}`]: (doc, args, context, info) => context.autograph.resolver.match(model).id(args.id).one({ required: true }),
+            [`find${model}`]: (doc, args, context, info) => {
+              return {
+                edges: () => context.autograph.resolver.match(model).args(args).many(),
+                count: () => context.autograph.resolver.match(model).args(args).count(),
+                pageInfo: () => context.autograph.resolver.match(model).args(args).many(),
+              };
+            },
+          });
+        }, {
+          node: (doc, args, context, info) => {
+            const { id } = args;
+            const [modelName] = fromGUID(id);
+            const model = schema.models[modelName];
+            return context.autograph.resolver.match(model).id(id).one().then((result) => {
+              if (result == null) return result;
+              result.__typename = modelName; // eslint-disable-line no-underscore-dangle
+              return result;
+            });
+          },
+        }),
       },
     };
+  }
+
+  static #getGQLType(field, suffix) {
+    let { type } = field;
+    const { isEmbedded, isRequired, isScalar, isArray, isArrayRequired, defaultValue } = field;
+    const modelType = `${type}${suffix}`;
+    if (suffix && !isScalar) type = isEmbedded ? modelType : 'ID';
+    type = isArray ? `[${type}${isArrayRequired ? '!' : ''}]` : type;
+    if (!suffix && isRequired) type += '!';
+    if (suffix === 'InputCreate' && isRequired && defaultValue != null) type += '!';
+    return type;
   }
 
   static #identifyOnDeletes(models, parentName) {

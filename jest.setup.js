@@ -39,7 +39,7 @@ beforeAll(async () => {
   // Config
   const config = Config({ uri: mongoServer.getUri() });
   ({ client } = config.dataSources.default);
-  const schema = new Schema(config)
+  const $schema = new Schema(config)
     .merge(schemaDef)
     .decorate()
     .merge({
@@ -49,11 +49,11 @@ beforeAll(async () => {
         }
       `,
     })
-    .toObject();
-  // const api = new API(schema).decorate().toObject();
-  // const xschema = makeExecutableSchema(schema.merge(api).toObject());
+    .api();
+  const schema = $schema.parse();
   const context = global.context = { network: { id: 'networkId' } };
   await createIndexes(client, schema.indexes);
+  global.$schema = $schema;
   global.schema = schema;
   global.resolver = new Resolver({ schema, context });
   global.mongoClient = client;

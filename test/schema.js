@@ -1,5 +1,7 @@
 module.exports = {
   typeDefs: `
+    scalar Date
+
     input PersonInputMeta {
       notify: Boolean
     }
@@ -122,9 +124,4 @@ module.exports = {
       name: String
     }
   `,
-  resolvers: {
-    Query: {
-      getPerson: () => 'getPerson',
-    },
-  },
 };

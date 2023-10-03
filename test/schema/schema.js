@@ -1,4 +1,5 @@
 module.exports = `
+  scalar Date
   scalar Mixed
 
   type Author {

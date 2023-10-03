@@ -12,9 +12,9 @@ module.exports = class Resolver {
   #loaders;
   #sessions = []; // Holds nested 2D array of transactions
 
-  constructor(config) {
-    this.#schema = config.schema;
-    this.#context = config.context;
+  constructor({ schema, context }) {
+    this.#schema = schema.parse?.() || schema;
+    this.#context = context;
     this.#loaders = this.#createNewLoaders();
     this.driver = this.raw; // Alias
     Util.set(this.#context, 'autograph.resolver', this);
@@ -205,11 +205,12 @@ module.exports = class Resolver {
   toResultSet(model, result, query = {}) {
     if (result == null) return result;
     if (typeof result !== 'object') return result;
-    return Util.map(result, (doc) => {
+    return Object.defineProperties(Util.map(result, (doc) => {
       return Object.defineProperties(this.#schema.models[model].walk(doc, node => node.value !== undefined && Object.assign(node, { key: node.field.name }), { key: 'key' }), {
         $cursor: { value: doc.$cursor },
-        $pageInfo: { value: doc.$pageInfo },
       });
+    }), {
+      $pageInfo: { value: result.$pageInfo },
     });
   }
 

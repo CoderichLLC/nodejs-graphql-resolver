@@ -1,5 +1,6 @@
 const { ObjectId } = require('mongodb');
 const Validator = require('validator');
+const { makeExecutableSchema } = require('@graphql-tools/schema');
 const MongoClient = require('./MongoClient');
 const Pipeline = require('../src/data/Pipeline');
 
@@ -14,6 +15,7 @@ Pipeline.define('email', ({ value }) => {
 });
 
 module.exports = ({ uri }) => ({
+  makeExecutableSchema,
   dataLoaders: {
     default: {
       cache: true,

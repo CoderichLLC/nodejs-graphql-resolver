@@ -28,7 +28,7 @@ module.exports = class Loader {
 
       return this.#model.source.client.resolve($query).then((data) => {
         if (data == null) return null; // Explicit return null;
-        if ($query.isCursorPaging) return Loader.#paginateResults(data, query.toObject());
+        if ($query.isCursorPaging && Array.isArray(data)) return Loader.#paginateResults(data, query.toObject());
         return data;
       });
     }));
@@ -75,16 +75,12 @@ module.exports = class Loader {
     }
 
     // Add $pageInfo
-    return Object.defineProperties(rs, {
-      $pageInfo: {
-        get() {
-          return {
-            startCursor: get(rs, '0.$cursor', ''),
-            endCursor: get(rs, `${rs.length - 1}.$cursor`, ''),
-            hasPreviousPage,
-            hasNextPage,
-          };
-        },
+    return Object.defineProperty(rs, '$pageInfo', {
+      value: {
+        startCursor: get(rs, '0.$cursor', ''),
+        endCursor: get(rs, `${rs.length - 1}.$cursor`, ''),
+        hasPreviousPage,
+        hasNextPage,
       },
     });
   }

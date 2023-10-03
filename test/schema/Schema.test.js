@@ -82,7 +82,7 @@ const parsedModels = {
 
 describe('Schema', () => {
   test('parse', () => {
-    expect(new Schema(config).merge(typeDefs).toObject()).toMatchObject({
+    expect(new Schema(config).merge(typeDefs).api().parse()).toMatchObject({
       models: parsedModels,
     });
   });
@@ -99,7 +99,7 @@ describe('Schema', () => {
       },
     });
 
-    expect(new Schema(config).merge(typeDefs).decorate().toObject()).toMatchObject({ models });
+    expect(new Schema(config).merge(typeDefs).decorate().parse()).toMatchObject({ models });
   });
 
   test('merge', () => {
@@ -112,7 +112,7 @@ describe('Schema', () => {
           bio: Mixed! @field(key: "bio2")
         }
       `,
-    }).toObject();
+    }).parse();
 
     // Unchanged
     expect(schema.models.Library).toMatchObject(parsedModels.Library);
