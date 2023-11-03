@@ -532,6 +532,14 @@ module.exports = class Schema {
             });
           },
         }),
+        ...(mutationModels.length ? {
+          Mutation: mutationModels.reduce((prev, model) => {
+            if (model.crud.includes('c')) prev[`create${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).save(args.input);
+            if (model.crud.includes('u')) prev[`update${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).id(args.id).save(args.input);
+            if (model.crud.includes('d')) prev[`delete${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).id(args.id).delete();
+            return prev;
+          }, {}),
+        } : {}),
       },
     };
   }

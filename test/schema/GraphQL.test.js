@@ -2,16 +2,34 @@ const { graphql } = require('graphql');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
 
 describe('GraphQL', () => {
-  let xschema, $schema, resolver, context;
+  let xschema, $schema, context;
   let person;
 
   beforeAll(async () => {
-    ({ $schema, resolver, context } = global);
+    ({ $schema, context } = global);
     xschema = makeExecutableSchema($schema.toObject());
-    [person] = await Promise.all([
-      resolver.match('Person').save({ name: 'rich', emailAddress: 'email@gmail.com' }),
-      resolver.match('Person').save({ name: 'anne', emailAddress: 'email@gmail.com' }),
-    ]);
+  });
+
+  test('create', async () => {
+    const [{ errors, data }] = await Promise.all(['rich', 'anne'].map((name) => {
+      return graphql({
+        schema: xschema,
+        contextValue: context,
+        source: `
+          mutation ($input: PersonInputCreate!) {
+            createPerson(input: $input) {
+              id
+            }
+          }
+        `,
+        variableValues: {
+          input: { name, emailAddress: 'email@gmail.com' },
+        },
+      });
+    }));
+    expect(errors).not.toBeDefined();
+    expect(data).toBeDefined();
+    person = data.createPerson;
   });
 
   test('get', async () => {
@@ -148,6 +166,57 @@ describe('GraphQL', () => {
               name: 'anne',
             },
           }],
+        },
+      },
+    });
+  });
+
+  test('update', async () => {
+    expect(await graphql({
+      schema: xschema,
+      contextValue: context,
+      source: `
+        mutation ($id: ID!, $input: PersonInputUpdate) {
+          updatePerson(id: $id, input: $input) {
+            id
+            name
+          }
+        }
+      `,
+      variableValues: {
+        id: person.id,
+        input: { name: 'richie' },
+      },
+    })).toEqual({
+      errors: undefined,
+      data: {
+        updatePerson: {
+          id: `${person.id}`,
+          name: 'richie',
+        },
+      },
+    });
+  });
+
+  test('delete', async () => {
+    expect(await graphql({
+      schema: xschema,
+      contextValue: context,
+      source: `
+        mutation ($id: ID!) {
+          deletePerson(id: $id) {
+            id
+            name
+          }
+        }
+      `,
+      variableValues: { id: person.id },
+    })).toEqual({
+      errors: undefined,
+      data: {
+        deletePerson: {
+          id: `${person.id}`,
+          name: 'richie',
         },
       },
     });

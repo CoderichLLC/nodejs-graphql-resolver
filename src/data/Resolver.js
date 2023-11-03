@@ -8,12 +8,14 @@ const QueryResolver = require('../query/QueryResolver');
 
 module.exports = class Resolver {
   #schema;
+  // #xschema;
   #context;
   #loaders;
   #sessions = []; // Holds nested 2D array of transactions
 
-  constructor({ schema, context }) {
+  constructor({ schema, xschema, context }) {
     this.#schema = schema.parse?.() || schema;
+    // this.#xschema = xschema;
     this.#context = context;
     this.#loaders = this.#createNewLoaders();
     this.driver = this.raw; // Alias

@@ -3,6 +3,7 @@ TODO:
     - I don't like resolver.auto()...
     - Resolver.graphql()? This requires executableSchema...
     - autograph.legacyMode (move to config)
+  * Pipelines cannot start with invalid var name (eg. $pk)
   * MongoClient
   * Schema.createNamedQuery - what to do?
   * Magic methods? $lookup?
@@ -16,6 +17,7 @@ Known Issues:
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
 
 Improvement Considerations:
+  * There are times you may not want resolver to CRUD an attribute (eg. NetworkPlace.parent should be set via meta because of side-effects)
   * Upsert???
   * EventEmitter
     - Debounce a function (debounce) to prevent excessive/redundant calls?

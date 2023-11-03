@@ -1,7 +1,40 @@
 const Schema = require('../../src/schema/Schema');
 const { mergeDeep } = require('../../src/service/AppService');
-const config = require('./config');
-const typeDefs = require('./schema');
+
+const config = {
+  decorators: {
+    default: `
+      id: ID! @field(key: "_id")
+      createdAt: Date @field(finalize: createdAt, crud: r)
+      updatedAt: Date @field(finalize: [timestamp, toDate], crud: r)
+    `,
+  },
+};
+
+const typeDefs = `
+  scalar Date
+  scalar Mixed
+
+  type Author {
+    id: ID! @field(key: "__id")
+    name: String!
+    bio: Mixed @field(key: "biography")
+    telephone: String @field(default: "###-###-####")
+    authored: [Book!]
+  }
+
+  type Library @model(key: "library") {
+    id: ID! @field(key: "__id")
+    name: String!
+    books: [Book!]
+  }
+
+  type Book @model(source: "postgres") {
+    id: ID
+    name: String!
+    author: Author!
+  }
+`;
 
 const parsedModels = {
   Author: {
@@ -82,6 +115,12 @@ const parsedModels = {
 
 describe('Schema', () => {
   test('parse', () => {
+    expect(new Schema(config).merge(typeDefs).parse()).toMatchObject({
+      models: parsedModels,
+    });
+  });
+
+  test('parse (with api)', () => {
     expect(new Schema(config).merge(typeDefs).api().parse()).toMatchObject({
       models: parsedModels,
     });
