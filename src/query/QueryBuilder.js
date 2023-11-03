@@ -26,7 +26,7 @@ module.exports = class QueryBuilder {
   /**
    * When a termnial command is called resolve() returns the Query object
    */
-  resolve() {
+  terminate() {
     return new Query(this.#config);
   }
 
@@ -129,15 +129,15 @@ module.exports = class QueryBuilder {
    * Core terminal commands
    */
   one(flags) {
-    return this.flags(flags).resolve(Object.assign(this.#query, { op: 'findOne', crud: 'read', key: `get${this.#query.model}` }));
+    return this.flags(flags).terminate(Object.assign(this.#query, { op: 'findOne', crud: 'read', key: `get${this.#query.model}` }));
   }
 
   many(flags) {
-    return this.flags(flags).resolve(Object.assign(this.#query, { op: 'findMany', crud: 'read', key: `find${this.#query.model}` }));
+    return this.flags(flags).terminate(Object.assign(this.#query, { op: 'findMany', crud: 'read', key: `find${this.#query.model}` }));
   }
 
   count() {
-    return this.resolve(Object.assign(this.#query, { op: 'count', crud: 'read', key: `count${this.#query.model}` }));
+    return this.terminate(Object.assign(this.#query, { op: 'count', crud: 'read', key: `count${this.#query.model}` }));
   }
 
   save(...args) {
@@ -187,9 +187,7 @@ module.exports = class QueryBuilder {
     return this.#mutation('splice', { [path]: values });
   }
 
-  /**
-   */
-  auto(root, args, context, info) {
+  resolve(root, args, context, info) {
     Object.assign(this.#query, args);
 
     switch (getGQLReturnType(`${info.returnType}`)) {
@@ -209,7 +207,7 @@ module.exports = class QueryBuilder {
     let input = suffix === 'One' ? args[0] : args;
     if (input === undefined) input = {};
     this.#query.args.input = input;
-    return this.resolve(Object.assign(this.#query, {
+    return this.terminate(Object.assign(this.#query, {
       op: `${crud}${suffix}`,
       key: `${crud}${this.#query.model}`,
       crud: ['push', 'pull', 'splice'].includes(crud) ? 'update' : crud,

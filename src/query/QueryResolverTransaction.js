@@ -8,9 +8,9 @@ module.exports = class QueryResolverTransaction extends QueryResolver {
     this.#config = config;
   }
 
-  resolve() {
+  terminate() {
     return this.#config.transaction.then((transaction) => {
-      return super.resolve(super.options(transaction));
+      return super.terminate(super.options(transaction));
     });
   }
 };

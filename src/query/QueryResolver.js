@@ -20,8 +20,8 @@ module.exports = class QueryResolver extends QueryBuilder {
     this.#model = schema.models[query.model];
   }
 
-  resolve() {
-    const query = super.resolve();
+  terminate() {
+    const query = super.terminate();
     const { op, input } = query.toObject();
 
     // Resolve

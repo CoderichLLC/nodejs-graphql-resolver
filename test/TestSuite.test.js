@@ -229,8 +229,8 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ id: undefined }).many()).toEqual([]);
       expect(await resolver.match('Person').where({ id: undefined, name: 'absolutelyNoone' }).many()).toEqual([]);
 
-      // Auto (Connection)
-      const resolution = await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).auto(null, null, null, { returnType: 'MyConnection' });
+      // Auto resolve (Connection)
+      const resolution = await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).resolve(null, null, null, { returnType: 'MyConnection' });
       expect(resolution).toMatchObject({ count: expect.any(Function), edges: expect.any(Function), pageInfo: expect.any(Function) });
       expect(await resolution.count()).toBe(2);
       expect((await resolution.edges()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'christie' }, { id: richard.id, name: 'richard' }].sort(sorter));
@@ -489,8 +489,8 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ 'authored.chapters': { name: 'chapter*', 'pages.verbage': '*intro*' } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
       expect(await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
 
-      // Auto (Connection)
-      const resolution = await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).auto(null, null, null, { returnType: 'MyConnection' });
+      // Auto Resolve (Connection)
+      const resolution = await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).resolve(null, null, null, { returnType: 'MyConnection' });
       expect(resolution).toMatchObject({ count: expect.any(Function), edges: expect.any(Function), pageInfo: expect.any(Function) });
       expect(await resolution.count()).toBe(1);
       expect(await resolution.edges()).toMatchObject([{ id: christie.id, name: 'christie' }]);

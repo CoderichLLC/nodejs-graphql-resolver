@@ -13,7 +13,7 @@ const { Resolver } = require('../index');
     resolvers: {
       Query: {
         findPerson: (doc, args, ctx, info) => {
-          return ctx.autograph.resolver.match('Person').auto(doc, args, ctx, info);
+          return ctx.autograph.resolver.match('Person').resolve(doc, args, ctx, info);
         },
       },
     },
