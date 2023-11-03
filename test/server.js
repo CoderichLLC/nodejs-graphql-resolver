@@ -8,6 +8,17 @@ const { Resolver } = require('../index');
 (async () => {
   const { schema, context, mongoClient } = await JestService.setup();
   await JestService.createIndexes(mongoClient, schema.parse().indexes);
+
+  schema.merge({
+    resolvers: {
+      Query: {
+        findPerson: (doc, args, ctx, info) => {
+          return ctx.autograph.resolver.match('Person').auto(doc, args, ctx, info);
+        },
+      },
+    },
+  });
+
   const xschema = makeExecutableSchema(schema.toObject());
 
   const server = new ApolloServer({

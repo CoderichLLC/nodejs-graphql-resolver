@@ -3,7 +3,7 @@ const Schema = require('./src/schema/Schema');
 const Config = require('./test/config');
 const schemaDef = require('./test/schema');
 
-exports.setup = async () => {
+exports.setup = async (mergeConfig) => {
   // Start mongo server
   const mongoServer = await MongoMemoryReplSet.create({ replSet: { storageEngine: 'wiredTiger' } });
 
@@ -12,7 +12,7 @@ exports.setup = async () => {
   const { client: mongoClient } = config.dataSources.default;
 
   // Schema
-  const schema = new Schema(config).merge(schemaDef).merge({ typeDefs: 'type Library { id: ID }' }).decorate().api();
+  const schema = new Schema(config).merge(schemaDef).merge(mergeConfig).decorate().api();
   const context = { network: { id: 'networkId' } };
   return { schema, mongoClient, mongoServer, context };
 };

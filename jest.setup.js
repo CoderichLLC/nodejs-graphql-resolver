@@ -24,7 +24,7 @@ expect.extend({
 });
 
 beforeAll(async () => {
-  ({ schema, context, mongoClient, mongoServer } = await setup());
+  ({ schema, context, mongoClient, mongoServer } = await setup({ typeDefs: 'type Library { id: ID }' }));
   global.$schema = schema;
   global.context = context;
   global.schema = schema.parse();

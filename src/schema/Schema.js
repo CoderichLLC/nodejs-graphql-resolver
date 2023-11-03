@@ -59,12 +59,12 @@ module.exports = class Schema {
   /**
    * Merge typeDefs and resolvers
    */
-  merge(schema) {
+  merge(schema = {}) {
     if (typeof schema === 'string') schema = { typeDefs: schema };
     else if (schema instanceof Schema) schema = schema.toObject();
-    const { typeDefs, resolvers = {} } = schema;
-    this.#typeDefs = mergeTypeDefs([parse(typeDefs), this.#typeDefs], { noLocation: true, reverseDirectives: true, onFieldTypeConflict: a => a });
-    this.#resolvers = mergeDeep(this.#resolvers, resolvers);
+    const { typeDefs, resolvers } = schema;
+    if (typeDefs) this.#typeDefs = mergeTypeDefs([parse(typeDefs), this.#typeDefs], { noLocation: true, reverseDirectives: true, onFieldTypeConflict: a => a });
+    if (resolvers) this.#resolvers = mergeDeep(this.#resolvers, resolvers);
     return this;
   }
 
