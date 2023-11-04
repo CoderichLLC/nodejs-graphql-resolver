@@ -1,7 +1,4 @@
 TODO:
-  * GraphQL API
-    - meta (confirm this is now working via .args())
-    - cursor value does not look correct!
   * Pipelines cannot start with invalid var name (eg. $pk)
     - Pipeline "toId" is now $id or $pk depending upon needs (Breaking change below)
   * MongoClient
@@ -13,14 +10,14 @@ TODO:
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
-  * query.flags.debug should not be at driver level
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
   * Referential integrity (onDelete) defined in embedded documents is not implemented
   * .flags({ debug: true }) - You will never see debug info when the result is cached and no driver called
+    - query.flags.debug should not be at driver level
   * Transactions still act up once in a while when running the tests; also sometimes see a JSON circular reference
 
 Improvement Considerations:
-  * There are times you may not want resolver to CRUD an attribute (eg. NetworkPlace.parent should be set via meta because of side-effects)
+  * There are times you may NOT want resolver to CRUD an attribute (eg. NetworkPlace.parent should be set via meta because of side-effects)
   * Upsert???
   * Resolver.graphql()
     - This requires executableSchema...
@@ -39,7 +36,7 @@ Improvement Considerations:
   * DataLoader - rewrite for batch queries
   * EnsureId - inline query?
   * Allow @field(key: "some.path") in order to hoist
-  * Support for GUID
+  * Support for GUID (node interface)
     - autograph.legacyMode (move to config)
 
 BREAKING CHANGELOG:

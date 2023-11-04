@@ -41,11 +41,13 @@ module.exports = class Loader {
     const sortPaths = Object.keys(Util.flatten(sort, { safe: true }));
     const limiter = first || last;
 
-    // Add $cursor data
-    Util.map(rs, (doc) => {
-      const sortValues = sortPaths.reduce((prev, path) => Object.assign(prev, { [path]: get(doc, path) }), {});
-      Object.defineProperty(doc, '$cursor', { value: Buffer.from(JSON.stringify(sortValues)).toString('base64') });
-    });
+    // Add $cursor data (but only if sort is defined!)
+    if (sortPaths.length) {
+      Util.map(rs, (doc) => {
+        const sortValues = sortPaths.reduce((prev, path) => Object.assign(prev, { [path]: get(doc, path) }), {});
+        Object.defineProperty(doc, '$cursor', { value: Buffer.from(JSON.stringify(sortValues)).toString('base64') });
+      });
+    }
 
     // First try to take off the "bookends" ($gte | $lte)
     if (rs.length && rs[0].$cursor === after) {
