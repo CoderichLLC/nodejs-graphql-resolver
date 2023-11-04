@@ -4,6 +4,7 @@ TODO:
   * Pipelines cannot start with invalid var name (eg. $pk)
   * MongoClient
   * Schema.createNamedQuery - what to do?
+    * Allow user-defined loaders (replacing .named?)
   * Magic methods? $lookup?
   * Ability to trigger validation/finalize?
   * Schema.validate()? Do you need/want schema definitions for Directives and Enums?
@@ -13,6 +14,9 @@ Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
   * query.flags.debug should not be at driver level
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
+  * Referential integrity (onDelete) defined in embedded documents is not implemented
+  * .flags({ debug: true }) - You will never see debug info when the result is cached and no driver called
+  * Transactions still act up once in a while when running the tests; also sometimes see a JSON circular reference
 
 Improvement Considerations:
   * There are times you may not want resolver to CRUD an attribute (eg. NetworkPlace.parent should be set via meta because of side-effects)
@@ -23,7 +27,6 @@ Improvement Considerations:
     - Debounce a function (debounce) to prevent excessive/redundant calls?
     - Memoize a function to prevent excessive/redundant calls?
   * Why do you send `${model}` in query instead of the actual model object?
-  * Allow user-defined loaders (replacing .named?)
   * You need proper events on embedded documents so that "construct": "createdBy" would work!
   * config.dataSources to determine if supports
     - Joins

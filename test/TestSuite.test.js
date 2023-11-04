@@ -42,6 +42,7 @@ describe('TestSuite', () => {
       richard = await resolver.match('Person').save({ age: 40, name: 'Richard', status: 'alive', state: 'NJ', emailAddress: 'rich@coderich.com', network: 'network', strip: 'mall', multiLang: 'lang', 'multiLang.en': 'en', 'multiLang.es': 'es' });
       expect(richard.id).toBeDefined();
       expect(richard._id).not.toBeDefined(); // eslint-disable-line
+      expect(richard.age).toBe(40);
       expect(richard.name).toBe('richard');
       expect(richard.telephone).toBe('###-###-####'); // Default value
 
@@ -230,7 +231,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ id: undefined, name: 'absolutelyNoone' }).many()).toEqual([]);
 
       // Auto resolve (Connection)
-      const resolution = await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).resolve(null, null, null, { returnType: 'MyConnection' });
+      const resolution = await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).resolve({ returnType: 'MyConnection' });
       expect(resolution).toMatchObject({ count: expect.any(Function), edges: expect.any(Function), pageInfo: expect.any(Function) });
       expect(await resolution.count()).toBe(2);
       expect((await resolution.edges()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'christie' }, { id: richard.id, name: 'richard' }].sort(sorter));
@@ -490,7 +491,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).many()).toMatchObject([{ id: christie.id, name: 'christie' }]);
 
       // Auto Resolve (Connection)
-      const resolution = await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).resolve(null, null, null, { returnType: 'MyConnection' });
+      const resolution = await resolver.match('Person').where({ 'authored.chapters': { name: '{citizen,chap*}', 'pages.verbage': '*intro*' } }).resolve({ returnType: 'MyConnection' });
       expect(resolution).toMatchObject({ count: expect.any(Function), edges: expect.any(Function), pageInfo: expect.any(Function) });
       expect(await resolution.count()).toBe(1);
       expect(await resolution.edges()).toMatchObject([{ id: christie.id, name: 'christie' }]);
@@ -755,6 +756,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ name: '{christie,richard}' }).many()).toMatchObject([{ id: christie.id }]);
       expect(await resolver.match('Book').many()).toMatchObject([{ id: healthBook.id }]);
       expect(await resolver.match('Chapter').sortBy({ name: 'asc' }).many()).toMatchObject([{ id: chapter1.id }, { id: chapter2.id }]);
+      // expect(await resolver.match('Person').id(christie.id).one()).toMatchObject({ friends: [], section: null });
     });
 
     test('remove multi', async () => {
@@ -873,16 +875,25 @@ describe('TestSuite', () => {
     });
   });
 
-  // describe('$magic methods', () => {
-  //   test('$lookup', async () => {
-  //     // Simple lookup
-  //     const [book] = await christie.$lookup('authored');
-  //     expect(book).toBeDefined();
+  describe('$magic methods', () => {
+    test('$', async () => {
+      const doc = await resolver.match('Person').id(christie.id).one();
+      expect(await doc.$.one()).toMatchObject({ id: doc.id });
+      expect(await doc.$.flags({ debug: false }).many()).toEqual([expect.objectContaining({ id: doc.id })]);
+      expect(await doc.$.save({ age: 50 })).toMatchObject({ id: doc.id, age: 50 });
+      expect(await Object.assign(doc, { age: 90 }).$.save()).toMatchObject({ id: doc.id, age: 90 });
+      // expect(await doc.$.lookup('authored').one()).toMatchObject({ id: 1 });
+    });
 
-  //     // Where clause lookup
-  //     const [chapter, nada] = await book.$lookup('chapters', { where: { name: 'chapter1' } });
-  //     expect(chapter.name).toBe('Chapter1');
-  //     expect(nada).toBeUndefined();
-  //   });
-  // });
+    // test('$lookup', async () => {
+    //   // Simple lookup
+    //   const [book] = await christie.$lookup('authored');
+    //   expect(book).toBeDefined();
+
+    //   // Where clause lookup
+    //   const [chapter, nada] = await book.$lookup('chapters', { where: { name: 'chapter1' } });
+    //   expect(chapter.name).toBe('Chapter1');
+    //   expect(nada).toBeUndefined();
+    // });
+  });
 });

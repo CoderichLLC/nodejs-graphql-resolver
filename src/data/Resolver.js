@@ -204,11 +204,44 @@ module.exports = class Resolver {
     });
   }
 
-  toResultSet(model, result, query = {}) {
+  toResultSet(model, result) {
+    const self = this;
     if (result == null) return result;
     if (typeof result !== 'object') return result;
     return Object.defineProperties(Util.map(result, (doc) => {
-      return Object.defineProperties(this.#schema.models[model].walk(doc, node => node.value !== undefined && Object.assign(node, { key: node.field.name }), { key: 'key' }), {
+      const $doc = this.#schema.models[model].walk(doc, node => node.value !== undefined && Object.assign(node, { key: node.field.name }), { key: 'key' });
+      return Object.defineProperties($doc, {
+        $: {
+          get: () => {
+            return new Proxy(this.match(model).id($doc.id), {
+              get(queryResolver, cmd, proxy) {
+                return (...args) => {
+                  switch (cmd) {
+                    case 'save': {
+                      return queryResolver.save({ ...$doc, ...args[0] });
+                    }
+                    case 'lookup': {
+                      const field = args[0];
+                      const $model = model.fields[field].model;
+                      console.log($doc[field]);
+                      return self.match($model).where({ id: $doc[field] });
+                      // return (field) => {
+                      //   console.log(field);
+                      //   const $model = model.fields[field].model;
+                      //   console.log($model);
+                      // };
+                    }
+                    default: {
+                      queryResolver = queryResolver[cmd](...args);
+                      return queryResolver instanceof Promise ? queryResolver : proxy;
+                    }
+                  }
+                };
+              },
+            });
+          },
+        },
+        $model: { value: model },
         $cursor: { value: doc.$cursor },
       });
     }), {

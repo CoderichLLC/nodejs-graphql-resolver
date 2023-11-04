@@ -2,11 +2,11 @@ const { graphql } = require('graphql');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
 
 describe('GraphQL', () => {
-  let xschema, $schema, context;
-  let person;
+  let xschema, $schema, context, resolver;
+  let person, book;
 
   beforeAll(async () => {
-    ({ $schema, context } = global);
+    ({ $schema, context, resolver } = global);
     xschema = makeExecutableSchema($schema.toObject());
   });
 
@@ -30,9 +30,12 @@ describe('GraphQL', () => {
     expect(errors).not.toBeDefined();
     expect(data).toBeDefined();
     person = data.createPerson;
+
+    // Let's quickly create some FK data
+    book = await resolver.match('Book').save({ name: 'book', price: 10, author: person.id });
   });
 
-  test('get', async () => {
+  test('getPerson (authored connection)', async () => {
     expect(await graphql({
       schema: xschema,
       contextValue: context,
@@ -40,6 +43,14 @@ describe('GraphQL', () => {
         query {
           getPerson(id: "${person.id}") {
             id
+            authored {
+              edges {
+                node {
+                  id
+                  name
+                }
+              }
+            }
           }
         }
       `,
@@ -48,6 +59,37 @@ describe('GraphQL', () => {
       data: {
         getPerson: {
           id: `${person.id}`,
+          authored: {
+            edges: [{
+              node: {
+                id: expect.anything(),
+                name: 'Book', // toTitleCase
+              },
+            }],
+          },
+        },
+      },
+    });
+  });
+
+  test('getBook (author)', async () => {
+    expect(await graphql({
+      schema: xschema,
+      contextValue: context,
+      source: `
+        query {
+          getBook(id: "${book.id}") {
+            id
+            author { name }
+          }
+        }
+      `,
+    })).toEqual({
+      errors: undefined,
+      data: {
+        getBook: {
+          id: `${book.id}`,
+          author: { name: 'rich' },
         },
       },
     });

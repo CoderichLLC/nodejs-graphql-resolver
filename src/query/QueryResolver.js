@@ -109,6 +109,7 @@ module.exports = class QueryResolver extends QueryBuilder {
     const { id } = query.toObject();
     const txn = this.#resolver.transaction(false);
 
+    // if (this.#model.name === 'Person') console.log(this.#model.referentialIntegrity);
     return txn.run(Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, fieldRef, isArray, op }) => () => {
       const fieldStr = fieldRef ? `${field}.${fieldRef}` : `${field.name}`;
       const $where = { [fieldStr]: id };

@@ -1,9 +1,10 @@
 const Query = require('./Query');
-const { getGQLReturnType } = require('../service/AppService');
+const { getGQLReturnType, mergeDeep } = require('../service/AppService');
 
 module.exports = class QueryBuilder {
   #config;
   #query;
+  #terminalCommands = ['one', 'many', 'count', 'save', 'delete', 'first', 'last', 'push', 'pull', 'splice'];
 
   constructor(config) {
     const { query } = config;
@@ -14,6 +15,7 @@ module.exports = class QueryBuilder {
       id: { writable: true, enumerable: true, value: query.id },
       args: { writable: true, enumerable: true, value: query.args || {} },
       flags: { writable: true, enumerable: true, value: query.flags || {} },
+      // where: { writable: true, enumerable: true, value: query.where || {} },
       options: { writable: true, enumerable: true, value: query.options || {} },
     });
 
@@ -23,8 +25,12 @@ module.exports = class QueryBuilder {
     this.remove = this.delete;
   }
 
+  isTerminal(cmd) {
+    return this.#terminalCommands.includes(cmd);
+  }
+
   /**
-   * When a termnial command is called resolve() returns the Query object
+   * When a termnial command is called terminate() returns the Query object
    */
   terminate() {
     return new Query(this.#config);
@@ -34,9 +40,9 @@ module.exports = class QueryBuilder {
    * Chainable methods
    */
   id(id) {
-    this.#propCheck('id', 'where', 'native', 'sort', 'skip', 'limit', 'before', 'after');
+    this.#propCheck('id', 'native', 'sort', 'skip', 'limit', 'before', 'after');
     this.#query.id = id;
-    this.#query.where = { id };
+    this.#query.where = mergeDeep(this.#query.where || {}, { id });
     this.#query.args.id = id;
     return this;
   }
@@ -56,9 +62,10 @@ module.exports = class QueryBuilder {
   }
 
   where(clause) {
-    this.#propCheck('where', 'id', 'native');
-    this.#query.where = clause;
-    this.#query.args.where = clause;
+    this.#propCheck('where', 'native', false);
+    const $clause = mergeDeep(this.#query.where || {}, clause);
+    this.#query.where = $clause;
+    this.#query.args.where = $clause;
     return this;
   }
 
@@ -187,9 +194,10 @@ module.exports = class QueryBuilder {
     return this.#mutation('splice', { [path]: values });
   }
 
-  resolve(root, args, context, info) {
-    Object.assign(this.#query, args);
-
+  /**
+   * For use in GraphQL resolver methods to return the "correct" response
+   */
+  resolve(info) {
     switch (getGQLReturnType(`${info.returnType}`)) {
       case 'array': return this.many();
       case 'number': return this.count();
@@ -217,7 +225,7 @@ module.exports = class QueryBuilder {
   }
 
   #propCheck(prop, ...checks) {
-    if (this.#query[prop]) throw new Error(`Cannot redefine "${prop}"`);
+    if (checks[checks.length - 1] !== false && this.#query[prop]) throw new Error(`Cannot redefine "${prop}"`);
     if (['skip', 'limit'].includes(prop) && this.#query.isCursorPaging) throw new Error(`Cannot use "${prop}" while using Cursor-Style Pagination`);
     if (['first', 'last', 'before', 'after'].includes(prop) && this.isClassicPaging) throw new Error(`Cannot use "${prop}" while using Classic-Style Pagination`);
     checks.forEach((check) => { if (this.#query[check]) throw new Error(`Cannot use "${prop}" while using "${check}"`); });

@@ -8,6 +8,7 @@ const Pipeline = require('../data/Pipeline');
 const Emitter = require('../data/Emitter');
 
 const operations = ['Query', 'Mutation', 'Subscription'];
+const interfaceKinds = [Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
 const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
 const pipelines = ['finalize', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
@@ -255,7 +256,7 @@ module.exports = class Schema {
           thunks.unshift(($schema) => {
             $field.model = $schema.models[$field.type];
             $field.linkBy = $field.linkBy || $field.model?.idField;
-            $field.linkFrom = $field.isVirtual ? $model.fields[$model.idField].key : $field.key;
+            $field.linkField = $field.isVirtual ? $model.fields[$model.idField] : $field;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
             $field.isScalar = Boolean(!$field.model || scalars.includes($field.type));
@@ -268,7 +269,7 @@ module.exports = class Schema {
             if ($field.isFKReference) {
               const to = $field.model.key;
               const on = $field.model.fields[$field.linkBy].key;
-              const from = $field.linkFrom;
+              const from = $field.linkField.key;
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
               $field.pipelines.finalize.push('ensureId'); // Absolute Last
@@ -415,6 +416,7 @@ module.exports = class Schema {
 
         ${readModels.map((model) => {
           const fields = Object.values(model.fields).filter(field => field.crud.includes('r'));
+          const connectionFields = fields.filter(field => field.isConnection);
 
           return `
             input ${model}InputWhere {
@@ -432,6 +434,11 @@ module.exports = class Schema {
               node: ${model}
               cursor: String
             }
+            ${connectionFields.length ? `
+              extend type ${model} {
+                ${connectionFields.map(field => `${field}: ${field.model}Connection`)}
+              }
+            ` : ''}
           `;
         })}
 
@@ -540,6 +547,17 @@ module.exports = class Schema {
             return prev;
           }, {}),
         } : {}),
+        ...readModels.reduce((prev, model) => {
+          return Object.assign(prev, {
+            [model]: Object.values(model.fields).filter(field => field.model?.isEntity).reduce((prev2, field) => {
+              return Object.assign(prev2, {
+                [field]: (doc, args, context, info) => {
+                  return context.autograph.resolver.match(field.model).where({ [field.linkBy]: doc[field.linkField.name] }).args(args).resolve(info);
+                },
+              });
+            }, {}),
+          });
+        }, {}),
       },
     };
   }
@@ -561,9 +579,10 @@ module.exports = class Schema {
         if (`${field.model.name}` === `${parentName}`) {
           if (model.isEntity) {
             prev.push({ model, field, isArray: field.isArray, op: field.onDelete });
-          } else {
-            prev.push(...Schema.#identifyOnDeletes(models, model.name).map(od => Object.assign(od, { fieldRef: field.name, isArray: field.isArray, op: field.onDelete })));
           }
+          // else {
+          //   prev.push(...Schema.#identifyOnDeletes(models, model.name).map(od => Object.assign(od, { fieldRef: field.name, isArray: field.isArray, op: field.onDelete })));
+          // }
         }
       });
 

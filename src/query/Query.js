@@ -161,7 +161,7 @@ module.exports = class Query {
           join.from = path.reduce((prev, curr, i) => {
             const $field = this.#model.resolvePath(path.slice(0, i + 1).join('.'), 'key');
             if ($field.isArray) isArray = true;
-            return prev.concat($field.linkFrom);
+            return prev.concat($field.linkField.key);
           }, []).join('.');
         }
 

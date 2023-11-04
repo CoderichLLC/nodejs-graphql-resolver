@@ -116,7 +116,7 @@ module.exports = {
       name: String! @field(normalize: toLowerCase)
       frozen: String! @field(default: "frozen", restruct: immutable)
       description: String
-      person: Person
+      person: Person @field(onDelete: nullify)
     }
 
     type PlainJane @model {
