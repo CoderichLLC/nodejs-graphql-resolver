@@ -882,18 +882,13 @@ describe('TestSuite', () => {
       expect(await doc.$.flags({ debug: false }).many()).toEqual([expect.objectContaining({ id: doc.id })]);
       expect(await doc.$.save({ age: 50 })).toMatchObject({ id: doc.id, age: 50 });
       expect(await Object.assign(doc, { age: 90 }).$.save()).toMatchObject({ id: doc.id, age: 90 });
-      // expect(await doc.$.lookup('authored').one()).toMatchObject({ id: 1 });
+      expect(await doc.$.lookup('authored').one()).toMatchObject({ id: healthBook.id });
+      expect(await doc.$.lookup('authored').where({ name: 'health*' }).one()).toMatchObject({ id: healthBook.id });
+      expect(await doc.$.lookup('authored').where({ name: 'moby*' }).one()).toBeNull();
+      expect(await healthBook.$.lookup('chapters').count()).toBe(2);
+      const [chapter, nada] = await healthBook.$.lookup('chapters').where({ name: 'chapter1' }).many();
+      expect(chapter.name).toBe('Chapter1');
+      expect(nada).toBeUndefined();
     });
-
-    // test('$lookup', async () => {
-    //   // Simple lookup
-    //   const [book] = await christie.$lookup('authored');
-    //   expect(book).toBeDefined();
-
-    //   // Where clause lookup
-    //   const [chapter, nada] = await book.$lookup('chapters', { where: { name: 'chapter1' } });
-    //   expect(chapter.name).toBe('Chapter1');
-    //   expect(nada).toBeUndefined();
-    // });
   });
 });

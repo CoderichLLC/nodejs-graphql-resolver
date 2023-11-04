@@ -221,15 +221,9 @@ module.exports = class Resolver {
                       return queryResolver.save({ ...$doc, ...args[0] });
                     }
                     case 'lookup': {
-                      const field = args[0];
-                      const $model = model.fields[field].model;
-                      console.log($doc[field]);
-                      return self.match($model).where({ id: $doc[field] });
-                      // return (field) => {
-                      //   console.log(field);
-                      //   const $model = model.fields[field].model;
-                      //   console.log($model);
-                      // };
+                      const field = self.toModel(model).fields[args[0]];
+                      const where = { [field.linkBy]: $doc[field.linkField.name] };
+                      return self.match(field.model).where(where);
                     }
                     default: {
                       queryResolver = queryResolver[cmd](...args);

@@ -1,11 +1,12 @@
 TODO:
   * GraphQL API
-    - meta
+    - meta (confirm this is now working via .args())
+    - cursor value does not look correct!
   * Pipelines cannot start with invalid var name (eg. $pk)
+    - Pipeline "toId" is now $id or $pk depending upon needs (Breaking change below)
   * MongoClient
   * Schema.createNamedQuery - what to do?
     * Allow user-defined loaders (replacing .named?)
-  * Magic methods? $lookup?
   * Ability to trigger validation/finalize?
   * Schema.validate()? Do you need/want schema definitions for Directives and Enums?
   * CAN YOU USE STICH SCHEMA TO PIECEMEAL REFACTOR TO THIS NEW MODULE???
@@ -42,7 +43,7 @@ Improvement Considerations:
     - autograph.legacyMode (move to config)
 
 BREAKING CHANGELOG:
-  * PageInfo and cursor no longer required (only usable when cursorPaginating...)
+  * PageInfo and cursor no longer required schema (only defined when cursorPaginating...)
   * Revamped how transactions work
   * Revamped how initial setup works (config.js)
   * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }
@@ -58,6 +59,8 @@ BREAKING CHANGELOG:
     - Getter to "changeset" on update
   * Emitter.on('setup') now passed object: { schema }
   * No more gqlScope, dalScope, fieldScope (use crud + scope)
+  * resolver.resolve() now takes 1 argument (info) and requires you to use .args() etc if need be
+  * $Magic methods now have signature doc.$.<method> and are more powerful and chainable
 
 ---------
 

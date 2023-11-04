@@ -15,7 +15,6 @@ module.exports = class QueryBuilder {
       id: { writable: true, enumerable: true, value: query.id },
       args: { writable: true, enumerable: true, value: query.args || {} },
       flags: { writable: true, enumerable: true, value: query.flags || {} },
-      // where: { writable: true, enumerable: true, value: query.where || {} },
       options: { writable: true, enumerable: true, value: query.options || {} },
     });
 
@@ -30,10 +29,24 @@ module.exports = class QueryBuilder {
   }
 
   /**
-   * When a termnial command is called terminate() returns the Query object
+   * When a termnial command is called, terminate() returns the Query object
+   * We have to clone() the Query because we mutate this.#config all while the query is being built
+   * However there is a "bug" when using .resolve() (below) and the QueryBuilder is re-used to resolve each thunk
    */
   terminate() {
-    return new Query(this.#config);
+    return new Query(this.#config).clone();
+  }
+
+  /**
+   * For use in GraphQL resolver methods to return the "correct" response
+   */
+  resolve(info) {
+    switch (getGQLReturnType(`${info.returnType}`)) {
+      case 'array': return this.many();
+      case 'number': return this.count();
+      case 'connection': return { count: () => this.count(), edges: () => this.many(), pageInfo: () => this.many() };
+      case 'scalar': default: return this.one();
+    }
   }
 
   /**
@@ -192,18 +205,6 @@ module.exports = class QueryBuilder {
   splice(path, ...values) {
     values = values.flat();
     return this.#mutation('splice', { [path]: values });
-  }
-
-  /**
-   * For use in GraphQL resolver methods to return the "correct" response
-   */
-  resolve(info) {
-    switch (getGQLReturnType(`${info.returnType}`)) {
-      case 'array': return this.many();
-      case 'number': return this.count();
-      case 'connection': return { count: () => this.count(), edges: () => this.many(), pageInfo: () => this.many() };
-      case 'scalar': default: return this.one();
-    }
   }
 
   /**

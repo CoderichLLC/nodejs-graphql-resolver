@@ -518,7 +518,7 @@ module.exports = class Schema {
         }, {}),
         Query: queryModels.reduce((prev, model) => {
           return Object.assign(prev, {
-            [`get${model}`]: (doc, args, context, info) => context.autograph.resolver.match(model).id(args.id).one({ required: true }),
+            [`get${model}`]: (doc, args, context, info) => context.autograph.resolver.match(model).args(args).one({ required: true }),
             [`find${model}`]: (doc, args, context, info) => {
               return {
                 edges: () => context.autograph.resolver.match(model).args(args).many(),
@@ -541,9 +541,9 @@ module.exports = class Schema {
         }),
         ...(mutationModels.length ? {
           Mutation: mutationModels.reduce((prev, model) => {
-            if (model.crud.includes('c')) prev[`create${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).save(args.input);
-            if (model.crud.includes('u')) prev[`update${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).id(args.id).save(args.input);
-            if (model.crud.includes('d')) prev[`delete${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).id(args.id).delete();
+            if (model.crud.includes('c')) prev[`create${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).save(args.input);
+            if (model.crud.includes('u')) prev[`update${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).save(args.input);
+            if (model.crud.includes('d')) prev[`delete${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).delete();
             return prev;
           }, {}),
         } : {}),

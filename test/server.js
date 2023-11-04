@@ -9,15 +9,15 @@ const { Resolver } = require('../index');
   const { schema, context, mongoClient } = await JestService.setup();
   await JestService.createIndexes(mongoClient, schema.parse().indexes);
 
-  schema.merge({
-    resolvers: {
-      Query: {
-        findPerson: (doc, args, ctx, info) => {
-          return ctx.autograph.resolver.match('Person').resolve(doc, args, ctx, info);
-        },
-      },
-    },
-  });
+  // schema.merge({
+  //   resolvers: {
+  //     Query: {
+  //       findPerson: (doc, args, ctx, info) => {
+  //         return ctx.autograph.resolver.match('Person').args(args).resolve(info);
+  //       },
+  //     },
+  //   },
+  // });
 
   const xschema = makeExecutableSchema(schema.toObject());
 
