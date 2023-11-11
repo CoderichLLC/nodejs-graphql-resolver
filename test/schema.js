@@ -7,7 +7,7 @@ module.exports = {
     }
 
     type Person
-      @model(meta: "PersonInputMeta")
+      @model(key: "person", meta: "PersonInputMeta")
       @index(name: "uix_person_name", type: unique, on: [name])
     {
       age: Int @field(key: "my_age")

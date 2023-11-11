@@ -75,6 +75,7 @@ module.exports = class Query {
     const { input, where, sort, before, after, isNative, isCursorPaging } = this.#query;
 
     const query = this.clone({
+      model: this.#model.key,
       select: Object.values(this.#model.fields).map(field => field.key),
       input: this.#model.walk(input, node => node.value !== undefined && Object.assign(node, { key: node.field.key })),
       where: isNative ? where : this.#model.walk(where, node => Object.assign(node, { key: node.field.key })),

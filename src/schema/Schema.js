@@ -61,11 +61,19 @@ module.exports = class Schema {
    * Merge typeDefs and resolvers
    */
   merge(schema = {}) {
+    // Normalize schema input
     if (typeof schema === 'string') schema = { typeDefs: schema };
     else if (schema instanceof Schema) schema = schema.toObject();
-    const { typeDefs, resolvers } = schema;
-    if (typeDefs) this.#typeDefs = mergeTypeDefs([parse(typeDefs), this.#typeDefs], { noLocation: true, reverseDirectives: true, onFieldTypeConflict: a => a });
-    if (resolvers) this.#resolvers = mergeDeep(this.#resolvers, resolvers);
+
+    if (schema.typeDefs) {
+      const typeDefs = Util.ensureArray(schema.typeDefs).map(td => (typeof td === 'string' ? parse(td) : td));
+      this.#typeDefs = mergeTypeDefs([typeDefs, this.#typeDefs], { noLocation: true, reverseDirectives: true, onFieldTypeConflict: a => a });
+    }
+
+    if (schema.resolvers) {
+      this.#resolvers = mergeDeep(this.#resolvers, schema.resolvers);
+    }
+
     return this;
   }
 
@@ -344,6 +352,7 @@ module.exports = class Schema {
         scope: AutoGraphMixed #
         meta: AutoGraphMixed # Custom input "meta" field for mutations
         source: AutoGraphMixed # Data source (default: "default")
+        decorate: AutoGraphMixed # Decorator (default: "default")
         embed: Boolean # Mark this an embedded model (default false)
         persist: Boolean # Persist this model (default true)
       ) on OBJECT | INTERFACE
@@ -381,15 +390,15 @@ module.exports = class Schema {
 
   static #api(schema) {
     // These models are for creating types
-    const readModels = Object.values(schema.models).filter(model => model.crud.includes('r'));
-    const createModels = Object.values(schema.models).filter(model => model.crud.includes('c'));
-    const updateModels = Object.values(schema.models).filter(model => model.crud.includes('u'));
+    const readModels = Object.values(schema.models).filter(model => model.crud?.includes('r'));
+    const createModels = Object.values(schema.models).filter(model => model.crud?.includes('c'));
+    const updateModels = Object.values(schema.models).filter(model => model.crud?.includes('u'));
 
     // These are for defining schema queries/mutations
     const entityModels = Object.values(schema.models).filter(model => model.isEntity);
-    const queryModels = entityModels.filter(model => model.crud.includes('r'));
-    const mutationModels = entityModels.filter(model => ['c', 'u', 'd'].some(el => model.crud.includes(el)));
-    const subscriptionModels = entityModels.filter(model => model.crud.includes('s'));
+    const queryModels = entityModels.filter(model => model.crud?.includes('r'));
+    const mutationModels = entityModels.filter(model => ['c', 'u', 'd'].some(el => model.crud?.includes(el)));
+    const subscriptionModels = entityModels.filter(model => model.crud?.includes('s'));
 
     return {
       typeDefs: `
@@ -415,7 +424,7 @@ module.exports = class Schema {
         `)}
 
         ${readModels.map((model) => {
-          const fields = Object.values(model.fields).filter(field => field.crud.includes('r'));
+          const fields = Object.values(model.fields).filter(field => field.crud?.includes('r'));
           const connectionFields = fields.filter(field => field.isConnection);
 
           return `
@@ -443,7 +452,7 @@ module.exports = class Schema {
         })}
 
         ${createModels.map((model) => {
-          const fields = Object.values(model.fields).filter(field => field.crud.includes('c') && !field.isVirtual);
+          const fields = Object.values(model.fields).filter(field => field.crud?.includes('c') && !field.isVirtual);
 
           return `
             input ${model}InputCreate {
@@ -453,7 +462,7 @@ module.exports = class Schema {
         })}
 
         ${updateModels.map((model) => {
-          const fields = Object.values(model.fields).filter(field => field.crud.includes('u') && !field.isVirtual);
+          const fields = Object.values(model.fields).filter(field => field.crud?.includes('u') && !field.isVirtual);
 
           return `
             input ${model}InputUpdate {
@@ -484,9 +493,9 @@ module.exports = class Schema {
             ${mutationModels.map((model) => {
               const api = [];
               const meta = model.meta ? `meta: ${model.meta}` : '';
-              if (model.crud.includes('c')) api.push(`create${model}(input: ${model}InputCreate! ${meta}): ${model}!`);
-              if (model.crud.includes('u')) api.push(`update${model}(id: ID! input: ${model}InputUpdate ${meta}): ${model}!`);
-              if (model.crud.includes('d')) api.push(`delete${model}(id: ID! ${meta}): ${model}!`);
+              if (model.crud?.includes('c')) api.push(`create${model}(input: ${model}InputCreate! ${meta}): ${model}!`);
+              if (model.crud?.includes('u')) api.push(`update${model}(id: ID! input: ${model}InputUpdate ${meta}): ${model}!`);
+              if (model.crud?.includes('d')) api.push(`delete${model}(id: ID! ${meta}): ${model}!`);
               return api.join('\n');
             })}
           }
@@ -541,9 +550,9 @@ module.exports = class Schema {
         }),
         ...(mutationModels.length ? {
           Mutation: mutationModels.reduce((prev, model) => {
-            if (model.crud.includes('c')) prev[`create${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).save(args.input);
-            if (model.crud.includes('u')) prev[`update${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).save(args.input);
-            if (model.crud.includes('d')) prev[`delete${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).delete();
+            if (model.crud?.includes('c')) prev[`create${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).save(args.input);
+            if (model.crud?.includes('u')) prev[`update${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).save(args.input);
+            if (model.crud?.includes('d')) prev[`delete${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).delete();
             return prev;
           }, {}),
         } : {}),
