@@ -1,12 +1,4 @@
 TODO:
-  * Pipelines cannot start with invalid var name (eg. $pk)
-    - Pipeline "toId" is now $id or $pk depending upon needs (Breaking change below)
-  * MongoClient
-    - Finalize the public api (resolve & transaction?)
-    - Can you derive transaction support by virtue of function definition?
-    - Seperate NPM module?
-  * Ability to trigger validation/finalize?
-  * Schema.validate()? Do you need/want schema definitions for Directives and Enums?
   * CAN YOU USE STICH SCHEMA TO PIECEMEAL REFACTOR TO THIS NEW MODULE???
     - How will you get around cross-emitter dependency?
 
@@ -19,6 +11,9 @@ Known Issues:
   * Transactions still act up once in a while when running the tests; also sometimes see a JSON circular reference
 
 Improvement Considerations:
+  * Ability to trigger validation/finalize?
+  * Schema.validate()? Do you need/want schema definitions for Directives and Enums?
+  * Can you derive transaction support by virtue of function definition existing?
   * create&updateMany is woefully slow due to individualized CRUD
   * Ability to override models' terminal commands (eg. one(), many())?
   * There are times you may NOT want resolver to CRUD an attribute (eg. NetworkPlace.parent should be set via meta because of side-effects)
@@ -50,7 +45,7 @@ BREAKING CHANGELOG:
     - makeExecutableSchema
   * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }
     - No more pipeline on database result! (check default, transform/normalize, deserialize)
-    - Pipeline "toId" is now $id or $pk depending upon needs
+    - Pipeline "toId" is completely removed
     - Removed Pipelines [transform, deserialize, destruct, validate]
       - transform -> normalize
       - validate -> finalize
@@ -67,6 +62,7 @@ BREAKING CHANGELOG:
   * createNamedQuery is replaced by Resolver.$loader
     - cb function now has signature (args, context)
     - cache is on by default and persists indefinitely (must be managed)
+  * MongoClient now seperate NPM module @coderich/autograph-mongodb
 
 ---------
 

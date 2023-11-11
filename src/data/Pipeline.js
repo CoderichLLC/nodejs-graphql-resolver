@@ -76,7 +76,6 @@ module.exports = class Pipeline {
     Pipeline.define('$pk', ({ query, model, value, path }) => model.source.idValue(get(query.doc, path) || value?.id || value), { ignoreNull: false });
     Pipeline.define('$fk', ({ model, value }) => model.source.idValue(value.id || value));
     Pipeline.define('$default', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
-    Pipeline.define('$array', ({ field, value }) => (field.isArray && !Array.isArray(value) ? [value] : value), { itemize: false });
 
     //
     Pipeline.define('$cast', ({ field, value }) => {

@@ -1,7 +1,7 @@
 const { ObjectId } = require('mongodb');
 const Validator = require('validator');
 const { makeExecutableSchema } = require('@graphql-tools/schema');
-const MongoClient = require('./MongoClient');
+const MongoClient = require('@coderich/autograph-mongodb');
 const Pipeline = require('../src/data/Pipeline');
 
 Pipeline.define('bookName', Pipeline.Deny('The Bible'));
