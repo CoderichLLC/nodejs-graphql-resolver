@@ -8,7 +8,7 @@ const Pipeline = require('../data/Pipeline');
 const Emitter = require('../data/Emitter');
 
 const operations = ['Query', 'Mutation', 'Subscription'];
-const interfaceKinds = [Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
+// const interfaceKinds = [Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
 const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
 const pipelines = ['finalize', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
@@ -198,7 +198,6 @@ module.exports = class Schema {
           thunks.push(($schema) => {
             $model.isEntity = Boolean($model.isMarkedModel && !$model.isEmbedded);
 
-            // Utility functions
             $model.resolvePath = (path, prop = 'name') => this.#schema.resolvePath(`${$model[prop]}.${path}`, prop);
 
             $model.isJoinPath = (path, prop = 'name') => {
@@ -307,15 +306,16 @@ module.exports = class Schema {
       return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
     };
 
-    // Emit event now that we're set up
-    Emitter.emit('setup', { schema: this.#schema });
-
     // Return schema
     return this.#schema;
   }
 
   api() {
     return this.merge(Schema.#api(this.parse()));
+  }
+
+  setup() {
+    return Emitter.emit('setup', this.#schema);
   }
 
   toObject() {

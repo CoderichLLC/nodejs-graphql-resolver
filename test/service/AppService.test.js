@@ -8,5 +8,6 @@ describe('AppService', () => {
 
   test('hashObject', () => {
     expect(hashObject(query1)).toEqual(hashObject(query2));
+    expect(hashObject(1)).toEqual('1aee48a1ce9885851ed10b486ed333ee181944db');
   });
 });

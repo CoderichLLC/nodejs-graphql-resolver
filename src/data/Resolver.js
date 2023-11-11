@@ -1,24 +1,28 @@
-// const { graphql } = require('graphql');
+const { graphql } = require('graphql');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
-const Loader = require('./Loader');
 const Emitter = require('./Emitter');
+const Loader = require('./Loader');
+const DataLoader = require('./DataLoader');
 const Transaction = require('./Transaction');
 const QueryResolver = require('../query/QueryResolver');
 
+const loaders = {};
+
 module.exports = class Resolver {
   #schema;
-  // #xschema;
+  #xschema;
   #context;
-  #loaders;
+  #dataLoaders;
   #sessions = []; // Holds nested 2D array of transactions
 
   constructor({ schema, xschema, context }) {
     this.#schema = schema.parse?.() || schema;
-    // this.#xschema = xschema;
+    this.#xschema = xschema;
     this.#context = context;
-    this.#loaders = this.#createNewLoaders();
+    this.#dataLoaders = this.#createDataLoaders();
     this.driver = this.raw; // Alias
+    this.model = this.match; // Alias
     Util.set(this.#context, 'autograph.resolver', this);
   }
 
@@ -27,12 +31,12 @@ module.exports = class Resolver {
   }
 
   clear(model) {
-    this.#loaders[model].clearAll();
+    this.#dataLoaders[model].clearAll();
     return this;
   }
 
   clearAll() {
-    Object.values(this.#loaders).forEach(loader => loader.clearAll());
+    Object.values(this.#dataLoaders).forEach(loader => loader.clearAll());
     return this;
   }
 
@@ -47,14 +51,14 @@ module.exports = class Resolver {
     return this.toModel(model)?.source?.client?.driver(model);
   }
 
-  // graphql(args) {
-  //   args.schema = args.schema || this.#schema;
-  //   args.contextValue = args.contextValue || this.#context;
-  //   return graphql(args);
-  //   // const { schema } = this;
-  //   // const variableValues = JSON.parse(JSON.stringify(variables));
-  //   // return graphql({ schema, source, variableValues, contextValue });
-  // }
+  graphql(args) {
+    args.schema ??= this.#xschema;
+    args.contextValue ??= this.#context;
+    return graphql(args);
+    // const { schema } = this;
+    // const variableValues = JSON.parse(JSON.stringify(variables));
+    // return graphql({ schema, source, variableValues, contextValue });
+  }
 
   /**
    * Create and execute a query for a provided model.
@@ -68,6 +72,17 @@ module.exports = class Resolver {
       schema: this.#schema,
       context: this.#context,
       query: { model: `${model}` },
+    });
+  }
+
+  loader(name) {
+    const context = this.#context;
+
+    return new Proxy(loaders[name], {
+      get(loader, fn, proxy) {
+        if (fn === 'load') return args => loader.load(args, context);
+        return Reflect.get(loader, fn, proxy);
+      },
     });
   }
 
@@ -193,7 +208,7 @@ module.exports = class Resolver {
         return results;
       });
     } else {
-      thunk = () => this.#loaders[model].resolve(tquery);
+      thunk = () => this.#dataLoaders[model].resolve(tquery);
     }
 
     return this.#createSystemEvent(tquery, () => {
@@ -247,25 +262,11 @@ module.exports = class Resolver {
     return typeof model === 'string' ? this.#schema.models[model] : model;
   }
 
-  // toModelMarked(model) {
-  //   const marked = this.toModel(model);
-  //   if (!marked) throw new Error(`${model} is not defined in schema`);
-  //   if (!marked.isMarkedModel) throw new Error(`${model} is not a marked model`);
-  //   return marked;
-  // }
-
-  // toModelEntity(model) {
-  //   const entity = this.toModel(model);
-  //   if (!entity) throw new Error(`${model} is not defined in schema`);
-  //   if (!entity.isEntity) throw new Error(`${model} is not an entity`);
-  //   return entity;
-  // }
-
-  #createNewLoaders() {
+  #createDataLoaders() {
     return Object.entries(this.#schema.models).filter(([key, value]) => {
       return value.loader && value.isEntity;
     }).reduce((prev, [key, value]) => {
-      return Object.assign(prev, { [key]: new Loader(value) });
+      return Object.assign(prev, { [key]: new DataLoader(value) });
     }, {});
   }
 
@@ -293,5 +294,11 @@ module.exports = class Resolver {
       const { data = {} } = e;
       throw Boom.boomify(e, { data: { ...event, ...data } });
     });
+  }
+
+  static $loader(name, resolver, config) {
+    if (!name) return loaders;
+    if (!resolver) return loaders[name];
+    return (loaders[name] = new Loader(resolver, config));
   }
 };

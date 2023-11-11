@@ -2,11 +2,13 @@ TODO:
   * Pipelines cannot start with invalid var name (eg. $pk)
     - Pipeline "toId" is now $id or $pk depending upon needs (Breaking change below)
   * MongoClient
-  * Schema.createNamedQuery - what to do?
-    * Allow user-defined loaders (replacing .named?)
+    - Finalize the public api (resolve & transaction?)
+    - Can you derive transaction support by virtue of function definition?
+    - Seperate NPM module?
   * Ability to trigger validation/finalize?
   * Schema.validate()? Do you need/want schema definitions for Directives and Enums?
   * CAN YOU USE STICH SCHEMA TO PIECEMEAL REFACTOR TO THIS NEW MODULE???
+    - How will you get around cross-emitter dependency?
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
@@ -17,6 +19,8 @@ Known Issues:
   * Transactions still act up once in a while when running the tests; also sometimes see a JSON circular reference
 
 Improvement Considerations:
+  * create&updateMany is woefully slow due to individualized CRUD
+  * Ability to override models' terminal commands (eg. one(), many())?
   * There are times you may NOT want resolver to CRUD an attribute (eg. NetworkPlace.parent should be set via meta because of side-effects)
   * Upsert???
   * Resolver.graphql()
@@ -43,6 +47,7 @@ BREAKING CHANGELOG:
   * PageInfo and cursor no longer required schema (only defined when cursorPaginating...)
   * Revamped how transactions work
   * Revamped how initial setup works (config.js)
+    - makeExecutableSchema
   * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }
     - No more pipeline on database result! (check default, transform/normalize, deserialize)
     - Pipeline "toId" is now $id or $pk depending upon needs
@@ -54,10 +59,14 @@ BREAKING CHANGELOG:
     - "Next" functions are run next, next() must ALWAYS be called; passing a value to next() will bypass thunk()
     - Event arguments refactored (no more merged! use query.input)
     - Getter to "changeset" on update
-  * Emitter.on('setup') now passed object: { schema }
+  * Emitter.on('setup') is passed the "parsedSchema" object
   * No more gqlScope, dalScope, fieldScope (use crud + scope)
   * resolver.resolve() now takes 1 argument (info) and requires you to use .args() etc if need be
   * $Magic methods now have signature doc.$.<method> and are more powerful and chainable
+  * Resolver now sets itself at context.autograph
+  * createNamedQuery is replaced by Resolver.$loader
+    - cb function now has signature (args, context)
+    - cache is on by default and persists indefinitely (must be managed)
 
 ---------
 

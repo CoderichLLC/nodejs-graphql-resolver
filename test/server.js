@@ -1,28 +1,31 @@
 // const get = require('lodash.get');
 const { ApolloServer } = require('@apollo/server');
 const { startStandaloneServer } = require('@apollo/server/standalone');
-const { makeExecutableSchema } = require('@graphql-tools/schema');
 const JestService = require('../jest.service');
-const { Resolver } = require('../index');
+const { Resolver, Emitter } = require('../index');
 
 (async () => {
   const { schema, context, mongoClient } = await JestService.setup();
-  await JestService.createIndexes(mongoClient, schema.parse().indexes);
 
-  // schema.merge({
-  //   resolvers: {
-  //     Query: {
-  //       findPerson: (doc, args, ctx, info) => {
-  //         return ctx.autograph.resolver.match('Person').args(args).resolve(info);
-  //       },
-  //     },
-  //   },
-  // });
+  Emitter.on('setup', async (parsedSchema, next) => {
+    await JestService.createIndexes(mongoClient, parsedSchema.indexes);
+    next();
+  });
 
-  const xschema = makeExecutableSchema(schema.toObject());
+  schema.merge({
+    resolvers: {
+      Query: {
+        findPerson: (doc, args, ctx, info) => {
+          return ctx.autograph.resolver.match('Person').args(args).resolve(info);
+        },
+      },
+    },
+  });
+
+  await schema.setup();
 
   const server = new ApolloServer({
-    schema: xschema,
+    schema: schema.makeExecutableSchema(),
 
     /**
      * Apollo Server creates a shallow copy of context which creates havoc for the world
