@@ -15,6 +15,7 @@ Pipeline.define('email', ({ value }) => {
 });
 
 module.exports = ({ uri }) => ({
+  namespace: 'autograph',
   makeExecutableSchema,
   dataLoaders: {
     default: {

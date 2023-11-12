@@ -1,4 +1,5 @@
 TODO:
+  * Easy select('a b c d') syntax
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result

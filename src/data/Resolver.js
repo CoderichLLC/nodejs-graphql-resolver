@@ -23,7 +23,7 @@ module.exports = class Resolver {
     this.#dataLoaders = this.#createDataLoaders();
     this.driver = this.raw; // Alias
     this.model = this.match; // Alias
-    Util.set(this.#context, 'autograph.resolver', this);
+    Util.set(this.#context, `${this.#schema.namespace}.resolver`, this);
   }
 
   getContext() {

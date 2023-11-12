@@ -23,6 +23,7 @@ module.exports = class Schema {
 
   constructor(config) {
     this.#config = config;
+    this.#config.namespace ??= 'autograph';
     this.#typeDefs = Schema.#framework();
   }
 
@@ -66,7 +67,16 @@ module.exports = class Schema {
     else if (schema instanceof Schema) schema = schema.toObject();
 
     if (schema.typeDefs) {
-      const typeDefs = Util.ensureArray(schema.typeDefs).map(td => (typeof td === 'string' ? parse(td) : td));
+      const typeDefs = Util.ensureArray(schema.typeDefs).map((td) => {
+        try {
+          const $td = typeof td === 'string' ? parse(td) : td;
+          return $td;
+        } catch (e) {
+          console.log(`Unable to parse typeDef (being ignored):\n${td}`); // eslint-disable-line
+          return null;
+        }
+      }).filter(Boolean);
+
       this.#typeDefs = mergeTypeDefs([typeDefs, this.#typeDefs], { noLocation: true, reverseDirectives: true, onFieldTypeConflict: a => a });
     }
 
@@ -84,7 +94,7 @@ module.exports = class Schema {
     if (this.#schema) return this.#schema;
 
     // const schema = buildASTSchema(this.#typeDefs);
-    this.#schema = { types: {}, models: {}, indexes: [] };
+    this.#schema = { types: {}, models: {}, indexes: [], namespace: this.#config.namespace };
     let model, field, isField, isList;
     const thunks = [];
 
@@ -535,12 +545,12 @@ module.exports = class Schema {
         }, {}),
         Query: queryModels.reduce((prev, model) => {
           return Object.assign(prev, {
-            [`get${model}`]: (doc, args, context, info) => context.autograph.resolver.match(model).args(args).info(info).one({ required: true }),
+            [`get${model}`]: (doc, args, context, info) => context[schema.namespace].resolver.match(model).args(args).info(info).one({ required: true }),
             [`find${model}`]: (doc, args, context, info) => {
               return {
-                edges: () => context.autograph.resolver.match(model).args(args).info(info).many(),
-                count: () => context.autograph.resolver.match(model).args(args).info(info).count(),
-                pageInfo: () => context.autograph.resolver.match(model).args(args).info(info).many(),
+                edges: () => context[schema.namespace].resolver.match(model).args(args).info(info).many(),
+                count: () => context[schema.namespace].resolver.match(model).args(args).info(info).count(),
+                pageInfo: () => context[schema.namespace].resolver.match(model).args(args).info(info).many(),
               };
             },
           });
@@ -549,7 +559,7 @@ module.exports = class Schema {
             const { id } = args;
             const [modelName] = fromGUID(id);
             const model = schema.models[modelName];
-            return context.autograph.resolver.match(model).id(id).info(info).one().then((result) => {
+            return context[schema.namespace].resolver.match(model).id(id).info(info).one().then((result) => {
               if (result == null) return result;
               result.__typename = modelName; // eslint-disable-line no-underscore-dangle
               return result;
@@ -558,9 +568,9 @@ module.exports = class Schema {
         }),
         ...(mutationModels.length ? {
           Mutation: mutationModels.reduce((prev, model) => {
-            if (model.crud?.includes('c')) prev[`create${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).info(info).save(args.input);
-            if (model.crud?.includes('u')) prev[`update${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).info(info).save(args.input);
-            if (model.crud?.includes('d')) prev[`delete${model}`] = (doc, args, context, info) => context.autograph.resolver.match(model).args(args).info(info).delete();
+            if (model.crud?.includes('c')) prev[`create${model}`] = (doc, args, context, info) => context[schema.namespace].resolver.match(model).args(args).info(info).save(args.input);
+            if (model.crud?.includes('u')) prev[`update${model}`] = (doc, args, context, info) => context[schema.namespace].resolver.match(model).args(args).info(info).save(args.input);
+            if (model.crud?.includes('d')) prev[`delete${model}`] = (doc, args, context, info) => context[schema.namespace].resolver.match(model).args(args).info(info).delete();
             return prev;
           }, {}),
         } : {}),
@@ -569,7 +579,7 @@ module.exports = class Schema {
             [model]: Object.values(model.fields).filter(field => field.model?.isEntity).reduce((prev2, field) => {
               return Object.assign(prev2, {
                 [field]: (doc, args, context, info) => {
-                  return context.autograph.resolver.match(field.model).where({ [field.linkBy]: doc[field.linkField.name] }).args(args).info(info).resolve(info);
+                  return context[schema.namespace].resolver.match(field.model).where({ [field.linkBy]: doc[field.linkField.name] }).args(args).info(info).resolve(info);
                 },
               });
             }, {}),
