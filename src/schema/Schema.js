@@ -29,7 +29,7 @@ module.exports = class Schema {
     this.#config.directives.field ??= 'field';
     this.#config.directives.link ??= 'link';
     this.#config.directives.index ??= 'index';
-    this.#typeDefs = Schema.#framework(this.#config.directives);
+    // this.#typeDefs = Schema.#framework(this.#config.directives);
   }
 
   /**
@@ -345,6 +345,11 @@ module.exports = class Schema {
 
   api() {
     return this.merge(Schema.#api(this.parse()));
+  }
+
+  framework() {
+    this.#typeDefs = Schema.#framework(this.#config.directives);
+    return this;
   }
 
   setup() {

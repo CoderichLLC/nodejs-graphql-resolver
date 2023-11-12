@@ -12,7 +12,7 @@ exports.setup = async (mergeConfig) => {
   const { client: mongoClient } = config.dataSources.default;
 
   // Schema
-  const schema = new Schema(config).merge(schemaDef).merge(mergeConfig).decorate().api();
+  const schema = new Schema(config).framework().merge(schemaDef).merge(mergeConfig).decorate().api();
   const context = { network: { id: 'networkId' } };
   return { schema, mongoClient, mongoServer, context };
 };
