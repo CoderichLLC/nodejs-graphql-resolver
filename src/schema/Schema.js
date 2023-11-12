@@ -367,8 +367,10 @@ module.exports = class Schema {
 
     return parse(`
       scalar AutoGraphMixed
+      scalar AutoGraphDriver # DELETE WHEN MIGRATED
 
       enum AutoGraphIndexEnum { unique }
+      enum AutoGraphAuthzEnum { private protected public } # DELETE WHEN MIGRATED
       enum AutoGraphOnDeleteEnum { cascade nullify restrict defer }
       enum AutoGraphPipelineEnum { ${Object.keys(Pipeline).filter(k => !k.startsWith('$')).join(' ')} }
 
@@ -382,6 +384,16 @@ module.exports = class Schema {
         decorate: AutoGraphMixed # Decorator (default: "default")
         embed: Boolean # Mark this an embedded model (default false)
         persist: Boolean # Persist this model (default true)
+
+        # TEMP TO APPEASE TRANSITION
+        driver: AutoGraphDriver # External data driver
+        createdAt: String # Specify db key (default "createdAt")
+        updatedAt: String # Specify db key (default "updatedAt")
+        gqlScope: AutoGraphMixed # Dictate how GraphQL API behaves
+        dalScope: AutoGraphMixed # Dictate how the DAL behaves
+        fieldScope: AutoGraphMixed # Dictate how a FIELD may use me
+        authz: AutoGraphAuthzEnum # Access level used for authorization (default: private)
+        namespace: String # Logical grouping of models that can be globbed (useful for authz)
       ) on OBJECT | INTERFACE
 
       directive @${field}(
@@ -400,6 +412,16 @@ module.exports = class Schema {
         serialize: [AutoGraphPipelineEnum!]
         finalize: [AutoGraphPipelineEnum!]
         validate: [AutoGraphPipelineEnum!] # Alias for finalize
+
+        # TEMP TO APPEASE TRANSITION
+        id: String # Specify the ModelRef this field FK References
+        ref: AutoGraphMixed # Specify the modelRef field's name (overrides isEmbedded)
+        gqlScope: AutoGraphMixed # Dictate how GraphQL API behaves
+        dalScope: AutoGraphMixed # Dictate how the DAL behaves
+        fieldScope: AutoGraphMixed # Dictate how a FIELD may use me
+        destruct: [AutoGraphPipelineEnum!]
+        transform: [AutoGraphPipelineEnum!]
+        deserialize: [AutoGraphPipelineEnum!]
       ) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION | SCALAR
 
       directive @${link}(
