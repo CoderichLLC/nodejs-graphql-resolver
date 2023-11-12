@@ -64,7 +64,7 @@ module.exports = class Query {
   transform() {
     return Promise.all([
       this.pipeline('input', this.#query.input),
-      this.#query.isNative ? this.#query.where : this.pipeline('where', this.#query.where),
+      this.#query.isNative ? this.#query.where : this.pipeline('where', this.#query.where ?? {}),
       this.pipeline('sort', this.#query.sort),
     ]).then(([input, where, sort]) => this.clone({ input, where, sort }));
   }

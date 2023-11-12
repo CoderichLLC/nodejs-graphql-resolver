@@ -209,6 +209,14 @@ module.exports = class Schema {
                 target[key] = value;
                 break;
               }
+
+              // Backwards compat (deprecated)
+              case 'model-gqlScope': { model.crud = value; break; }
+              case 'model-fieldScope': { model.scope = value; break; }
+              case 'field-gqlScope': { field.crud = value; break; }
+              case 'field-fieldScope': { field.scope = value; break; }
+
+              // Pipelines
               default: {
                 if (pipelines.includes(key)) {
                   target.pipelines[key] = target.pipelines[key].concat(value).filter(Boolean);

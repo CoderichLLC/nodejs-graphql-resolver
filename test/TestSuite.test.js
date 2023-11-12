@@ -173,6 +173,7 @@ describe('TestSuite', () => {
       // Context switch
       context.network.id = 'networkIdd';
       await expect(resolver.match('Person').where({ name: richard.name }).one({ required: true })).rejects.toThrow(/not found/gi);
+      await expect(resolver.match('Person').one({ required: true })).rejects.toThrow(/not found/gi);
       context.network.id = 'networkId';
     });
 

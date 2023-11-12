@@ -1,5 +1,8 @@
 TODO:
   * Easy select('a b c d') syntax
+  * Helper method to load schema from directory
+    - typeDefs
+    - resolvers
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
