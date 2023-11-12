@@ -24,17 +24,24 @@ module.exports = class Schema {
   constructor(config) {
     this.#config = config;
     this.#config.namespace ??= 'autograph';
-    this.#typeDefs = Schema.#framework();
+    this.#config.directives ??= {};
+    this.#config.directives.model ??= 'model';
+    this.#config.directives.field ??= 'field';
+    this.#config.directives.link ??= 'link';
+    this.#config.directives.index ??= 'index';
+    this.#typeDefs = Schema.#framework(this.#config.directives);
   }
 
   /**
    * Decorate each marked @model with config-driven field decorators
    */
   decorate() {
+    const { directives } = this.#config;
+
     this.#typeDefs = visit(this.#typeDefs, {
       enter: (node) => {
         if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
-          const directive = node.directives.find(({ name }) => name.value === 'model');
+          const directive = node.directives.find(({ name }) => name.value === directives.model);
 
           if (directive) {
             const arg = directive.arguments.find(({ name }) => name.value === 'decorate');
@@ -94,7 +101,8 @@ module.exports = class Schema {
     if (this.#schema) return this.#schema;
 
     // const schema = buildASTSchema(this.#typeDefs);
-    this.#schema = { types: {}, models: {}, indexes: [], namespace: this.#config.namespace };
+    const { directives, namespace } = this.#config;
+    this.#schema = { types: {}, models: {}, indexes: [], namespace };
     let model, field, isField, isList;
     const thunks = [];
 
@@ -141,8 +149,8 @@ module.exports = class Schema {
           const target = isField ? field : model;
           target.directives[name] = target.directives[name] || {};
 
-          if (name === 'model') model.isMarkedModel = true;
-          else if (name === 'index') this.#schema.indexes.push({ model });
+          if (name === directives.model) model.isMarkedModel = true;
+          else if (name === directives.index) this.#schema.indexes.push({ model });
 
           node.arguments.forEach((arg) => {
             const key = arg.name.value;
@@ -150,54 +158,54 @@ module.exports = class Schema {
             const value = values ? values.map(n => n.value) : val;
             target.directives[name][key] = value;
 
-            if (name === 'index') this.#schema.indexes[this.#schema.indexes.length - 1][key] = value;
+            if (name === directives.index) this.#schema.indexes[this.#schema.indexes.length - 1][key] = value;
 
             switch (`${name}-${key}`) {
               // Model specific directives
-              case 'model-id': {
+              case `${directives.model}-id`: {
                 model.idField = value;
                 break;
               }
-              case 'model-source': {
+              case `${directives.model}-source`: {
                 model.source = this.#config.dataSources?.[value];
                 break;
               }
-              case 'model-loader': {
+              case `${directives.model}-loader`: {
                 model.loader = this.#config.dataLoaders?.[value];
                 break;
               }
-              case 'model-embed': {
+              case `${directives.model}-embed`: {
                 model.isEmbedded = value;
                 break;
               }
               // Field specific directives
-              case 'field-default': {
+              case `${directives.field}-default`: {
                 field.defaultValue = value;
                 break;
               }
-              case 'field-connection': {
+              case `${directives.field}-connection`: {
                 field.isConnection = value;
                 break;
               }
-              case 'field-validate': { // Alias for finalize
+              case `${directives.field}-validate`: { // Alias for finalize
                 target.pipelines.finalize = target.pipelines.finalize.concat(value).filter(Boolean);
                 break;
               }
-              case 'link-by': {
+              case `${directives.link}-by`: {
                 field.linkBy = value;
                 field.isVirtual = true;
                 break;
               }
               // Generic by target directives
-              case 'model-persist': case 'field-persist': {
+              case `${directives.model}-persist`: case `${directives.field}-persist`: {
                 target.isPersistable = value;
                 break;
               }
-              case 'model-crud': case 'model-scope': case 'field-crud': {
+              case `${directives.model}-crud`: case `${directives.model}-scope`: case `${directives.field}-crud`: {
                 target[key] = Util.nvl(value, '');
                 break;
               }
-              case 'model-key': case 'model-meta': case 'field-key': case 'field-onDelete': {
+              case `${directives.model}-key`: case `${directives.model}-meta`: case `${directives.field}-key`: case `${directives.field}-onDelete`: {
                 target[key] = value;
                 break;
               }
@@ -354,7 +362,9 @@ module.exports = class Schema {
     return this.#config.makeExecutableSchema(this.toObject());
   }
 
-  static #framework() {
+  static #framework(directives) {
+    const { model, field, link, index } = directives;
+
     return parse(`
       scalar AutoGraphMixed
 
@@ -362,7 +372,7 @@ module.exports = class Schema {
       enum AutoGraphOnDeleteEnum { cascade nullify restrict defer }
       enum AutoGraphPipelineEnum { ${Object.keys(Pipeline).filter(k => !k.startsWith('$')).join(' ')} }
 
-      directive @model(
+      directive @${model}(
         id: String # Specify the ID/PK field (default "id")
         key: String # Specify db table/collection name
         crud: AutoGraphMixed # CRUD API
@@ -374,7 +384,7 @@ module.exports = class Schema {
         persist: Boolean # Persist this model (default true)
       ) on OBJECT | INTERFACE
 
-      directive @field(
+      directive @${field}(
         key: String # Specify db key
         persist: Boolean # Persist this field (default true)
         connection: Boolean # Treat this field as a connection type (default false - rolling this out slowly)
@@ -392,13 +402,13 @@ module.exports = class Schema {
         validate: [AutoGraphPipelineEnum!] # Alias for finalize
       ) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION | SCALAR
 
-      directive @link(
+      directive @${link}(
         to: AutoGraphMixed  # The MODEL to link to (default's to modelRef)
         by: AutoGraphMixed! # The FIELD to match yourself by
         use: AutoGraphMixed # The VALUE to use (default's to @link'd value); useful for many-to-many relationships
       ) on FIELD_DEFINITION
 
-      directive @index(
+      directive @${index}(
         name: String
         on: [AutoGraphMixed!]!
         type: AutoGraphIndexEnum!
