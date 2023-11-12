@@ -48,7 +48,8 @@ module.exports = class Resolver {
   }
 
   raw(model) {
-    return this.toModel(model)?.source?.client?.driver(model);
+    model = this.toModel(model);
+    return model?.source?.client?.driver(model.key);
   }
 
   graphql(args) {

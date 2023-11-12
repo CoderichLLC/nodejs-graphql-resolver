@@ -1,6 +1,4 @@
 TODO:
-  * CAN YOU USE STICH SCHEMA TO PIECEMEAL REFACTOR TO THIS NEW MODULE???
-    - How will you get around cross-emitter dependency?
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
@@ -11,6 +9,8 @@ Known Issues:
   * Transactions still act up once in a while when running the tests; also sometimes see a JSON circular reference
 
 Improvement Considerations:
+  * Resolver.graphql()
+    - This requires executableSchema...
   * Ability to trigger validation/finalize?
   * Schema.validate()? Do you need/want schema definitions for Directives and Enums?
   * Can you derive transaction support by virtue of function definition existing?
@@ -18,12 +18,11 @@ Improvement Considerations:
   * Ability to override models' terminal commands (eg. one(), many())?
   * There are times you may NOT want resolver to CRUD an attribute (eg. NetworkPlace.parent should be set via meta because of side-effects)
   * Upsert???
-  * Resolver.graphql()
-    - This requires executableSchema...
   * EventEmitter
     - Debounce a function (debounce) to prevent excessive/redundant calls?
     - Memoize a function to prevent excessive/redundant calls?
   * Why do you send `${model}` in query instead of the actual model object?
+    - I "think" this is because you clone query and it's better/faster to clone a string
   * You need proper events on embedded documents so that "construct": "createdBy" would work!
   * config.dataSources to determine if supports
     - Joins
