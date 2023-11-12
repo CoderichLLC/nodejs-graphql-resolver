@@ -169,6 +169,10 @@ module.exports = class Schema {
                 field.isConnection = value;
                 break;
               }
+              case 'field-validate': { // Alias for finalize
+                target.pipelines.finalize = target.pipelines.finalize.concat(value).filter(Boolean);
+                break;
+              }
               case 'link-by': {
                 field.linkBy = value;
                 field.isVirtual = true;
@@ -375,6 +379,7 @@ module.exports = class Schema {
         restruct: [AutoGraphPipelineEnum!]
         serialize: [AutoGraphPipelineEnum!]
         finalize: [AutoGraphPipelineEnum!]
+        validate: [AutoGraphPipelineEnum!] # Alias for finalize
       ) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION | SCALAR
 
       directive @link(
