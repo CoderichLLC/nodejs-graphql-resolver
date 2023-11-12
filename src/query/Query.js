@@ -32,6 +32,7 @@ module.exports = class Query {
   toCacheKey() {
     return {
       op: this.#query.op,
+      select: this.#query.select,
       where: this.#query.where,
       sort: this.#query.sort,
       joins: this.#query.joins,
@@ -76,7 +77,7 @@ module.exports = class Query {
 
     const query = this.clone({
       model: this.#model.key,
-      select: Object.values(this.#model.fields).map(field => field.key),
+      select: this.#query.select.map(name => this.#model.fields[name].key),
       input: this.#model.walk(input, node => node.value !== undefined && Object.assign(node, { key: node.field.key })),
       where: isNative ? where : this.#model.walk(where, node => Object.assign(node, { key: node.field.key })),
       sort: this.#model.walk(sort, node => Object.assign(node, { key: node.field.key })),

@@ -2,19 +2,21 @@ const Query = require('./Query');
 const { getGQLReturnType, getGQLSelectFields, mergeDeep } = require('../service/AppService');
 
 module.exports = class QueryBuilder {
-  #config;
   #query;
+  #config;
   #terminalCommands = ['one', 'many', 'count', 'save', 'delete', 'first', 'last', 'push', 'pull', 'splice'];
 
   constructor(config) {
-    const { query } = config;
+    const { schema, query } = config;
 
     this.#config = config;
+    const model = schema.models[query.model];
 
     this.#query = Object.defineProperties(query, {
       id: { writable: true, enumerable: true, value: query.id },
       args: { writable: true, enumerable: true, value: query.args || {} },
       flags: { writable: true, enumerable: true, value: query.flags || {} },
+      select: { writable: true, enumerable: true, value: query.select || Object.keys(model.fields) },
       options: { writable: true, enumerable: true, value: query.options || {} },
     });
 
