@@ -10,7 +10,7 @@ describe('QueryBuilder', () => {
 
   describe('Invalid Combinations', () => {
     test('reuse', () => {
-      ['id', 'native', 'select', 'sort', 'skip', 'limit', 'before', 'after'].forEach((prop) => {
+      ['id', 'native', 'sort', 'skip', 'limit', 'before', 'after'].forEach((prop) => {
         expect(() => factory('Person')[prop]({})[prop]({})).toThrow(new RegExp(`Cannot redefine "${prop}"`, 'gi'));
       });
     });

@@ -1,5 +1,5 @@
 const Query = require('./Query');
-const { getGQLReturnType, mergeDeep } = require('../service/AppService');
+const { getGQLReturnType, getGQLSelectFields, mergeDeep } = require('../service/AppService');
 
 module.exports = class QueryBuilder {
   #config;
@@ -41,7 +41,9 @@ module.exports = class QueryBuilder {
    * For use in GraphQL resolver methods to return the "correct" response
    */
   resolve(info) {
-    switch (getGQLReturnType(`${info.returnType}`)) {
+    this.info(info);
+
+    switch (getGQLReturnType(info)) {
       case 'array': return this.many();
       case 'number': return this.count();
       case 'connection': return { count: () => this.count(), edges: () => this.many(), pageInfo: () => this.many() };
@@ -65,6 +67,11 @@ module.exports = class QueryBuilder {
     return this;
   }
 
+  info(info) {
+    this.select(getGQLSelectFields(this.#query.model, info));
+    return this;
+  }
+
   native(clause) {
     this.#propCheck('native', 'id', 'where');
     this.#query.isNative = true;
@@ -83,7 +90,6 @@ module.exports = class QueryBuilder {
   }
 
   select(...select) {
-    this.#propCheck('select');
     select = select.flat();
     this.#query.select = select;
     this.#query.args.select = select;

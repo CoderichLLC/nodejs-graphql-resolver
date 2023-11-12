@@ -1,9 +1,11 @@
+const get = require('lodash.get');
 const Util = require('@coderich/util');
 const PicoMatch = require('picomatch');
 const FillRange = require('fill-range');
 const ObjectHash = require('object-hash');
 const ObjectId = require('bson-objectid');
 const DeepMerge = require('deepmerge');
+const { parseResolveInfo, simplifyParsedResolveInfoFragmentWithType } = require('graphql-parse-resolve-info');
 
 exports.isGlob = str => PicoMatch.scan(str).isGlob;
 exports.globToRegex = (glob, options = {}) => PicoMatch.makeRe(glob, { nocase: true, ...options, expandRange: (a, b) => `(${FillRange(a, b, { toRegex: true })})` });
@@ -26,9 +28,17 @@ exports.finalizeWhereClause = (obj, arrayOp = '$in') => {
   }, {});
 };
 
-exports.getGQLReturnType = (returnType) => {
+exports.getGQLReturnType = (info) => {
+  const returnType = `${info.returnType}`;
   const typeMap = { array: /^\[.+\].?$/, connection: /.+Connection!?$/, number: /^(Int|Float)!?$/, scalar: /.*/ };
   return Object.entries(typeMap).find(([type, pattern]) => returnType.match(pattern))[0];
+};
+
+exports.getGQLSelectFields = (model, info) => {
+  const parsed = parseResolveInfo(info, { noLocation: true });
+  const { fields } = simplifyParsedResolveInfoFragmentWithType(parsed, info.returnType);
+  const node = get(fields, `edges.fieldsByTypeName.${model}Edge.node.fieldsByTypeName.${model}`);
+  return Object.keys(node || fields);
 };
 
 exports.removeUndefinedDeep = (obj) => {
