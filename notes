@@ -1,6 +1,7 @@
 TODO:
   * Easy select('a b c d') syntax
   * Tests overhaul
+    - Need to make sure that Scalar @field() is working
   * Break up Schema monolith (schema.parse() usage)
 
 Release 0.14

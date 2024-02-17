@@ -9,11 +9,13 @@ const Emitter = require('../data/Emitter');
 
 const operations = ['Query', 'Mutation', 'Subscription'];
 // const interfaceKinds = [Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
+const scalarKinds = [Kind.SCALAR_TYPE_DEFINITION, Kind.SCALAR_TYPE_EXTENSION];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
-const allowedKinds = modelKinds.concat(Kind.DOCUMENT, Kind.FIELD_DEFINITION, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
+const fieldKinds = [Kind.FIELD_DEFINITION].concat(scalarKinds);
+const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
 const pipelines = ['finalize', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
 const inputPipelines = ['finalize', 'construct', 'instruct', 'normalize', 'serialize'];
-const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
+// const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
 
 module.exports = class Schema {
   #config;
@@ -123,17 +125,17 @@ module.exports = class Schema {
     visit(this.#typeDefs, {
       enter: (node) => {
         const name = node.name?.value;
-        if (!allowedKinds.includes(node.kind)) return false;
+        if (!allowedKinds.includes(node.kind) || operations.includes(name)) return false;
 
-        if (modelKinds.includes(node.kind) && !operations.includes(name)) {
+        if (modelKinds.includes(node.kind)) {
           // this.#schema.types[name] = schema.getType(name);
 
           model = this.#schema.models[name] = {
             name,
             key: name,
             fields: {},
-            crud: 'crud',
-            scope: 'crud',
+            crud: 'crud', // For use when creating API Queries and Mutations
+            scope: 'crud', // For use when defining types (how it's field.model reference can be used)
             idField: 'id',
             isPersistable: true,
             source: this.#config.dataSources?.default,
@@ -141,16 +143,16 @@ module.exports = class Schema {
             directives: {},
             toString: () => name,
           };
-        } else if (node.kind === Kind.FIELD_DEFINITION) {
+        } else if (fieldKinds.includes(node.kind)) {
           isField = true;
-          field = model.fields[name] = {
+          field = {
             name,
             key: name,
-            crud: 'crud',
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
             directives: {},
             toString: () => name,
           };
+          if (model) model.fields[name] = field;
         } else if (node.kind === Kind.NON_NULL_TYPE) {
           field[isList ? 'isArrayRequired' : 'isRequired'] = true;
         } else if (node.kind === Kind.NAMED_TYPE) {
@@ -167,8 +169,8 @@ module.exports = class Schema {
 
           node.arguments.forEach((arg) => {
             const key = arg.name.value;
-            const { value: val, values } = arg.value;
-            const value = values ? values.map(n => n.value) : val;
+            const { value: val, values = { value: val }, kind } = arg.value;
+            const value = kind === 'NullValue' ? null : Util.map(values, n => n.value);
             target.directives[name][key] = value;
 
             if (name === directives.index) this.#schema.indexes[this.#schema.indexes.length - 1][key] = value;
@@ -227,7 +229,6 @@ module.exports = class Schema {
               case 'model-gqlScope': { model.crud = value; break; }
               case 'model-fieldScope': { model.scope = value; break; }
               case 'field-gqlScope': { field.crud = value; break; }
-              case 'field-fieldScope': { field.scope = value; break; }
 
               // Pipelines
               default: {
@@ -243,7 +244,7 @@ module.exports = class Schema {
         return undefined; // Continue
       },
       leave: (node) => {
-        if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
+        if (modelKinds.includes(node.kind)) {
           const $model = model;
           // const idField = $model.fields[$model.idField];
           // $model.primaryKey = Util.nvl(idField?.key, idField?.name, 'id');
@@ -308,11 +309,12 @@ module.exports = class Schema {
           // Field resolution comes first (unshift)
           thunks.unshift(($schema) => {
             $field.model = $schema.models[$field.type];
-            $field.linkBy = $field.linkBy || $field.model?.idField;
+            $field.crud = Util.uvl($field.crud, $field.model?.scope, 'crud');
+            $field.linkBy ??= $field.model?.idField;
             $field.linkField = $field.isVirtual ? $model.fields[$model.idField] : $field;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
+            // $field.isScalar = Boolean(!$field.model || scalars.includes($field.type));
             $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
-            $field.isScalar = Boolean(!$field.model || scalars.includes($field.type));
 
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
@@ -444,7 +446,6 @@ module.exports = class Schema {
         ref: AutoGraphMixed # Specify the modelRef field's name (overrides isEmbedded)
         gqlScope: AutoGraphMixed # Dictate how GraphQL API behaves
         dalScope: AutoGraphMixed # Dictate how the DAL behaves
-        fieldScope: AutoGraphMixed # Dictate how a FIELD may use me
         destruct: [AutoGraphPipelineEnum!]
         transform: [AutoGraphPipelineEnum!]
         deserialize: [AutoGraphPipelineEnum!]
@@ -466,9 +467,9 @@ module.exports = class Schema {
 
   static #api(schema) {
     // These models are for creating types
-    const readModels = Object.values(schema.models).filter(model => model.crud?.includes('r'));
-    const createModels = Object.values(schema.models).filter(model => model.crud?.includes('c'));
-    const updateModels = Object.values(schema.models).filter(model => model.crud?.includes('u'));
+    const readModels = Object.values(schema.models).filter(model => [model.crud, model.scope].join()?.includes('r'));
+    const createModels = Object.values(schema.models).filter(model => [model.crud, model.scope].join()?.includes('c'));
+    const updateModels = Object.values(schema.models).filter(model => [model.crud, model.scope].join()?.includes('u'));
 
     // These are for defining schema queries/mutations
     const entityModels = Object.values(schema.models).filter(model => model.isEntity);
@@ -586,6 +587,47 @@ module.exports = class Schema {
               ): ${model}SubscriptionPayload!
             `)}
           }
+
+          ${subscriptionModels.map((model) => {
+            const fields = Object.values(model.fields).filter(field => field.crud?.includes('r'));
+
+            return `
+              input ${model}SubscriptionInputFilter {
+                when: [SubscriptionWhenEnum!]! = [preEvent, postEvent]
+                where: ${model}SubscriptionInputWhere! = {}
+              }
+
+              input ${model}SubscriptionInputWhere {
+                ${fields.map(field => `${field}: ${field.model?.isEntity ? `${field.model}InputWhere` : 'AutoGraphMixed'}`)}
+              }
+
+              type ${model}SubscriptionPayload {
+                event: ${model}SubscriptionPayloadEvent
+                query: ${model}SubscriptionQuery
+              }
+
+              type ${model}SubscriptionPayloadEvent {
+                crud: SubscriptionCrudEnum!
+                data: ${model}SubscriptionPayloadEventData!
+              }
+
+              type ${model}SubscriptionPayloadEventData {
+                ${fields.map(field => `${field}: ${Schema.#getGQLType(field)}`)}
+              }
+
+              interface ${model}SubscriptionQuery {
+                ${fields.map(field => `${field}: ${Schema.#getGQLType(field)}`)}
+              }
+
+              type ${model}Create implements ${model}SubscriptionQuery {
+                ${fields.map(field => `${field}: ${Schema.#getGQLType(field)}`)}
+              }
+
+              type ${model}Update implements ${model}SubscriptionQuery {
+                ${fields.map(field => `${field}: ${Schema.#getGQLType(field)}`)}
+              }
+            `;
+          })}
         ` : ''}
       `,
       resolvers: {

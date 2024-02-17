@@ -78,8 +78,9 @@ class Emitter extends EventEmitter {
     } : (event, next) => {
       if (arr.includes(`${event.query[prop]}`)) {
         if (once) this.removeListener(eventName, wrapper);
-        next(listener(event, next));
+        return next(listener(event, next));
       }
+      return next();
     };
 
     return this.on(eventName, wrapper);

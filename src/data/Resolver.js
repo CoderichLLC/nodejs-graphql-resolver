@@ -279,6 +279,10 @@ module.exports = class Resolver {
     const type = query.isMutation ? 'Mutation' : 'Query';
     const event = { schema: this.#schema, context: this.#context, resolver: this, query };
 
+    // Backwards compat
+    query.match = { ...query.where };
+    query.toObject = () => query;
+
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly;
       if (Util.isEqual(query.changeset, { added: {}, updated: {}, deleted: {} })) return query.doc;
