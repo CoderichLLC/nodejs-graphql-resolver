@@ -76,12 +76,15 @@ module.exports = class Resolver {
     });
   }
 
+  /**
+   * Execute a user-defined loader (curry in context)
+   */
   loader(name) {
     const context = this.#context;
 
     return new Proxy(loaders[name], {
       get(loader, fn, proxy) {
-        if (fn === 'load') return args => loader.load(args, context);
+        if (fn.startsWith('load')) return args => loader[fn](args, context);
         return Reflect.get(loader, fn, proxy);
       },
     });

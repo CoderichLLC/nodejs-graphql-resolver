@@ -29,8 +29,18 @@ module.exports = class Schema {
     this.#config.directives.field ??= 'field';
     this.#config.directives.link ??= 'link';
     this.#config.directives.index ??= 'index';
-    // this.#typeDefs = Schema.#framework(this.#config.directives);
+    this.#typeDefs = Schema.#framework(this.#config.directives);
   }
+
+  /* ****** DEPRECATE! ****** */
+  getModels() {
+    return this.#schema.models;
+  }
+
+  getModel(name) {
+    return this.#schema.models[`${name}`];
+  }
+  /* ***************** */
 
   /**
    * Decorate each marked @model with config-driven field decorators
@@ -106,6 +116,9 @@ module.exports = class Schema {
     let model, field, isField, isList;
     const thunks = [];
 
+    // Deprecate
+    this.#schema.getModel = name => this.#schema.models[`${name}`];
+
     // Parse AST
     visit(this.#typeDefs, {
       enter: (node) => {
@@ -119,9 +132,9 @@ module.exports = class Schema {
             name,
             key: name,
             fields: {},
-            idField: 'id',
             crud: 'crud',
             scope: 'crud',
+            idField: 'id',
             isPersistable: true,
             source: this.#config.dataSources?.default,
             loader: this.#config.dataLoaders?.default,

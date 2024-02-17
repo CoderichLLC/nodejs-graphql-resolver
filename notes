@@ -1,8 +1,10 @@
 TODO:
   * Easy select('a b c d') syntax
-  * Helper method to load schema from directory
-    - typeDefs
-    - resolvers
+  * Tests overhaul
+  * Break up Schema monolith (schema.parse() usage)
+
+Release 0.14
+  * Remove deprecated directives
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
