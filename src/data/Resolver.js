@@ -283,7 +283,7 @@ module.exports = class Resolver {
     Object.assign(event, query);
     query.match = query.where;
     query.toObject = () => query;
-    event.merged = { ...event.input };
+    event.merged = event.input;
     event.input = event.args?.input;
 
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
