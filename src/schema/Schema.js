@@ -8,14 +8,15 @@ const Pipeline = require('../data/Pipeline');
 const Emitter = require('../data/Emitter');
 
 const operations = ['Query', 'Mutation', 'Subscription'];
-// const interfaceKinds = [Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
-const scalarKinds = [Kind.SCALAR_TYPE_DEFINITION, Kind.SCALAR_TYPE_EXTENSION];
-const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION, Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
+const interfaceKinds = [Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
+// const unionKinds = [Kind.UNION_TYPE_DEFINITION, Kind.UNION_TYPE_EXTENSION];
+const scalarKinds = [Kind.SCALAR_TYPE_DEFINITION, Kind.SCALAR_TYPE_EXTENSION, Kind.ENUM_TYPE_DEFINITION, Kind.ENUM_TYPE_EXTENSION];
 const fieldKinds = [Kind.FIELD_DEFINITION].concat(scalarKinds);
-const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE);
+const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION].concat(interfaceKinds);
+const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE).concat(scalarKinds);
 const pipelines = ['finalize', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
 const inputPipelines = ['finalize', 'construct', 'instruct', 'normalize', 'serialize'];
-// const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
+const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
 
 module.exports = class Schema {
   #config;
@@ -112,7 +113,6 @@ module.exports = class Schema {
   parse() {
     if (this.#schema) return this.#schema;
 
-    // const schema = buildASTSchema(this.#typeDefs);
     const { directives, namespace } = this.#config;
     this.#schema = { types: {}, models: {}, indexes: [], namespace };
     let model, field, isField, isList;
@@ -121,7 +121,7 @@ module.exports = class Schema {
     // Deprecate
     this.#schema.getModel = name => this.#schema.models[`${name}`];
 
-    // Parse AST
+    // Parse AST (build/defined this.#schema)
     visit(this.#typeDefs, {
       enter: (node) => {
         const name = node.name?.value;
@@ -153,6 +153,10 @@ module.exports = class Schema {
             toString: () => name,
           };
           if (model) model.fields[name] = field;
+        }
+
+        if (scalarKinds.includes(node.kind)) {
+          scalars.push(node.name.value);
         } else if (node.kind === Kind.NON_NULL_TYPE) {
           field[isList ? 'isArrayRequired' : 'isRequired'] = true;
         } else if (node.kind === Kind.NAMED_TYPE) {
@@ -169,8 +173,7 @@ module.exports = class Schema {
 
           node.arguments.forEach((arg) => {
             const key = arg.name.value;
-            const { value: val, values = { value: val }, kind } = arg.value;
-            const value = kind === 'NullValue' ? null : Util.map(values, n => n.value);
+            const value = Schema.#resolveNodeValue(arg.value);
             target.directives[name][key] = value;
 
             if (name === directives.index) this.#schema.indexes[this.#schema.indexes.length - 1][key] = value;
@@ -313,8 +316,8 @@ module.exports = class Schema {
             $field.linkBy ??= $field.model?.idField;
             $field.linkField = $field.isVirtual ? $model.fields[$model.idField] : $field;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
-            // $field.isScalar = Boolean(!$field.model || scalars.includes($field.type));
             $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
+            $field.isScalar = scalars.includes($field.type);
 
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
@@ -362,6 +365,23 @@ module.exports = class Schema {
       return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
     };
 
+    // Mutate typeDefs
+    let $model;
+    this.#typeDefs = visit(this.#typeDefs, {
+      enter: (node) => {
+        const name = node.name?.value;
+        if (!allowedKinds.includes(node.kind) || operations.includes(name)) return false;
+
+        if (modelKinds.includes(node.kind)) {
+          $model = this.#schema.models[name];
+        } else if (fieldKinds.includes(node.kind)) {
+          if (!Util.uvl($model?.fields[name]?.crud, 'crud')?.includes('r')) return null;
+        }
+
+        return undefined;
+      },
+    });
+
     // Return schema
     return this.#schema;
   }
@@ -388,6 +408,15 @@ module.exports = class Schema {
 
   makeExecutableSchema() {
     return this.#config.makeExecutableSchema(this.toObject());
+  }
+
+  static #resolveNodeValue(node) {
+    switch (node.kind) {
+      case 'NullValue': return null;
+      case 'ListValue': return node.values.map(Schema.#resolveNodeValue);
+      case 'ObjectValue': return node.fields.reduce((prev, field) => Object.assign(prev, { [field.name.value]: Schema.#resolveNodeValue(field.value) }), {});
+      default: return node.value ?? node;
+    }
   }
 
   static #framework(directives) {
@@ -480,6 +509,7 @@ module.exports = class Schema {
     return {
       typeDefs: `
         scalar AutoGraphMixed
+        scalar AutoGraphDateTime
 
         interface Node { id: ID! }
 
@@ -506,10 +536,10 @@ module.exports = class Schema {
 
           return `
             input ${model}InputWhere {
-              ${fields.map(field => `${field}: ${field.model?.isEntity ? `${field.model}InputWhere` : 'AutoGraphMixed'}`)}
+              ${fields.map(field => `${field}: ${field.model ? `${field.model}InputWhere` : 'AutoGraphMixed'}`)}
             }
             input ${model}InputSort {
-              ${fields.map(field => `${field}: ${field.model?.isEntity ? `${field.model}InputSort` : 'SortOrderEnum'}`)}
+              ${fields.map(field => `${field}: ${field.model ? `${field.model}InputSort` : 'SortOrderEnum'}`)}
             }
             type ${model}Connection {
               count: Int!
@@ -598,7 +628,7 @@ module.exports = class Schema {
               }
 
               input ${model}SubscriptionInputWhere {
-                ${fields.map(field => `${field}: ${field.model?.isEntity ? `${field.model}InputWhere` : 'AutoGraphMixed'}`)}
+                ${fields.map(field => `${field}: ${field.model ? `${field.model}InputWhere` : 'AutoGraphMixed'}`)}
               }
 
               type ${model}SubscriptionPayload {
@@ -691,12 +721,12 @@ module.exports = class Schema {
 
   static #getGQLType(field, suffix) {
     let { type } = field;
-    const { isEmbedded, isRequired, isScalar, isArray, isArrayRequired, defaultValue } = field;
+    const { isEmbedded, isRequired, isScalar, isArray, isArrayRequired, isPrimaryKey, defaultValue } = field;
     const modelType = `${type}${suffix}`;
     if (suffix && !isScalar) type = isEmbedded ? modelType : 'ID';
     type = isArray ? `[${type}${isArrayRequired ? '!' : ''}]` : type;
     if (!suffix && isRequired) type += '!';
-    if (suffix === 'InputCreate' && isRequired && defaultValue != null) type += '!';
+    if (suffix === 'InputCreate' && !isPrimaryKey && isRequired && defaultValue == null) type += '!';
     return type;
   }
 

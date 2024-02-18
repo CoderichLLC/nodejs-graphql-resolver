@@ -1,4 +1,5 @@
 TODO:
+  * Scalar types are not correctly handled in Schema.parse()
   * Easy select('a b c d') syntax
   * Tests overhaul
     - Need to make sure that Scalar @field() is working
