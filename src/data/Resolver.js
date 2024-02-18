@@ -280,8 +280,11 @@ module.exports = class Resolver {
     const event = { schema: this.#schema, context: this.#context, resolver: this, query };
 
     // Backwards compat
-    query.match = { ...query.where };
+    Object.assign(event, query);
+    query.match = query.where;
     query.toObject = () => query;
+    event.merged = { ...event.input };
+    event.input = event.args?.input;
 
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly;
@@ -289,13 +292,16 @@ module.exports = class Resolver {
       if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$finalize']);
       if (query.isMutation) await Emitter.emit('finalize', event);
       return thunk().then((result) => {
+        event.result = result; // backwards compat
         query.result = result;
         return Emitter.emit(`post${type}`, event);
       });
     }).then((result = query.result) => {
+      event.result = result; // backwards compat
       query.result = result;
       return Emitter.emit('preResponse', event);
     }).then((result = query.result) => {
+      event.result = result; // backwards compat
       query.result = result;
       return Emitter.emit('postResponse', event);
     }).then((result = query.result) => result).catch((e) => {

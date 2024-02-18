@@ -1,5 +1,7 @@
 TODO:
+  * Need a way to define idValue (for User.id)
   * Scalar types are not correctly handled in Schema.parse()
+  * Connection types need API args
   * Easy select('a b c d') syntax
   * Tests overhaul
     - Need to make sure that Scalar @field() is working

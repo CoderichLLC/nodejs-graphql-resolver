@@ -63,6 +63,7 @@ module.exports = class Pipeline {
     Pipeline.define('createdAt', ({ value }) => value || new Date(), { ignoreNull: false });
     Pipeline.define('timestamp', () => Date.now(), { ignoreNull: false });
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
+    Pipeline.define('toId', ({ model, value }) => model.source.idValue(value.id || value)); // Deprecate
 
     // Structures
     Pipeline.define('$instruct', params => Pipeline.resolve(params, 'instruct'), { ignoreNull: false });

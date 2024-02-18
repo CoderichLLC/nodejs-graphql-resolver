@@ -337,6 +337,8 @@ module.exports = class Schema {
           isField = false;
         } else if (node.kind === Kind.LIST_TYPE) {
           isList = false;
+        } else if (scalarKinds.includes(node.kind)) {
+          isField = false;
         }
       },
     });
