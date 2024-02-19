@@ -13,9 +13,7 @@ exports.globToRegex = (glob, options = {}) => PicoMatch.makeRe(glob, { nocase: t
 const smartMerge = (target, source, options) => source;
 exports.isScalarValue = value => typeof value !== 'object' && typeof value !== 'function';
 exports.isLeafValue = value => Array.isArray(value) || value instanceof Date || ObjectId.isValid(value) || exports.isScalarValue(value);
-exports.isBasicObject = obj => obj != null && typeof obj === 'object' && !(ObjectId.isValid(obj)) && !(obj instanceof Date) && typeof (obj.then) !== 'function';
-exports.isPlainObject = obj => exports.isBasicObject(obj) && !Array.isArray(obj);
-exports.mergeDeep = (...args) => DeepMerge.all(args, { isMergeableObject: obj => (exports.isPlainObject(obj) || Array.isArray(obj)), arrayMerge: smartMerge });
+exports.mergeDeep = (...args) => DeepMerge.all(args, { isMergeableObject: obj => (Util.isPlainObjectOrArray(obj)), arrayMerge: smartMerge });
 exports.hashObject = obj => ObjectHash(obj, { respectType: false, respectFunctionNames: false, respectFunctionProperties: false, unorderedArrays: true, ignoreUnknown: true, replacer: r => (ObjectId.isValid(r) ? `${r}` : r) });
 exports.fromGUID = guid => Buffer.from(`${guid}`, 'base64').toString('ascii').split(',');
 exports.guidToId = (autograph, guid) => (autograph.legacyMode ? guid : exports.uvl(exports.fromGUID(guid)[1], guid));

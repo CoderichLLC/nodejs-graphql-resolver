@@ -230,6 +230,8 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ name: undefined }).many()).toEqual([]);
       expect(await resolver.match('Person').where({ id: undefined }).many()).toEqual([]);
       expect(await resolver.match('Person').where({ id: undefined, name: 'absolutelyNoone' }).many()).toEqual([]);
+      expect(await resolver.match('Person').where({ id: [richard.id, christie.id] }).many()).toMatchObject([{ id: richard.id }, { id: christie.id }]);
+      expect(await resolver.match('Person').where({ id: [] }).many()).toEqual([]);
 
       // Auto resolve (Connection)
       const resolution = await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).resolve({ returnType: 'MyConnection' });
@@ -384,6 +386,7 @@ describe('TestSuite', () => {
       await expect(resolver.match('Person').id(richard.id).save({ name: null })).rejects.toThrow(/required/gi);
       await expect(resolver.match('Person').id('nobody').save({ name: 'NewGuy' })).rejects.toThrow(/not found/gi);
       await expect(resolver.match('Person').id(richard.id).save({ friends: [richard.id] })).rejects.toThrow(/reference to itself/gi);
+      await expect(resolver.match('Person').id(richard.id).save({ gender: 'slug' })).rejects.toThrow(/allows/gi);
     });
 
     test('Book', async () => {

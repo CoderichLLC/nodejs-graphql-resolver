@@ -15,7 +15,7 @@
     "dev": "coderich-dev"
   },
   "dependencies": {
-    "@coderich/util": "0.1.11",
+    "@coderich/util": "0.1.13",
     "@graphql-tools/merge": "9.0.0",
     "@graphql-tools/resolvers-composition": "7.0.0",
     "@hapi/boom": "10.0.1",

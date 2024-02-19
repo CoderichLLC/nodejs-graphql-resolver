@@ -1,6 +1,7 @@
 module.exports = {
   typeDefs: `
     scalar Date
+    enum Gender { male female }
 
     input PersonInputMeta {
       notify: Boolean
@@ -12,6 +13,7 @@ module.exports = {
     {
       age: Int @field(key: "my_age")
       name: String! @field(serialize: toLowerCase)
+      gender: Gender! @field(default: male)
       authored: [Book] @link(by: author) @field(connection: true)
       emailAddress: String! @field(key: "email_address", finalize: email)
       friends: [Person] @field(normalize: dedupe, finalize: selfless, onDelete: cascade, connection: true)

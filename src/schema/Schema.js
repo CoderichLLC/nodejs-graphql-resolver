@@ -3,17 +3,18 @@
 const Util = require('@coderich/util');
 const { Kind, parse, visit } = require('graphql');
 const { mergeTypeDefs, mergeFields } = require('@graphql-tools/merge');
-const { isLeafValue, isPlainObject, isBasicObject, mergeDeep, fromGUID } = require('../service/AppService');
+const { isLeafValue, mergeDeep, fromGUID } = require('../service/AppService');
 const Pipeline = require('../data/Pipeline');
 const Emitter = require('../data/Emitter');
 
 const operations = ['Query', 'Mutation', 'Subscription'];
 const interfaceKinds = [Kind.INTERFACE_TYPE_DEFINITION, Kind.INTERFACE_TYPE_EXTENSION];
 // const unionKinds = [Kind.UNION_TYPE_DEFINITION, Kind.UNION_TYPE_EXTENSION];
-const scalarKinds = [Kind.SCALAR_TYPE_DEFINITION, Kind.SCALAR_TYPE_EXTENSION, Kind.ENUM_TYPE_DEFINITION, Kind.ENUM_TYPE_EXTENSION];
-const fieldKinds = [Kind.FIELD_DEFINITION].concat(scalarKinds);
+const enumKinds = [Kind.ENUM_TYPE_DEFINITION, Kind.ENUM_TYPE_EXTENSION];
+const scalarKinds = [Kind.SCALAR_TYPE_DEFINITION, Kind.SCALAR_TYPE_EXTENSION];
+const fieldKinds = [Kind.FIELD_DEFINITION];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION].concat(interfaceKinds);
-const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE).concat(scalarKinds);
+const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE).concat(scalarKinds).concat(enumKinds);
 const pipelines = ['finalize', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
 const inputPipelines = ['finalize', 'construct', 'instruct', 'normalize', 'serialize'];
 const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
@@ -114,8 +115,8 @@ module.exports = class Schema {
     if (this.#schema) return this.#schema;
 
     const { directives, namespace } = this.#config;
-    this.#schema = { types: {}, models: {}, indexes: [], namespace };
-    let model, field, isField, isList;
+    this.#schema = { models: {}, enums: {}, scalars: {}, indexes: [], namespace };
+    let target, model, field, isList;
     const thunks = [];
 
     // Deprecate
@@ -128,9 +129,7 @@ module.exports = class Schema {
         if (!allowedKinds.includes(node.kind) || operations.includes(name)) return false;
 
         if (modelKinds.includes(node.kind)) {
-          // this.#schema.types[name] = schema.getType(name);
-
-          model = this.#schema.models[name] = {
+          target = model = this.#schema.models[name] = {
             name,
             key: name,
             fields: {},
@@ -140,24 +139,43 @@ module.exports = class Schema {
             isPersistable: true,
             source: this.#config.dataSources?.default,
             loader: this.#config.dataLoaders?.default,
+            pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
             directives: {},
             toString: () => name,
           };
-        } else if (fieldKinds.includes(node.kind)) {
-          isField = true;
-          field = {
+        }
+
+        if (fieldKinds.includes(node.kind)) {
+          target = field = model.fields[name] = {
             name,
             key: name,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
             directives: {},
             toString: () => name,
           };
-          if (model) model.fields[name] = field;
         }
 
         if (scalarKinds.includes(node.kind)) {
-          scalars.push(node.name.value);
-        } else if (node.kind === Kind.NON_NULL_TYPE) {
+          scalars.push(name);
+          target = this.#schema.scalars[name] = {
+            directives: {},
+            pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
+          };
+        }
+
+        if (enumKinds.includes(node.kind)) {
+          target = this.#schema.enums[name] = {
+            directives: {},
+            pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
+          };
+
+          // Define (and assign) an Allow pipeline for the enumeration
+          const values = Schema.#resolveNodeValue(node);
+          Pipeline.define(name, Pipeline.Allow(...values), { configurable: true });
+          target.pipelines.finalize.push(name);
+        }
+
+        if (node.kind === Kind.NON_NULL_TYPE) {
           field[isList ? 'isArrayRequired' : 'isRequired'] = true;
         } else if (node.kind === Kind.NAMED_TYPE) {
           field.type = node.name.value;
@@ -165,7 +183,6 @@ module.exports = class Schema {
           field.isArray = true;
           isList = true;
         } else if (node.kind === Kind.DIRECTIVE) {
-          const target = isField ? field : model;
           target.directives[name] = target.directives[name] || {};
 
           if (name === directives.model) model.isMarkedModel = true;
@@ -269,7 +286,7 @@ module.exports = class Schema {
             };
 
             $model.walk = (data, fn, opts = {}) => {
-              if (data == null || !isPlainObject(data)) return data;
+              if (data == null || !Util.isPlainObject(data)) return data;
 
               // Options
               opts.key = opts.key ?? 'name';
@@ -291,7 +308,7 @@ module.exports = class Schema {
 
                 // Recursive walk
                 if (!$field.model?.isEmbedded) run = [];
-                const $value = opts.itemize && $field.model && isBasicObject($node.value) ? Util.map($node.value, el => $field.model.walk(el, fn, { ...opts, path, run })) : $node.value;
+                const $value = opts.itemize && $field.model && Util.isPlainObjectOrArray($node.value) ? Util.map($node.value, el => $field.model.walk(el, fn, { ...opts, path, run })) : $node.value;
                 return Object.assign(prev, { [$node.key]: $value });
               }, {});
             };
@@ -319,6 +336,12 @@ module.exports = class Schema {
             $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
             $field.isScalar = scalars.includes($field.type);
 
+            // Merge Enums and Scalar type definitions
+            const enumer = this.#schema.enums[$field.type];
+            const scalar = this.#schema.scalars[$field.type];
+            if (enumer) Object.entries(enumer.pipelines).forEach(([key, values]) => $field.pipelines[key].push(...values));
+            if (scalar) Object.entries(scalar.pipelines).forEach(([key, values]) => $field.pipelines[key].push(...values));
+
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
             if ($field.isFKReference) $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
@@ -334,11 +357,11 @@ module.exports = class Schema {
             }
           });
 
-          isField = false;
+          target = model;
         } else if (node.kind === Kind.LIST_TYPE) {
           isList = false;
-        } else if (scalarKinds.includes(node.kind)) {
-          isField = false;
+        } else if (scalarKinds.concat(enumKinds).includes(node.kind)) {
+          target = model;
         }
       },
     });
@@ -416,6 +439,8 @@ module.exports = class Schema {
     switch (node.kind) {
       case 'NullValue': return null;
       case 'ListValue': return node.values.map(Schema.#resolveNodeValue);
+      case 'EnumValueDefinition': return node.name.value;
+      case 'EnumTypeDefinition': return node.values.map(Schema.#resolveNodeValue);
       case 'ObjectValue': return node.fields.reduce((prev, field) => Object.assign(prev, { [field.name.value]: Schema.#resolveNodeValue(field.value) }), {});
       default: return node.value ?? node;
     }
