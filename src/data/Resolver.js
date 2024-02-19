@@ -201,7 +201,7 @@ module.exports = class Resolver {
     const currSession = this.#sessions.slice(-1).pop();
 
     if (oquery.isMutation) {
-      thunk = () => model.source.client.resolve(tquery.toDriver().toObject()).then((results = oquery.doc) => {
+      thunk = () => model.source.client.resolve(tquery.toDriver().toObject()).then((results) => {
         // We clear the cache immediately (regardless if we're in transaction or not)
         this.clear(model);
 
@@ -209,7 +209,7 @@ module.exports = class Resolver {
         currSession?.thunks.push(...this.#sessions.map(s => () => s.parent.clear(model)));
 
         // Return results
-        return results;
+        return oquery.crud === 'delete' ? oquery.doc : results;
       });
     } else {
       thunk = () => this.#dataLoaders[model].resolve(tquery);
@@ -218,7 +218,7 @@ module.exports = class Resolver {
     return this.#createSystemEvent(tquery, () => {
       return thunk().then((result) => {
         if (oquery.flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
-        return this.toResultSet(model, result, tquery.toObject());
+        return oquery.crud === 'delete' ? result : this.toResultSet(model, result);
       });
     });
   }
