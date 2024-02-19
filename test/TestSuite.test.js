@@ -44,12 +44,14 @@ describe('TestSuite', () => {
       expect(richard._id).not.toBeDefined(); // eslint-disable-line
       expect(richard.age).toBe(40);
       expect(richard.name).toBe('richard');
+      expect(richard.gender).toBe('male');
       expect(richard.telephone).toBe('###-###-####'); // Default value
 
-      christie = await resolver.match('Person').save({ name: 'Christie', emailAddress: 'christie@gmail.com', friends: [richard.id], telephone: 1112223333, network: 'network', nonsense: 'nonsense', section: { name: 'rich', person: richard.id } });
+      christie = await resolver.match('Person').save({ name: 'Christie', emailAddress: 'christie@gmail.com', gender: 'female', friends: [richard.id], telephone: 1112223333, network: 'network', nonsense: 'nonsense', section: { name: 'rich', person: richard.id } });
       expect(christie.id).toBeDefined();
       expect(christie.friends).toEqual([richard.id]);
       expect(christie.nonsense).not.toBeDefined();
+      expect(christie.gender).toBe('female');
       expect(christie.telephone).toBe('1112223333'); // Explicitly set
 
       // Tricky data stuff
@@ -147,11 +149,12 @@ describe('TestSuite', () => {
     });
 
     test('Art', async () => {
-      artsy = await resolver.match('Art').save({ name: 'My Find Art', sections: [{ name: 'Section1', person: richard.id }] });
+      artsy = await resolver.match('Art').save({ name: 'My Find Art', sections: [{ name: 'Section1', person: richard.id, type: 'home' }] });
       expect(artsy.id).toBeDefined();
       expect(artsy.sections).toMatchObject([{
         id: expect.thunk(ObjectId.isValid),
         name: 'section1',
+        type: 'home',
         frozen: 'frozen',
         createdAt: expect.any(Date),
         updatedAt: expect.any(Date),

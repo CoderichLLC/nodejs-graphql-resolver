@@ -2,6 +2,7 @@ module.exports = {
   typeDefs: `
     scalar Date
     enum Gender { male female }
+    enum BuildingType { home office business }
 
     input PersonInputMeta {
       notify: Boolean
@@ -92,7 +93,7 @@ module.exports = {
     type Building
     {
       year: Int @field(key: "year_built")
-      type: String! @field(finalize: buildingType)
+      type: BuildingType!
       tenants: [Person] @field(onDelete: cascade)
       landlord: Person @field(onDelete: nullify)
       description: String @field(default: "A building from the bloom")
@@ -117,6 +118,7 @@ module.exports = {
     type Section @model(embed: true) {
       name: String! @field(normalize: toLowerCase)
       frozen: String! @field(default: "frozen", restruct: immutable)
+      type: BuildingType
       description: String
       person: Person @field(onDelete: nullify)
     }

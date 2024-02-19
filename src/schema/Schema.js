@@ -176,11 +176,11 @@ module.exports = class Schema {
         }
 
         if (node.kind === Kind.NON_NULL_TYPE) {
-          field[isList ? 'isArrayRequired' : 'isRequired'] = true;
+          target[isList ? 'isArrayRequired' : 'isRequired'] = true;
         } else if (node.kind === Kind.NAMED_TYPE) {
-          field.type = node.name.value;
+          target.type = node.name.value;
         } else if (node.kind === Kind.LIST_TYPE) {
-          field.isArray = true;
+          target.isArray = true;
           isList = true;
         } else if (node.kind === Kind.DIRECTIVE) {
           target.directives[name] = target.directives[name] || {};
@@ -215,11 +215,11 @@ module.exports = class Schema {
               }
               // Field specific directives
               case `${directives.field}-default`: {
-                field.defaultValue = value;
+                target.defaultValue = value;
                 break;
               }
               case `${directives.field}-connection`: {
-                field.isConnection = value;
+                target.isConnection = value;
                 break;
               }
               case `${directives.field}-validate`: { // Alias for finalize
@@ -227,8 +227,8 @@ module.exports = class Schema {
                 break;
               }
               case `${directives.link}-by`: {
-                field.linkBy = value;
-                field.isVirtual = true;
+                target.linkBy = value;
+                target.isVirtual = true;
                 break;
               }
               // Generic by target directives
@@ -248,7 +248,7 @@ module.exports = class Schema {
               // Backwards compat (deprecated)
               case 'model-gqlScope': { model.crud = value; break; }
               case 'model-fieldScope': { model.scope = value; break; }
-              case 'field-gqlScope': { field.crud = value; break; }
+              case 'field-gqlScope': { target.crud = value; break; }
 
               // Pipelines
               default: {
