@@ -82,7 +82,7 @@ module.exports = class QueryResolver extends QueryBuilder {
       case 'deleteOne': {
         return this.#get(query).then((doc) => {
           return this.#resolveReferentialIntegrity(query).then(() => {
-            return this.#resolver.resolve(query).then(() => doc);
+            return this.#resolver.resolve(query.clone({ doc })).then(() => doc);
           });
         });
       }

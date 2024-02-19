@@ -201,7 +201,7 @@ module.exports = class Resolver {
     const currSession = this.#sessions.slice(-1).pop();
 
     if (oquery.isMutation) {
-      thunk = () => model.source.client.resolve(tquery.toDriver().toObject()).then((results) => {
+      thunk = () => model.source.client.resolve(tquery.toDriver().toObject()).then((results = oquery.doc) => {
         // We clear the cache immediately (regardless if we're in transaction or not)
         this.clear(model);
 
