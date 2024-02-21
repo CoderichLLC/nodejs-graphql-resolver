@@ -55,15 +55,14 @@ module.exports = class Pipeline {
     jsStringTransformers.forEach(name => Pipeline.define(`${name}`, ({ value }) => String(value)[name]()));
 
     // Additional Transformers
-    Pipeline.define('toTitleCase', ({ value }) => value.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()));
-    Pipeline.define('toSentenceCase', ({ value }) => value.charAt(0).toUpperCase() + value.slice(1));
     Pipeline.define('toArray', ({ value }) => (Array.isArray(value) ? value : [value]), { itemize: false });
     Pipeline.define('toDate', ({ value }) => new Date(value), { configurable: true });
     Pipeline.define('updatedAt', () => new Date(), { ignoreNull: false });
+    Pipeline.define('toTitleCase', ({ value }) => value.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()));
+    Pipeline.define('toSentenceCase', ({ value }) => value.charAt(0).toUpperCase() + value.slice(1));
     Pipeline.define('createdAt', ({ value }) => value || new Date(), { ignoreNull: false });
     Pipeline.define('timestamp', () => Date.now(), { ignoreNull: false });
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
-    Pipeline.define('toId', ({ model, value }) => model.source.idValue(value.id || value)); // Deprecate
 
     // Structures
     Pipeline.define('$instruct', params => Pipeline.resolve(params, 'instruct'), { ignoreNull: false });
@@ -74,8 +73,16 @@ module.exports = class Pipeline {
     Pipeline.define('$finalize', params => Pipeline.resolve(params, 'finalize'), { ignoreNull: false });
 
     //
-    Pipeline.define('$pk', ({ query, model, value, path }) => model.source.idValue(get(query.doc, path) || value?.id || value), { ignoreNull: false });
-    Pipeline.define('$fk', ({ model, value }) => model.source.idValue(value.id || value));
+    Pipeline.define('$pk', (params) => {
+      const value = get(params.query.doc, params.path) || params.value?.id || params.value;
+      return Pipeline[params.field.id]({ ...params, value });
+    }, { ignoreNull: false });
+
+    Pipeline.define('$fk', (params) => {
+      const value = params.value?.id || params.value;
+      return Pipeline[params.field.id]({ ...params, value });
+    });
+
     Pipeline.define('$default', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
 
     //

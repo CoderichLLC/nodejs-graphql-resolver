@@ -886,7 +886,7 @@ describe('TestSuite', () => {
     test('$', async () => {
       const doc = await resolver.match('Person').id(christie.id).one();
       expect(await doc.$.one()).toMatchObject({ id: doc.id });
-      expect(await doc.$.flags({ debug: false }).many()).toEqual([expect.objectContaining({ id: doc.id })]);
+      expect(await doc.$.many()).toEqual([expect.objectContaining({ id: doc.id })]);
       expect(await doc.$.save({ age: 50 })).toMatchObject({ id: doc.id, age: 50 });
       expect(await Object.assign(doc, { age: 90 }).$.save()).toMatchObject({ id: doc.id, age: 90 });
       expect(await doc.$.lookup('authored').one()).toMatchObject({ id: healthBook.id });

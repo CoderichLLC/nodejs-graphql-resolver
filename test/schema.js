@@ -14,6 +14,7 @@ module.exports = {
     {
       age: Int @field(key: "my_age")
       name: String! @field(serialize: toLowerCase)
+      # roles: [Role!]! @field(default: [])
       gender: Gender! @field(default: male)
       authored: [Book] @link(by: author) @field(connection: true)
       emailAddress: String! @field(key: "email_address", finalize: email)
@@ -126,6 +127,10 @@ module.exports = {
     type PlainJane @model {
       id: ID!
       name: String
+    }
+
+    type Role @model(pk: name) {
+      name: String!
     }
   `,
 };

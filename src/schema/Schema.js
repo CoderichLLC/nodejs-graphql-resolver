@@ -64,15 +64,15 @@ module.exports = class Schema {
 
             if (decorator) {
               const { fields } = parse(`type decorator { ${decorator} }`).definitions[0];
-              node.fields = mergeFields(node, node.fields, fields, { noLocation: true, onFieldTypeConflict: a => a });
+              node.fields = mergeFields(node, node.fields, fields, { noLocation: true, onFieldTypeConflict: (f, a, b) => a });
               return node;
             }
           }
 
-          return false;
+          return false; // Do not traverse any deeper
         }
 
-        return undefined;
+        return undefined; // Continue traversal
       },
     });
 
@@ -135,7 +135,7 @@ module.exports = class Schema {
             fields: {},
             crud: 'crud', // For use when creating API Queries and Mutations
             scope: 'crud', // For use when defining types (how it's field.model reference can be used)
-            idField: 'id',
+            pkField: 'id',
             isPersistable: true,
             source: this.#config.dataSources?.default,
             loader: this.#config.dataLoaders?.default,
@@ -197,8 +197,8 @@ module.exports = class Schema {
 
             switch (`${name}-${key}`) {
               // Model specific directives
-              case `${directives.model}-id`: {
-                model.idField = value;
+              case `${directives.model}-pk`: {
+                model.pkField = value;
                 break;
               }
               case `${directives.model}-source`: {
@@ -226,6 +226,10 @@ module.exports = class Schema {
                 target.pipelines.finalize = target.pipelines.finalize.concat(value).filter(Boolean);
                 break;
               }
+              case `${directives.field}-transform`: { // Deprecated
+                target.pipelines.normalize = target.pipelines.normalize.concat(value).filter(Boolean);
+                break;
+              }
               case `${directives.link}-by`: {
                 target.linkBy = value;
                 target.isVirtual = true;
@@ -240,7 +244,12 @@ module.exports = class Schema {
                 target[key] = Util.nvl(value, '');
                 break;
               }
-              case `${directives.model}-key`: case `${directives.model}-meta`: case `${directives.field}-key`: case `${directives.field}-onDelete`: {
+              case `${directives.model}-id`:
+              case `${directives.model}-key`:
+              case `${directives.model}-meta`:
+              case `${directives.field}-id`:
+              case `${directives.field}-key`:
+              case `${directives.field}-onDelete`: {
                 target[key] = value;
                 break;
               }
@@ -266,8 +275,8 @@ module.exports = class Schema {
       leave: (node) => {
         if (modelKinds.includes(node.kind)) {
           const $model = model;
-          // const idField = $model.fields[$model.idField];
-          // $model.primaryKey = Util.nvl(idField?.key, idField?.name, 'id');
+
+          model.id ??= model.source?.id;
 
           // Model resolution after field resolution (push)
           thunks.push(($schema) => {
@@ -323,15 +332,16 @@ module.exports = class Schema {
           const $field = field;
           const $model = model;
 
-          $field.isPrimaryKey = Boolean($field.name === model.idField);
-          $field.isPersistable = Util.uvl($field.isPersistable, model.isPersistable, true);
+          field.isPrimaryKey = Boolean(field.name === model.pkField);
+          field.isPersistable = Util.uvl(field.isPersistable, model.isPersistable, true);
 
           // Field resolution comes first (unshift)
           thunks.unshift(($schema) => {
+            $field.id ??= $model.id;
             $field.model = $schema.models[$field.type];
+            $field.linkBy ??= $field.model?.pkField;
             $field.crud = Util.uvl($field.crud, $field.model?.scope, 'crud');
-            $field.linkBy ??= $field.model?.idField;
-            $field.linkField = $field.isVirtual ? $model.fields[$model.idField] : $field;
+            $field.linkField = $field.isVirtual ? $model.fields[$model.pkField] : $field;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
             $field.isScalar = scalars.includes($field.type);
@@ -459,7 +469,8 @@ module.exports = class Schema {
       enum AutoGraphPipelineEnum { ${Object.keys(Pipeline).filter(k => !k.startsWith('$')).join(' ')} }
 
       directive @${model}(
-        id: String # Specify the ID/PK field (default "id")
+        id: String # Specify the ID strategy (eg. "toObjectId")
+        pk: String # Specify the PK field (default "id")
         key: String # Specify db table/collection name
         crud: AutoGraphMixed # CRUD API
         scope: AutoGraphMixed #
@@ -481,6 +492,7 @@ module.exports = class Schema {
       ) on OBJECT | INTERFACE
 
       directive @${field}(
+        id: String # Specify the ID strategy (eg. "toObjectId")
         key: String # Specify db key
         persist: Boolean # Persist this field (default true)
         connection: Boolean # Treat this field as a connection type (default false - rolling this out slowly)
@@ -498,11 +510,9 @@ module.exports = class Schema {
         validate: [AutoGraphPipelineEnum!] # Alias for finalize
 
         # TEMP TO APPEASE TRANSITION
-        id: String # Specify the ModelRef this field FK References
         ref: AutoGraphMixed # Specify the modelRef field's name (overrides isEmbedded)
         gqlScope: AutoGraphMixed # Dictate how GraphQL API behaves
         dalScope: AutoGraphMixed # Dictate how the DAL behaves
-        destruct: [AutoGraphPipelineEnum!]
         transform: [AutoGraphPipelineEnum!]
         deserialize: [AutoGraphPipelineEnum!]
       ) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION | SCALAR

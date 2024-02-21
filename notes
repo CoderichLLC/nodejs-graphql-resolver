@@ -1,6 +1,6 @@
 TODO:
   * Need a way to define idValue (for User.id)
-  * Scalar types are not correctly handled in Schema.parse()
+  * Need a way to define idKey (for User.roles array of String)
   * Connection types need API args
   * Easy select('a b c d') syntax
   * Tests overhaul
@@ -8,7 +8,7 @@ TODO:
   * Break up Schema monolith (schema.parse() usage)
 
 Release 0.14
-  * Remove deprecated directives
+  * Remove deprecations
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result

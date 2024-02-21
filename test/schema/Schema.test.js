@@ -132,7 +132,7 @@ describe('Schema', () => {
         fields: {
           id: {
             key: '_id',
-            isRequired: true,
+            // isRequired: true, // This should NOT be merged because it's a conflict and original wins
           },
         },
       },

@@ -12,6 +12,16 @@ Pipeline.define('networkID', ({ context }) => context.network.id, { ignoreNull: 
 Pipeline.define('email', ({ value }) => {
   if (!Validator.isEmail(value)) throw new Error('Invalid email');
 });
+Pipeline.define('toObjectId', ({ value }) => {
+  if (value instanceof ObjectId) return value;
+
+  try {
+    const id = new ObjectId(value);
+    return id;
+  } catch (e) {
+    return value;
+  }
+}, { ignoreNull: false });
 
 module.exports = ({ uri }) => ({
   namespace: 'autograph',
@@ -23,16 +33,7 @@ module.exports = ({ uri }) => ({
   },
   dataSources: {
     default: {
-      idValue: (value) => {
-        if (value instanceof ObjectId) return value;
-
-        try {
-          const id = new ObjectId(value);
-          return id;
-        } catch (e) {
-          return value;
-        }
-      },
+      id: 'toObjectId',
       supports: ['transactions'],
       client: new MongoClient({
         uri,
