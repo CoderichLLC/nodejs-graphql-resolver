@@ -6,6 +6,7 @@ TODO:
   * Tests overhaul
     - Need to make sure that Scalar @field() is working
   * Break up Schema monolith (schema.parse() usage)
+  * Pipeline user-defined id function needs to "ignoreNull" (how to ensure it does?)
 
 Release 0.14
   * Remove deprecations
@@ -44,6 +45,8 @@ Improvement Considerations:
   * DataLoader - rewrite for batch queries
   * EnsureId - inline query?
   * Allow @field(key: "some.path") in order to hoist
+    - Also, allow this at the GraphQL API query layer?
+    - This has been discussed and https://github.com/graphql-kit/graphql-lodash exists (but its not recommended)
   * Support for GUID (node interface)
     - autograph.legacyMode (move to config)
 
