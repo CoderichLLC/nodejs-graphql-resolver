@@ -15,7 +15,7 @@
     "dev": "coderich-dev"
   },
   "dependencies": {
-    "@coderich/util": "0.1.13",
+    "@coderich/util": "1.0.2",
     "@graphql-tools/merge": "9.0.0",
     "@graphql-tools/resolvers-composition": "7.0.0",
     "@hapi/boom": "10.0.1",
@@ -32,10 +32,10 @@
   },
   "devDependencies": {
     "@apollo/server": "4.9.5",
-    "@coderich/autograph-mongodb": "0.0.1",
-    "@coderich/dev": "0.1.0",
+    "@coderich/autograph-mongodb": "0.0.2",
+    "@coderich/dev": "0.2.1",
     "@graphql-tools/schema": "10.0.0",
-    "graphql": "16.6.0",
+    "graphql": "16.8.1",
     "mongodb": "5.9.2",
     "mongodb-memory-server": "8.13.0",
     "validator": "13.9.0"
