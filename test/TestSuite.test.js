@@ -160,6 +160,18 @@ describe('TestSuite', () => {
         updatedAt: expect.any(Date),
       }]);
     });
+
+    test('PlainJane (with embedded)', async () => {
+      const jane = await resolver.match('PlainJane').save({ role: { 'detail.scope': 'r' } });
+      expect(jane).toMatchObject({
+        id: expect.anything(),
+        role: {
+          detail: {
+            scope: 'r',
+          },
+        },
+      });
+    });
   });
 
   describe('Get', () => {

@@ -34,7 +34,7 @@ module.exports = class QueryResolver extends QueryBuilder {
       }
       case 'updateOne': {
         return this.#get(query).then((doc) => {
-          const merged = mergeDeep({}, Util.unflatten(doc), Util.unflatten(input));
+          const merged = mergeDeep({}, Util.unflatten(doc, { safe: true }), Util.unflatten(input, { safe: true }));
           return this.#resolver.resolve(query.clone({ doc, input: merged }));
         });
       }

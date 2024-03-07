@@ -127,10 +127,19 @@ module.exports = {
     type PlainJane @model {
       id: ID!
       name: String
+      role: RoleEmbedded
     }
 
     type Role @model(pk: name) {
       name: String!
+    }
+
+    type RoleEmbedded {
+      detail: RoleDetail
+    }
+
+    type RoleDetail {
+      scope: String
     }
   `,
 };

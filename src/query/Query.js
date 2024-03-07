@@ -49,7 +49,7 @@ module.exports = class Query {
    * Run a portion of the pipeline against a data set
    */
   pipeline(target, data, transformers) {
-    data = Util.unflatten(data);
+    data = Util.unflatten(data, { safe: true });
     const crudMap = { create: ['$construct', '$serialize'], update: ['$restruct', '$serialize'] };
     const crudLines = crudMap[this.#query.crud] || [];
     const transformerMap = { where: ['$cast', '$instruct', '$serialize'], sort: [], input: [] };
@@ -128,7 +128,7 @@ module.exports = class Query {
     const { where = {}, sort = {} } = query;
     const flatSort = Util.flatten(sort, { safe: true });
     const flatWhere = Util.flatten(where, { safe: true });
-    const $sort = Util.unflatten(Object.keys(flatSort).reduce((prev, key) => Object.assign(prev, { [key]: {} }), {}));
+    const $sort = Util.unflatten(Object.keys(flatSort).reduce((prev, key) => Object.assign(prev, { [key]: {} }), {}), { safe: true });
 
     //
     query.sort = this.#model.walk(sort, (node) => {

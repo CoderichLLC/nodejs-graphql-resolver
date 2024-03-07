@@ -285,6 +285,7 @@ module.exports = class Resolver {
       // I hate this
       if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
 
+      // if (query.isMutation) query.input = await tquery.pipeline('input', query.input);
       if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$finalize']);
       if (query.isMutation) await Emitter.emit('finalize', event);
       return thunk().then((result) => {

@@ -11,8 +11,7 @@ exports.isGlob = str => PicoMatch.scan(str).isGlob;
 exports.globToRegex = (glob, options = {}) => PicoMatch.makeRe(glob, { nocase: true, ...options, expandRange: (a, b) => `(${FillRange(a, b, { toRegex: true })})` });
 
 const smartMerge = (target, source, options) => source;
-exports.isScalarValue = value => typeof value !== 'object' && typeof value !== 'function';
-exports.isLeafValue = value => Array.isArray(value) || value instanceof Date || ObjectId.isValid(value) || exports.isScalarValue(value);
+exports.isLeafValue = value => Array.isArray(value) || value instanceof Date || ObjectId.isValid(value) || Util.isScalarValue(value);
 exports.mergeDeep = (...args) => DeepMerge.all(args, { isMergeableObject: obj => (Util.isPlainObjectOrArray(obj)), arrayMerge: smartMerge });
 exports.hashObject = obj => ObjectHash(obj, { respectType: false, respectFunctionNames: false, respectFunctionProperties: false, unorderedArrays: true, ignoreUnknown: true, replacer: r => (ObjectId.isValid(r) ? `${r}` : r) });
 exports.fromGUID = guid => Buffer.from(`${guid}`, 'base64').toString('ascii').split(',');
@@ -39,8 +38,8 @@ exports.getGQLSelectFields = (model, info) => {
   return Object.keys(node || fields);
 };
 
-exports.removeUndefinedDeep = (obj) => {
-  return Util.unflatten(Object.entries(Util.flatten(obj)).reduce((prev, [key, value]) => {
-    return value === undefined ? prev : Object.assign(prev, { [key]: value });
-  }, {}));
-};
+// exports.removeUndefinedDeep = (obj) => {
+//   return Util.unflatten(Object.entries(Util.flatten(obj)).reduce((prev, [key, value]) => {
+//     return value === undefined ? prev : Object.assign(prev, { [key]: value });
+//   }, {}));
+// };
