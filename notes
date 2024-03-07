@@ -1,3 +1,8 @@
+WHAT MATTERS:
+  * input vs merged event
+  * mutating input/merged "preMutation" - input never get's re-transformed
+
+
 TODO:
   * Need a way to define idValue (for User.id)
   * Need a way to define idKey (for User.roles array of String)
@@ -93,3 +98,15 @@ BREAKING CHANGELOG:
   '$serialize', [input, where] - transformations to db driver
   '$finalize', [input] - After preMutation Before postMutation (old validation step)
 ]
+
+Query/Mutation
+  1. Resolver.match() -> QueryResolver/Builder
+  2. QueryResolver/Builder...terminate() -> Query.clone()
+      a. Update: Query.clone({ doc, input: merged })
+  3. Resolver.resolve(Query)
+  4. Query.transform()
+      a. Pipeline() [input, where, sort]
+
+  5. SystemEvent
+  6. Mutation ? DataSource.resolve(query.toDriver()) : DataLoader.resolve(query)
+  7. Resolver.toResultSet(result)

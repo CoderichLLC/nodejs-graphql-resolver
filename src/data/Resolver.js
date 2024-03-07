@@ -190,18 +190,11 @@ module.exports = class Resolver {
   async resolve(query) {
     let thunk;
     const tquery = await query.transform();
-    const oquery = Object.defineProperties(tquery.toObject(), {
-      changeset: {
-        get: function get() {
-          return oquery.crud === 'update' ? Util.changeset(this.doc, this.input) : undefined;
-        },
-      },
-    });
-    const model = this.#schema.models[oquery.model];
+    const { model, doc, crud, isMutation, flags } = query.toObject();
     const currSession = this.#sessions.slice(-1).pop();
 
-    if (oquery.isMutation) {
-      thunk = () => model.source.client.resolve(tquery.toDriver().toObject()).then((results) => {
+    if (isMutation) {
+      thunk = () => this.#schema.models[model].source.client.resolve(tquery.toDriver().toObject()).then((results) => {
         // We clear the cache immediately (regardless if we're in transaction or not)
         this.clear(model);
 
@@ -209,7 +202,7 @@ module.exports = class Resolver {
         currSession?.thunks.push(...this.#sessions.map(s => () => s.parent.clear(model)));
 
         // Return results
-        return oquery.crud === 'delete' ? oquery.doc : results;
+        return crud === 'delete' ? doc : results;
       });
     } else {
       thunk = () => this.#dataLoaders[model].resolve(tquery);
@@ -217,8 +210,8 @@ module.exports = class Resolver {
 
     return this.#createSystemEvent(tquery, () => {
       return thunk().then((result) => {
-        if (oquery.flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
-        return oquery.crud === 'delete' ? result : this.toResultSet(model, result);
+        if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
+        return crud === 'delete' ? result : this.toResultSet(model, result);
       });
     });
   }
@@ -288,7 +281,10 @@ module.exports = class Resolver {
 
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly;
-      if (Util.isEqual(query.changeset, { added: {}, updated: {}, deleted: {} })) return query.doc;
+
+      // I hate this
+      if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
+
       if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$finalize']);
       if (query.isMutation) await Emitter.emit('finalize', event);
       return thunk().then((result) => {
