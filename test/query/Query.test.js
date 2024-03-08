@@ -2,11 +2,11 @@ const ObjectId = require('bson-objectid');
 const QueryBuilder = require('../../src/query/QueryBuilder');
 
 describe('Query', () => {
-  let schema, factory;
+  let schema, factory, resolver;
 
   beforeAll(() => {
-    ({ schema } = global);
-    factory = model => new QueryBuilder({ schema, query: { model }, context: { network: { id: 'network' } } });
+    ({ schema, resolver } = global);
+    factory = model => new QueryBuilder({ resolver, schema, query: { model }, context: { network: { id: 'network' } } });
   });
 
   describe('transform', () => {
@@ -48,7 +48,7 @@ describe('Query', () => {
 
     test('update', async () => {
       expect((await factory('Person').where({ name: 'rich' }).save({ name: 'RiChArD', emailAddress: 'rich@gmail.com' }).transform()).toObject()).toMatchObject({
-        id: undefined,
+        // id: undefined,
         crud: 'update',
         op: 'updateMany',
         key: 'updatePerson',

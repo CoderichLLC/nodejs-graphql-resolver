@@ -1,10 +1,7 @@
 WHAT MATTERS:
   * query.where is not a function
+    - Legacy query.where() set's query.match under the hood
   * input vs merged event
-  * TypeError: Converting circular structure to JSON
-        --> starting at object with constructor 'Object'
-        --- property 'linkField' closes the circle
-        at stringify (<anonymous>)
 
 TODO:
   * Atlas Search Support
@@ -26,6 +23,8 @@ Known Issues:
   * .flags({ debug: true }) - You will never see debug info when the result is cached and no driver called
     - query.flags.debug should not be at driver level
   * Transactions still act up once in a while when running the tests; also sometimes see a JSON circular reference
+    - Circular ref presents itself as a problem when Jest test fails and it cannot JSON serialize the object
+    - It's unclear how taboo this is
 
 Improvement Considerations:
   * Resolver.graphql()

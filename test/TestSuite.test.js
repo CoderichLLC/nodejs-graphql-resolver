@@ -2,6 +2,7 @@ const { ObjectId } = require('mongodb');
 
 let richard;
 let christie;
+let jane;
 let mobyDick;
 let healthBook;
 let chapter1;
@@ -171,10 +172,11 @@ describe('TestSuite', () => {
     });
 
     test('PlainJane (with embedded)', async () => {
-      const jane = await resolver.match('PlainJane').save({
+      jane = await resolver.match('PlainJane').save({
         role: { 'detail.scope': 'r' }, // This tests a bug with unflatten (now fixed in Util)
         roles: [role], // This tests if we can have a FK by something other than ID
       });
+
       expect(jane).toMatchObject({
         id: expect.anything(),
         role: { detail: { scope: 'r' } },
@@ -916,6 +918,8 @@ describe('TestSuite', () => {
       expect(await doc.$.lookup('friends').count()).toBe(0);
       expect(await doc.$.lookup('authored').count()).toBe(1);
       expect(await healthBook.$.lookup('chapters').count()).toBe(2);
+      expect(await jane.$.lookup('roles').count()).toBe(1);
+      expect(await jane.$.lookup('roles').many()).toEqual([role]);
       const [chapter, nada] = await healthBook.$.lookup('chapters').where({ name: 'chapter1' }).many();
       expect(chapter.name).toBe('Chapter1');
       expect(nada).toBeUndefined();

@@ -233,7 +233,7 @@ module.exports = class Resolver {
                     }
                     case 'lookup': {
                       const field = self.toModel(model).fields[args[0]];
-                      const where = { [field.linkBy]: $doc[field.linkField.name] };
+                      const where = field.isVirtual ? { [field.linkBy]: $doc[field.linkField] } : { [field.fkField]: $doc[field] };
                       return self.match(field.model).where(where);
                     }
                     default: {
