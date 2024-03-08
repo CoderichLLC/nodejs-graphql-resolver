@@ -283,24 +283,14 @@ module.exports = class Resolver {
       if (resultEarly !== undefined) return resultEarly;
 
       // I hate this
-      if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
+      // if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
 
-      // if (query.isMutation) query.input = await tquery.pipeline('input', query.input);
       if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$finalize']);
-      if (query.isMutation) await Emitter.emit('finalize', event);
       return thunk().then((result) => {
         event.result = result; // backwards compat
         query.result = result;
         return Emitter.emit(`post${type}`, event);
       });
-    }).then((result = query.result) => {
-      event.result = result; // backwards compat
-      query.result = result;
-      return Emitter.emit('preResponse', event);
-    }).then((result = query.result) => {
-      event.result = result; // backwards compat
-      query.result = result;
-      return Emitter.emit('postResponse', event);
     }).then((result = query.result) => result).catch((e) => {
       const { data = {} } = e;
       throw Boom.boomify(e, { data: { ...event, ...data } });

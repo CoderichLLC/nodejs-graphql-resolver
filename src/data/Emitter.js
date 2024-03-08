@@ -12,20 +12,21 @@ class Emitter extends EventEmitter {
   emit(event, data) {
     // Here we pull out functions with "next" vs those without
     const [basicFuncs, nextFuncs] = this.rawListeners(event).reduce((prev, wrapper) => {
-      const listener = wrapper.listener || wrapper;
+      const { listener = wrapper } = wrapper;
       const isBasic = listener.length < 2;
+      wrapper.priority = listener.priority ?? 0;
       return prev[isBasic ? 0 : 1].push(wrapper) && prev;
     }, [[], []]);
 
     return new Promise((resolve, reject) => {
       // Basic functions run first; if they return a value they abort the flow of execution
-      basicFuncs.forEach((fn) => {
+      basicFuncs.sort(Emitter.sort).forEach((fn) => {
         const value = fn(data);
         if (value !== undefined && !(value instanceof Promise)) throw new AbortEarlyError(value);
       });
 
       // Next functions are async and control the timing of the next phase
-      Promise.all(nextFuncs.map((fn) => {
+      Promise.all(nextFuncs.sort(Emitter.sort).map((fn) => {
         return new Promise((next) => {
           Promise.resolve(fn(data, next));
         }).then((result) => {
@@ -38,35 +39,45 @@ class Emitter extends EventEmitter {
     });
   }
 
+  on(event, listener, priority = 0) {
+    listener.priority = priority;
+    return super.on(event, listener);
+  }
+
+  prependListener(event, listener, priority = 0) {
+    listener.priority = priority;
+    return super.prependListener(event, listener);
+  }
+
   /**
    * Syntactic sugar to listen on query keys
    */
   onKeys(...args) {
-    return this.#createWrapper(...args, 'key');
+    return this.#createWrapper('key', false, ...args,);
   }
 
   /**
    * Syntactic sugar to listen once on query keys
    */
   onceKeys(...args) {
-    return this.#createWrapper(...args, 'key', true);
+    return this.#createWrapper('key', true, ...args);
   }
 
   /**
    * Syntactic sugar to listen on query models
    */
   onModels(...args) {
-    return this.#createWrapper(...args, 'model');
+    return this.#createWrapper('model', false, ...args);
   }
 
   /**
    * Syntactic sugar to listen once on query models
    */
   onceModels(...args) {
-    return this.#createWrapper(...args, 'model', true);
+    return this.#createWrapper('model', true, ...args);
   }
 
-  #createWrapper(eventName, arr, listener, prop, once) {
+  #createWrapper(prop, once, eventName, arr, listener, priority) {
     arr = Util.ensureArray(arr);
 
     const wrapper = listener.length < 2 ? (event) => {
@@ -83,7 +94,13 @@ class Emitter extends EventEmitter {
       return next();
     };
 
-    return this.on(eventName, wrapper);
+    return this.on(eventName, wrapper, priority);
+  }
+
+  static sort(a, b) {
+    if (a.priority > b.priority) return -1;
+    if (a.priority < b.priority) return 1;
+    return 0;
   }
 }
 

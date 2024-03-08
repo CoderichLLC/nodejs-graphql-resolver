@@ -163,4 +163,37 @@ describe('Emitter', () => {
       expect(fn3).toBeCalledTimes(1);
     });
   });
+
+  describe('Priority', () => {
+    // Base case
+    const fn1 = jest.fn();
+    const fn2 = jest.fn();
+    const fn3 = jest.fn();
+    Emitter.on('event', fn1);
+    Emitter.on('event', fn2);
+    Emitter.prependListener('event', fn3);
+    Emitter.emit('event');
+    expect(fn1.mock.invocationCallOrder[0]).toBeLessThan(fn2.mock.invocationCallOrder[0]);
+    expect(fn3.mock.invocationCallOrder[0]).toBeLessThan(fn1.mock.invocationCallOrder[0]);
+
+    // Priority
+    const fn11 = jest.fn();
+    const fn21 = jest.fn();
+    const fn31 = jest.fn();
+    Emitter.on('event', fn11);
+    Emitter.prependListener('event', fn31, -Infinity);
+    Emitter.on('event', fn21, 1);
+    Emitter.emit('event');
+    expect(fn21.mock.invocationCallOrder[0]).toBeLessThan(fn11.mock.invocationCallOrder[0]);
+    expect(fn21.mock.invocationCallOrder[0]).toBeLessThan(fn31.mock.invocationCallOrder[0]);
+    expect(fn11.mock.invocationCallOrder[0]).toBeLessThan(fn31.mock.invocationCallOrder[0]);
+
+    // Infinities
+    const inf1 = jest.fn();
+    const inf2 = jest.fn();
+    Emitter.on('event', inf1, Infinity);
+    Emitter.on('event', inf2, Infinity);
+    Emitter.emit('event');
+    expect(inf1.mock.invocationCallOrder[0]).toBeLessThan(inf2.mock.invocationCallOrder[0]);
+  });
 });

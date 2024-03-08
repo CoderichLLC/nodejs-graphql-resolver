@@ -1,7 +1,10 @@
 WHAT MATTERS:
   * input vs merged event
   * mutating input/merged "preMutation" - input never get's re-transformed
-
+  * TypeError: Converting circular structure to JSON
+        --> starting at object with constructor 'Object'
+        --- property 'linkField' closes the circle
+        at stringify (<anonymous>)
 
 TODO:
   * Need a way to define idValue (for User.id)
