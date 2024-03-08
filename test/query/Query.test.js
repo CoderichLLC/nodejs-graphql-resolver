@@ -47,7 +47,7 @@ describe('Query', () => {
     });
 
     test('update', async () => {
-      expect((await factory('Person').where({ name: 'rich' }).save({ name: 'RiChArD' }).transform()).toObject()).toMatchObject({
+      expect((await factory('Person').where({ name: 'rich' }).save({ name: 'RiChArD', emailAddress: 'rich@gmail.com' }).transform()).toObject()).toMatchObject({
         id: undefined,
         crud: 'update',
         op: 'updateMany',
@@ -58,16 +58,17 @@ describe('Query', () => {
             id: expect.thunk(ObjectId.isValid),
             name: 'richard',
             network: 'network',
+            emailAddress: 'rich@gmail.com',
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
             // telephone: undefined, // Update does not set input as default
-            // updatedAt: expect.any(Date),
-            // createdAt: expect.any(Date),
           }),
         ],
       });
     });
 
     test('create', async () => {
-      expect((await factory('Person').save({ name: 'RiChArD' }).transform()).toObject()).toMatchObject({
+      expect((await factory('Person').save({ name: 'RiChArD', emailAddress: 'rich@gmail.com' }).transform()).toObject()).toMatchObject({
         id: undefined,
         crud: 'create',
         op: 'createOne',
@@ -78,8 +79,8 @@ describe('Query', () => {
           name: 'richard',
           network: 'network',
           telephone: '###-###-####', // Create will set default input
-          // updatedAt: expect.any(Date),
-          // createdAt: expect.any(Date),
+          updatedAt: expect.any(Date),
+          createdAt: expect.any(Date),
         },
       });
     });

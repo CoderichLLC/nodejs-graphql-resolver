@@ -53,7 +53,8 @@ module.exports = class Query {
     const crudMap = { create: ['$construct', '$serialize'], update: ['$restruct', '$serialize'] };
     const crudLines = crudMap[this.#query.crud] || [];
     const transformerMap = { where: ['$cast', '$instruct', '$serialize'], sort: [], input: [] };
-    if (this.#query.isMutation) transformerMap.input = ['$default', '$cast', '$normalize', '$instruct', ...crudLines];
+    if (this.#query.isMutation) transformerMap.input = ['$default', '$cast', '$normalize', '$instruct', ...crudLines, '$finalize'];
+    // if (this.#query.crud === 'create') transformerMap.input.unshift('$default'); // Cant because embedded documents on update are really "creates"
     transformers = transformers || transformerMap[target];
     return this.#pipeline(this.#query, target, this.#model, data, transformers.map(el => Pipeline[el]));
   }

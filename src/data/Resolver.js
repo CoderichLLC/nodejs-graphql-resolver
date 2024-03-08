@@ -189,12 +189,11 @@ module.exports = class Resolver {
    */
   async resolve(query) {
     let thunk;
-    const tquery = await query.transform();
     const { model, doc, crud, isMutation, flags } = query.toObject();
     const currSession = this.#sessions.slice(-1).pop();
 
     if (isMutation) {
-      thunk = () => this.#schema.models[model].source.client.resolve(tquery.toDriver().toObject()).then((results) => {
+      thunk = tquery => this.#schema.models[model].source.client.resolve(tquery.toDriver().toObject()).then((results) => {
         // We clear the cache immediately (regardless if we're in transaction or not)
         this.clear(model);
 
@@ -205,11 +204,11 @@ module.exports = class Resolver {
         return crud === 'delete' ? doc : results;
       });
     } else {
-      thunk = () => this.#dataLoaders[model].resolve(tquery);
+      thunk = tquery => this.#dataLoaders[model].resolve(tquery);
     }
 
-    return this.#createSystemEvent(tquery, () => {
-      return thunk().then((result) => {
+    return this.#createSystemEvent(query, (tquery) => {
+      return thunk(tquery).then((result) => {
         if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
         return crud === 'delete' ? result : this.toResultSet(model, result);
       });
@@ -267,8 +266,8 @@ module.exports = class Resolver {
     }, {});
   }
 
-  #createSystemEvent(tquery, thunk = () => {}) {
-    const query = tquery.toObject();
+  #createSystemEvent($query, thunk = () => {}) {
+    const query = $query.toObject();
     const type = query.isMutation ? 'Mutation' : 'Query';
     const event = { schema: this.#schema, context: this.#context, resolver: this, query };
 
@@ -280,13 +279,11 @@ module.exports = class Resolver {
     event.input = event.args?.input;
 
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
-      if (resultEarly !== undefined) return resultEarly;
-
-      // I hate this
+      if (resultEarly !== undefined) return resultEarly; // Nothing to validate/transform
       // if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
-
-      if (query.isMutation) query.input = await tquery.pipeline('input', query.input, ['$finalize']);
-      return thunk().then((result) => {
+      const tquery = await $query.transform();
+      // await Emitter.emit('validate', event); // We need to re-connect tquery to event
+      return thunk(tquery).then((result) => {
         event.result = result; // backwards compat
         query.result = result;
         return Emitter.emit(`post${type}`, event);
