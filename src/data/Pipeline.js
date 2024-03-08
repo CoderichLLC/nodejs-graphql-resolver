@@ -74,12 +74,14 @@ module.exports = class Pipeline {
 
     //
     Pipeline.define('$pk', (params) => {
-      const value = get(params.query.doc, params.path) || params.value?.id || params.value;
+      const { pkField } = params.model;
+      const value = get(params.query.doc, params.path) || params.value?.[pkField] || params.value; // I "think" the get() is for embedded documents
       return Pipeline[params.field.id]({ ...params, value });
     }, { ignoreNull: false });
 
     Pipeline.define('$fk', (params) => {
-      const value = params.value?.id || params.value;
+      const { fkField } = params.field;
+      const value = params.value?.[fkField] || params.value;
       return Pipeline[params.field.id]({ ...params, value });
     });
 
@@ -117,9 +119,9 @@ module.exports = class Pipeline {
 
     //
     Pipeline.define('ensureFK', ({ query, resolver, field, value }) => {
-      const { type, model } = field;
+      const { type, fkField } = field;
       const ids = Util.filterBy(Util.ensureArray(value), (a, b) => `${a}` === `${b}`);
-      return resolver.match(type).flags(query.flags).where({ [model.pkField]: ids }).count().then((count) => {
+      return resolver.match(type).flags(query.flags).where({ [fkField]: ids }).count().then((count) => {
         if (count !== ids.length) throw Boom.notFound(`${type} Not Found`);
       });
     }, { itemize: false });

@@ -20,6 +20,7 @@ let bookstore2;
 let library;
 let apartment;
 let artsy;
+let role;
 
 const sorter = (a, b) => {
   const idA = `${a.id}`;
@@ -162,8 +163,9 @@ describe('TestSuite', () => {
     });
 
     test('Role', async () => {
-      expect(await resolver.match('Role').save({ name: 'admin' })).toMatchObject({
-        // id: expect.anything(),
+      role = await resolver.match('Role').save({ name: 'admin' });
+      expect(role).toMatchObject({
+        id: expect.anything(),
         name: 'admin',
       });
     });
@@ -171,7 +173,7 @@ describe('TestSuite', () => {
     test('PlainJane (with embedded)', async () => {
       const jane = await resolver.match('PlainJane').save({
         role: { 'detail.scope': 'r' }, // This tests a bug with unflatten (now fixed in Util)
-        roles: ['admin'], // This tests if we can have a FK by something other than ID
+        roles: [role], // This tests if we can have a FK by something other than ID
       });
       expect(jane).toMatchObject({
         id: expect.anything(),

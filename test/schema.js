@@ -128,10 +128,10 @@ module.exports = {
       id: ID!
       name: String
       role: RoleEmbedded
-      roles: [Role!]! @field(default: [])
+      roles: [Role!]! @field(default: [], fk: name)
     }
 
-    type Role @model(pk: "name", decorate: null) {
+    type Role @model {
       name: String!
     }
 

@@ -8,7 +8,6 @@ WHAT MATTERS:
 
 TODO:
   * Atlas Search Support
-  * Need a way to define idKey (for User.roles array of String)
   * Tests overhaul
     - Need to make sure that Scalar @field() is working
 

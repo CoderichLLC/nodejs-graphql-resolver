@@ -214,6 +214,10 @@ module.exports = class Schema {
                 break;
               }
               // Field specific directives
+              case `${directives.field}-fk`: {
+                target.fkField = value;
+                break;
+              }
               case `${directives.field}-default`: {
                 target.defaultValue = value;
                 break;
@@ -230,9 +234,14 @@ module.exports = class Schema {
                 target.pipelines.normalize = target.pipelines.normalize.concat(value).filter(Boolean);
                 break;
               }
+              case `${directives.link}-to`: {
+                target.linkTo = value;
+                target.isVirtual ??= true;
+                break;
+              }
               case `${directives.link}-by`: {
                 target.linkBy = value;
-                target.isVirtual = true;
+                target.isVirtual ??= true;
                 break;
               }
               // Generic by target directives
@@ -340,7 +349,9 @@ module.exports = class Schema {
             $field.id ??= $model.id;
             $field.model = $schema.models[$field.type];
             $field.crud = Util.uvl($field.crud, $field.model?.scope, 'crud');
-            $field.linkBy ??= $field.model?.pkField;
+            $field.linkTo ??= $field.model;
+            $field.linkBy ??= $field.linkTo?.pkField; // This defines join logic (below) for both straight+virtual references
+            $field.fkField ??= $field.model?.pkField; // This is the fkReference field for straight references
             $field.linkField = $field.isVirtual ? $model.fields[$model.pkField] : $field;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
@@ -354,15 +365,15 @@ module.exports = class Schema {
 
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
-            if ($field.isFKReference) $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
-
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.finalize.push('required');
+
             if ($field.isFKReference) {
               const to = $field.model.key;
               const on = $field.model.fields[$field.linkBy].key;
               const from = $field.linkField.key;
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
+              $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
               $field.pipelines.finalize.push('ensureFK'); // Absolute Last
             }
           });
@@ -495,6 +506,7 @@ module.exports = class Schema {
 
       directive @${field}(
         id: String # Specify the ID strategy (eg. "toObjectId")
+        fk: String # Specify the FK field (default model.pk)
         key: String # Specify db key
         persist: Boolean # Persist this field (default true)
         connection: Boolean # Treat this field as a connection type (default false - rolling this out slowly)
