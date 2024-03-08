@@ -161,15 +161,22 @@ describe('TestSuite', () => {
       }]);
     });
 
+    test('Role', async () => {
+      expect(await resolver.match('Role').save({ name: 'admin' })).toMatchObject({
+        // id: expect.anything(),
+        name: 'admin',
+      });
+    });
+
     test('PlainJane (with embedded)', async () => {
-      const jane = await resolver.match('PlainJane').save({ role: { 'detail.scope': 'r' } });
+      const jane = await resolver.match('PlainJane').save({
+        role: { 'detail.scope': 'r' }, // This tests a bug with unflatten (now fixed in Util)
+        roles: ['admin'], // This tests if we can have a FK by something other than ID
+      });
       expect(jane).toMatchObject({
         id: expect.anything(),
-        role: {
-          detail: {
-            scope: 'r',
-          },
-        },
+        role: { detail: { scope: 'r' } },
+        roles: ['admin'],
       });
     });
   });

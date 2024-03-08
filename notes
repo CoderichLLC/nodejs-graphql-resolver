@@ -1,25 +1,24 @@
 WHAT MATTERS:
+  * query.where is not a function
   * input vs merged event
-  * toId alternative?
-  * delete query.props.id (workspace listener)
   * TypeError: Converting circular structure to JSON
         --> starting at object with constructor 'Object'
         --- property 'linkField' closes the circle
         at stringify (<anonymous>)
 
 TODO:
-  * Need a way to define idValue (for User.id)
+  * Atlas Search Support
   * Need a way to define idKey (for User.roles array of String)
-  * Easy select('a b c d') syntax
-    - GraphQL API passes in .args() and only selects what it needs.... is this ok for DataLoader Cache?
-    - I disabled it... when selecting "count" only there are problems
   * Tests overhaul
     - Need to make sure that Scalar @field() is working
-  * Break up Schema monolith (schema.parse() usage)
-  * Pipeline user-defined id function needs to "ignoreNull" (how to ensure it does?)
 
 Release 0.14
   * Remove deprecations
+  * Break up Schema monolith (schema.parse() usage)
+  * Pipeline user-defined id function needs to "ignoreNull" (how to ensure it does?)
+  * Easy select('a b c d') syntax
+    - GraphQL API passes in .args() and only selects what it needs.... is this ok for DataLoader Cache?
+    - I disabled it... when selecting "count" only there are problems
 
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
@@ -55,8 +54,6 @@ Improvement Considerations:
   * DataLoader - rewrite for batch queries
   * EnsureId - inline query?
   * Allow @field(key: "some.path") in order to hoist
-    - Also, allow this at the GraphQL API query layer?
-    - This has been discussed and https://github.com/graphql-kit/graphql-lodash exists (but its not recommended)
   * Support for GUID (node interface)
     - autograph.legacyMode (move to config)
 
@@ -67,7 +64,7 @@ BREAKING CHANGELOG:
     - makeExecutableSchema
   * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }
     - No more pipeline on database result! (check default, transform/normalize, deserialize)
-    - Pipeline "toId" is completely removed
+    - Pipeline "toId" is completely removed (use custom "toObjectId" Pipeline etc)
     - Removed Pipelines [transform, deserialize, destruct, validate]
       - transform -> normalize
       - validate -> finalize

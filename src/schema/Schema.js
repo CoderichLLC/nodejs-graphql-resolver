@@ -59,7 +59,7 @@ module.exports = class Schema {
 
           if (directive) {
             const arg = directive.arguments.find(({ name }) => name.value === 'decorate');
-            const value = arg?.value.value || 'default';
+            const value = Util.uvl(Schema.#resolveNodeValue(arg?.value), 'default');
             const decorator = this.#config.decorators?.[value];
 
             if (decorator) {
@@ -339,8 +339,8 @@ module.exports = class Schema {
           thunks.unshift(($schema) => {
             $field.id ??= $model.id;
             $field.model = $schema.models[$field.type];
-            $field.linkBy ??= $field.model?.pkField;
             $field.crud = Util.uvl($field.crud, $field.model?.scope, 'crud');
+            $field.linkBy ??= $field.model?.pkField;
             $field.linkField = $field.isVirtual ? $model.fields[$model.pkField] : $field;
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
@@ -363,7 +363,7 @@ module.exports = class Schema {
               const from = $field.linkField.key;
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
-              $field.pipelines.finalize.push('ensureId'); // Absolute Last
+              $field.pipelines.finalize.push('ensureFK'); // Absolute Last
             }
           });
 
@@ -446,6 +446,8 @@ module.exports = class Schema {
   }
 
   static #resolveNodeValue(node) {
+    if (node == null) return node;
+
     switch (node.kind) {
       case 'NullValue': return null;
       case 'ListValue': return node.values.map(Schema.#resolveNodeValue);

@@ -116,10 +116,10 @@ module.exports = class Pipeline {
     });
 
     //
-    Pipeline.define('ensureId', ({ query, resolver, model, field, value }) => {
-      const { type } = field;
+    Pipeline.define('ensureFK', ({ query, resolver, field, value }) => {
+      const { type, model } = field;
       const ids = Util.filterBy(Util.ensureArray(value), (a, b) => `${a}` === `${b}`);
-      return resolver.match(type).flags(query.flags).where({ id: ids }).count().then((count) => {
+      return resolver.match(type).flags(query.flags).where({ [model.pkField]: ids }).count().then((count) => {
         if (count !== ids.length) throw Boom.notFound(`${type} Not Found`);
       });
     }, { itemize: false });
