@@ -12,16 +12,6 @@ const { Resolver, Emitter } = require('../index');
     next();
   });
 
-  schema.merge({
-    resolvers: {
-      Query: {
-        findPerson: (doc, args, ctx, info) => {
-          return ctx.autograph.resolver.match('Person').args(args).resolve(info);
-        },
-      },
-    },
-  });
-
   await schema.setup();
 
   const server = new ApolloServer({

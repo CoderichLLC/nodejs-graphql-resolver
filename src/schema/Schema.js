@@ -589,7 +589,7 @@ module.exports = class Schema {
             }
             ${connectionFields.length ? `
               extend type ${model} {
-                ${connectionFields.map(field => `${field}: ${field.model}Connection`)}
+                ${connectionFields.map(field => `${field}(${Schema.#getConnectionArguments(field.model)}): ${field.model}Connection`)}
               }
             ` : ''}
           `;
@@ -619,16 +619,7 @@ module.exports = class Schema {
           node(id: ID!): Node
           ${queryModels.map(model => `
             get${model}(id: ID!): ${model}
-            find${model}(
-              where: ${model}InputWhere
-              sortBy: ${model}InputSort
-              limit: Int
-              skip: Int
-              first: Int
-              after: String
-              last: Int
-              before: String
-            ): ${model}Connection!
+            find${model}(${Schema.#getConnectionArguments(model)}): ${model}Connection!
           `)}
         }
 
@@ -713,13 +704,7 @@ module.exports = class Schema {
         Query: queryModels.reduce((prev, model) => {
           return Object.assign(prev, {
             [`get${model}`]: (doc, args, context, info) => context[schema.namespace].resolver.match(model).args(args).info(info).one({ required: true }),
-            [`find${model}`]: (doc, args, context, info) => {
-              return {
-                edges: () => context[schema.namespace].resolver.match(model).args(args).info(info).many(),
-                count: () => context[schema.namespace].resolver.match(model).args(args).info(info).count(),
-                pageInfo: () => context[schema.namespace].resolver.match(model).args(args).info(info).many(),
-              };
-            },
+            [`find${model}`]: (doc, args, context, info) => context[schema.namespace].resolver.match(model).args(args).info(info).resolve(info),
           });
         }, {
           node: (doc, args, context, info) => {
@@ -746,7 +731,7 @@ module.exports = class Schema {
             [model]: Object.values(model.fields).filter(field => field.model?.isEntity).reduce((prev2, field) => {
               return Object.assign(prev2, {
                 [field]: (doc, args, context, info) => {
-                  return context[schema.namespace].resolver.match(field.model).where({ [field.linkBy]: doc[field.linkField.name] }).args(args).info(info).resolve(info);
+                  return doc.$.lookup(field).args(args).info(info).resolve(info);
                 },
               });
             }, {}),
@@ -765,6 +750,19 @@ module.exports = class Schema {
     if (!suffix && isRequired) type += '!';
     if (suffix === 'InputCreate' && !isPrimaryKey && isRequired && defaultValue == null) type += '!';
     return type;
+  }
+
+  static #getConnectionArguments(model) {
+    return `
+      where: ${model}InputWhere
+      sortBy: ${model}InputSort
+      limit: Int
+      skip: Int
+      first: Int
+      after: String
+      last: Int
+      before: String
+    `;
   }
 
   static #identifyOnDeletes(models, parentName) {

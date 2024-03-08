@@ -43,3 +43,12 @@ exports.getGQLSelectFields = (model, info) => {
 //     return value === undefined ? prev : Object.assign(prev, { [key]: value });
 //   }, {}));
 // };
+
+exports.JSONParse = (mixed) => {
+  try {
+    const json = JSON.parse(mixed);
+    return json;
+  } catch (e) {
+    return undefined;
+  }
+};

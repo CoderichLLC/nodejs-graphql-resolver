@@ -68,7 +68,7 @@ module.exports = class QueryBuilder {
   }
 
   info(info) {
-    this.select(getGQLSelectFields(this.#query.model, info));
+    // this.select(getGQLSelectFields(this.#query.model, info));
     return this;
   }
 
@@ -82,7 +82,7 @@ module.exports = class QueryBuilder {
   }
 
   where(clause) {
-    this.#propCheck('where', 'native', false);
+    this.#propCheck('where', 'native', false); // Allow redefine of "where" because we merge it
     const $clause = mergeDeep(this.#query.where || {}, clause);
     this.#query.where = $clause;
     this.#query.args.where = $clause;

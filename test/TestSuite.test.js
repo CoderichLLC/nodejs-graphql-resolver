@@ -904,6 +904,8 @@ describe('TestSuite', () => {
       expect(await doc.$.lookup('authored').one()).toMatchObject({ id: healthBook.id });
       expect(await doc.$.lookup('authored').where({ name: 'health*' }).one()).toMatchObject({ id: healthBook.id });
       expect(await doc.$.lookup('authored').where({ name: 'moby*' }).one()).toBeNull();
+      expect(await doc.$.lookup('friends').count()).toBe(0);
+      expect(await doc.$.lookup('authored').count()).toBe(1);
       expect(await healthBook.$.lookup('chapters').count()).toBe(2);
       const [chapter, nada] = await healthBook.$.lookup('chapters').where({ name: 'chapter1' }).many();
       expect(chapter.name).toBe('Chapter1');

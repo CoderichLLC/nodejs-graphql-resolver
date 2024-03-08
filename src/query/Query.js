@@ -1,6 +1,6 @@
 const Util = require('@coderich/util');
 const Pipeline = require('../data/Pipeline');
-const { isGlob, globToRegex, mergeDeep, finalizeWhereClause } = require('../service/AppService');
+const { isGlob, globToRegex, mergeDeep, finalizeWhereClause, JSONParse } = require('../service/AppService');
 
 module.exports = class Query {
   #config;
@@ -82,8 +82,8 @@ module.exports = class Query {
       input: this.#model.walk(input, node => node.value !== undefined && Object.assign(node, { key: node.field.key })),
       where: isNative ? where : this.#model.walk(where, node => Object.assign(node, { key: node.field.key })),
       sort: this.#model.walk(sort, node => Object.assign(node, { key: node.field.key })),
-      before: (!isCursorPaging || !before) ? undefined : JSON.parse(Buffer.from(before, 'base64').toString('ascii')),
-      after: (!isCursorPaging || !after) ? undefined : JSON.parse(Buffer.from(after, 'base64').toString('ascii')),
+      before: (!isCursorPaging || !before) ? undefined : JSONParse(Buffer.from(before, 'base64').toString('ascii')),
+      after: (!isCursorPaging || !after) ? undefined : JSONParse(Buffer.from(after, 'base64').toString('ascii')),
       $schema: this.#schema.resolvePath,
     });
 

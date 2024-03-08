@@ -229,7 +229,7 @@ module.exports = class Resolver {
                 return (...args) => {
                   switch (cmd) {
                     case 'save': {
-                      return queryResolver.save({ ...$doc, ...args[0] });
+                      return queryResolver.save({ ...$doc, ...args[0] }); // $doc incase it's mutated
                     }
                     case 'lookup': {
                       const field = self.toModel(model).fields[args[0]];

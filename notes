@@ -1,6 +1,7 @@
 WHAT MATTERS:
   * input vs merged event
-  * mutating input/merged "preMutation" - input never get's re-transformed
+  * toId alternative?
+  * delete query.props.id (workspace listener)
   * TypeError: Converting circular structure to JSON
         --> starting at object with constructor 'Object'
         --- property 'linkField' closes the circle
@@ -9,8 +10,9 @@ WHAT MATTERS:
 TODO:
   * Need a way to define idValue (for User.id)
   * Need a way to define idKey (for User.roles array of String)
-  * Connection types need API args
   * Easy select('a b c d') syntax
+    - GraphQL API passes in .args() and only selects what it needs.... is this ok for DataLoader Cache?
+    - I disabled it... when selecting "count" only there are problems
   * Tests overhaul
     - Need to make sure that Scalar @field() is working
   * Break up Schema monolith (schema.parse() usage)
