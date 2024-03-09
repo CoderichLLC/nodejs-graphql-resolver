@@ -27,7 +27,6 @@ describe('performance', () => {
     const update = await resolver.match('Person').where({ age: 45 }).save({ age: 44 });
     console.timeEnd('updateMany');
     expect(update.length).toBe(1000);
-    // expect(update[0].age).toBe(44);
 
     // console.time('updateRaw');
     // await resolver.raw('Person').updateMany({}, { age: 40 });
@@ -37,6 +36,5 @@ describe('performance', () => {
     const find = await resolver.match('Person').many();
     console.timeEnd('findMany');
     expect(find.length).toBe(1000);
-    // expect(find[0].age).toBe(40);
   });
 });

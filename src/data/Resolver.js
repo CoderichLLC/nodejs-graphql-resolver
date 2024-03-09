@@ -1,6 +1,7 @@
 const { graphql } = require('graphql');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
+const Pipeline = require('./Pipeline');
 const Emitter = require('./Emitter');
 const Loader = require('./Loader');
 const DataLoader = require('./DataLoader');
@@ -220,7 +221,15 @@ module.exports = class Resolver {
     if (result == null) return result;
     if (typeof result !== 'object') return result;
     return Object.defineProperties(Util.map(result, (doc) => {
-      const $doc = this.#schema.models[model].walk(doc, node => node.value !== undefined && Object.assign(node, { key: node.field.name }), { key: 'key' });
+      // Transform result to domain model
+      const $doc = this.#schema.models[model].walk(doc, (node) => {
+        if (node.value === undefined) return undefined;
+        node.key = node.field.name;
+        node.value = Pipeline.$cast(node);
+        return node;
+      }, { key: 'key' });
+
+      // Assign useful/needed meta data
       return Object.defineProperties($doc, {
         $: {
           get: () => {

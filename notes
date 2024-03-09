@@ -1,6 +1,5 @@
 WHAT MATTERS:
-  * query.where is not a function
-    - Legacy query.where() set's query.match under the hood
+  * Emitter: args.parentPath is not a function
   * input vs merged event
 
 TODO:
