@@ -19,16 +19,8 @@ module.exports = class Pipeline {
     const wrapper = Object.defineProperty((args) => {
       try {
         if (ignoreNull && args.value == null) return args.value;
-
-        if (ignoreNull && itemize) {
-          return Util.map(args.value, (value) => {
-            const v = factory({ ...args, value });
-            return v === undefined ? value : v;
-          });
-        }
-
-        const value = factory(args);
-        return value === undefined ? args.value : value;
+        if (ignoreNull && itemize) return Util.map(args.value, value => Util.uvl(factory({ ...args, value }), value));
+        return Util.uvl(factory(args), args.value);
       } catch (e) {
         const { data = {} } = e;
         throw Boom.boomify(e, { data: { ...args, ...data } });

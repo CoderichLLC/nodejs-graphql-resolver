@@ -51,7 +51,7 @@ Improvement Considerations:
   * onDelete defer - could probably be done dynamically instead
   * DataLoader - rewrite for batch queries
   * EnsureId - inline query?
-  * Allow @field(key: "some.path") in order to hoist
+  * Allow @field(path: "some.path") in order to hoist
   * Support for GUID (node interface)
     - autograph.legacyMode (move to config)
 
