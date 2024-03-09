@@ -190,11 +190,13 @@ module.exports = class Resolver {
    */
   async resolve(query) {
     let thunk;
-    const { model, doc, crud, isMutation, flags } = query.toObject();
+    const { model, crud, isMutation, flags } = query.toObject();
     const currSession = this.#sessions.slice(-1).pop();
 
     if (isMutation) {
       thunk = tquery => this.#schema.models[model].source.client.resolve(tquery.toDriver().toObject()).then((results) => {
+        const { doc, input } = tquery.toObject();
+
         // We clear the cache immediately (regardless if we're in transaction or not)
         this.clear(model);
 
@@ -202,7 +204,9 @@ module.exports = class Resolver {
         currSession?.thunks.push(...this.#sessions.map(s => () => s.parent.clear(model)));
 
         // Return results
-        return crud === 'delete' ? doc : results;
+        if (crud === 'delete') return doc;
+        if (crud === 'update') return input;
+        return this.toResultSet(model, results);
       });
     } else {
       thunk = tquery => this.#dataLoaders[model].resolve(tquery);
@@ -211,7 +215,7 @@ module.exports = class Resolver {
     return this.#createSystemEvent(query, (tquery) => {
       return thunk(tquery).then((result) => {
         if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
-        return crud === 'delete' ? result : this.toResultSet(model, result);
+        return result;
       });
     });
   }
@@ -224,8 +228,8 @@ module.exports = class Resolver {
       // Transform result to domain model
       const $doc = this.#schema.models[model].walk(doc, (node) => {
         if (node.value === undefined) return undefined;
+        if (node.value != null && node.field.isArray) node.value = Util.ensureArray(node.value);
         node.key = node.field.name;
-        node.value = Pipeline.$cast(node);
         return node;
       }, { key: 'key' });
 
@@ -271,7 +275,7 @@ module.exports = class Resolver {
     return Object.entries(this.#schema.models).filter(([key, value]) => {
       return value.loader && value.isEntity;
     }).reduce((prev, [key, value]) => {
-      return Object.assign(prev, { [key]: new DataLoader(value) });
+      return Object.assign(prev, { [key]: new DataLoader(value, this) });
     }, {});
   }
 
@@ -292,11 +296,12 @@ module.exports = class Resolver {
       // if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
       const tquery = await $query.transform();
       // await Emitter.emit('validate', event); // We need to re-connect tquery to event
-      return thunk(tquery).then((result) => {
-        event.result = result; // backwards compat
-        query.result = result;
-        return Emitter.emit(`post${type}`, event);
-      });
+      return thunk(tquery);
+    }).then((result) => {
+      event.doc ??= result; // Case of create
+      event.result = result; // backwards compat
+      query.result = result;
+      return Emitter.emit(`post${type}`, event);
     }).then((result = query.result) => result).catch((e) => {
       const { data = {} } = e;
       throw Boom.boomify(e, { data: { ...event, ...data } });

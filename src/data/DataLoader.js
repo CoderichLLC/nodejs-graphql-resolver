@@ -6,9 +6,11 @@ const { hashObject } = require('../service/AppService');
 module.exports = class Loader {
   #model;
   #loader;
+  #resolver;
 
-  constructor(model) {
+  constructor(model, resolver) {
     this.#model = model;
+    this.#resolver = resolver;
     model.loader.cacheKeyFn ??= (query => hashObject(query.toCacheKey()));
     this.#loader = new DataLoader(keys => this.#resolve(keys), model.loader);
   }
@@ -28,8 +30,8 @@ module.exports = class Loader {
 
       return this.#model.source.client.resolve($query).then((data) => {
         if (data == null) return null; // Explicit return null;
-        if ($query.isCursorPaging && Array.isArray(data)) return Loader.#paginateResults(data, query.toObject());
-        return data;
+        if ($query.isCursorPaging && Array.isArray(data)) data = Loader.#paginateResults(data, query.toObject());
+        return this.#resolver.toResultSet(this.#model, data);
       });
     }));
   }

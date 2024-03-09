@@ -48,7 +48,7 @@ describe('Pipeline', () => {
       // Spys
       expect(email).toHaveBeenCalledTimes(1);
       expect(immutable).toHaveBeenCalledTimes(0); // Only called on restruct
-      expect($cast).toHaveBeenCalledTimes(60); // A lot (but we're invoking the wrapper)
+      expect($cast).toHaveBeenCalledTimes(35); // A lot (but we're invoking the wrapper)
       expect($default).toHaveBeenCalledTimes(33); // A lot (but we're invoking the wrapper)
       expect(toLowerCase).toHaveBeenCalledTimes(4); // names
 
