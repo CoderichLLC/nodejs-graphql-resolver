@@ -12,20 +12,22 @@ Pipeline.define('networkID', ({ context }) => context.network.id, { ignoreNull: 
 Pipeline.define('email', ({ value }) => {
   if (!Validator.isEmail(value)) throw new Error('Invalid email');
 });
-Pipeline.define('toObjectId', ({ value }) => {
-  if (value instanceof ObjectId) return value;
-
-  try {
-    const id = new ObjectId(value);
-    return id;
-  } catch (e) {
-    return value;
-  }
-}, { ignoreNull: false });
 
 module.exports = ({ uri }) => ({
   namespace: 'autograph',
   makeExecutableSchema,
+  generators: {
+    default: ({ value }) => {
+      if (value instanceof ObjectId) return value;
+
+      try {
+        const id = new ObjectId(value);
+        return id;
+      } catch (e) {
+        return value;
+      }
+    },
+  },
   dataLoaders: {
     default: {
       cache: true,
@@ -33,7 +35,6 @@ module.exports = ({ uri }) => ({
   },
   dataSources: {
     default: {
-      id: 'toObjectId',
       supports: ['transactions'],
       client: new MongoClient({
         uri,
@@ -46,9 +47,11 @@ module.exports = ({ uri }) => ({
   },
   decorators: {
     default: `
-      id: ID! @field(key: "_id")
-      createdAt: Date @field(finalize: createdAt, crud: r)
-      updatedAt: Date @field(finalize: [timestamp, toDate], crud: r)
+      type default {
+        id: ID! @field(key: "_id")
+        createdAt: Date @field(finalize: createdAt, crud: r)
+        updatedAt: Date @field(finalize: [timestamp, toDate], crud: r)
+      }
     `,
   },
 });

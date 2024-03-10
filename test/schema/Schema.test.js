@@ -4,9 +4,11 @@ const { mergeDeep } = require('../../src/service/AppService');
 const config = {
   decorators: {
     default: `
-      id: ID! @field(key: "_id")
-      createdAt: Date @field(finalize: createdAt, crud: r)
-      updatedAt: Date @field(finalize: [timestamp, toDate], crud: r)
+      type decorator {
+        id: ID! @field(key: "_id")
+        createdAt: Date @field(finalize: createdAt, crud: r)
+        updatedAt: Date @field(finalize: [timestamp, toDate], crud: r)
+      }
     `,
   },
 };

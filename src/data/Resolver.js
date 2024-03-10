@@ -295,7 +295,7 @@ module.exports = class Resolver {
       // if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
       const tquery = await $query.transform(false);
       query = tquery.toObject();
-      event = this.#createEvent(query)
+      event = this.#createEvent(query);
       if (query.isMutation) await Emitter.emit('validate', event);
       return thunk(tquery);
     }).then((result) => {

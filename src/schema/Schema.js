@@ -2,7 +2,7 @@
 
 const Util = require('@coderich/util');
 const { Kind, parse, visit } = require('graphql');
-const { mergeTypeDefs, mergeFields } = require('@graphql-tools/merge');
+const { mergeTypeDefs, mergeFields, mergeDirectives } = require('@graphql-tools/merge');
 const { isLeafValue, mergeDeep, fromGUID } = require('../service/AppService');
 const Pipeline = require('../data/Pipeline');
 const Emitter = require('../data/Emitter');
@@ -50,12 +50,12 @@ module.exports = class Schema {
    * Decorate each marked @model with config-driven field decorators
    */
   decorate() {
-    const { directives } = this.#config;
+    const { directives: { model } } = this.#config;
 
     this.#typeDefs = visit(this.#typeDefs, {
       enter: (node) => {
         if (modelKinds.includes(node.kind) && !operations.includes(node.name.value)) {
-          const directive = node.directives.find(({ name }) => name.value === directives.model);
+          const directive = node.directives.find(({ name }) => name.value === model);
 
           if (directive) {
             const arg = directive.arguments.find(({ name }) => name.value === 'decorate');
@@ -63,8 +63,10 @@ module.exports = class Schema {
             const decorator = this.#config.decorators?.[value];
 
             if (decorator) {
-              const { fields } = parse(`type decorator { ${decorator} }`).definitions[0];
+              const { fields, directives } = parse(decorator).definitions[0];
               node.fields = mergeFields(node, node.fields, fields, { noLocation: true, onFieldTypeConflict: (f, a, b) => a });
+              const modelDirective = directives.find(({ name }) => name.value === model);
+              if (modelDirective) Object.assign(directive, mergeDirectives([directive], [modelDirective], { noLocation: true, onFieldTypeConflict: (f, a, b) => a })[0]);
               return node;
             }
           }
@@ -139,6 +141,7 @@ module.exports = class Schema {
             isPersistable: true,
             source: this.#config.dataSources?.default,
             loader: this.#config.dataLoaders?.default,
+            generator: this.#config.generators?.default,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
             directives: {},
             toString: () => name,
@@ -247,6 +250,10 @@ module.exports = class Schema {
                 break;
               }
               // Generic by target directives
+              case `${directives.model}-id`: case `${directives.field}-id`: {
+                target.generator = this.#config.generators[value];
+                break;
+              }
               case `${directives.model}-persist`: case `${directives.field}-persist`: {
                 target.isPersistable = value;
                 break;
@@ -255,10 +262,8 @@ module.exports = class Schema {
                 target[key] = Util.nvl(value, '');
                 break;
               }
-              case `${directives.model}-id`:
               case `${directives.model}-key`:
               case `${directives.model}-meta`:
-              case `${directives.field}-id`:
               case `${directives.field}-key`:
               case `${directives.field}-onDelete`: {
                 target[key] = value;
@@ -286,8 +291,6 @@ module.exports = class Schema {
       leave: (node) => {
         if (modelKinds.includes(node.kind)) {
           const $model = model;
-
-          model.id ??= model.source?.id;
 
           // Model resolution after field resolution (push)
           thunks.push(($schema) => {
@@ -348,7 +351,6 @@ module.exports = class Schema {
 
           // Field resolution comes first (unshift)
           thunks.unshift(($schema) => {
-            $field.id ??= $model.id;
             $field.model = $schema.models[$field.type];
             $field.crud = Util.uvl($field.crud, $field.model?.scope, 'crud');
             $field.linkTo ??= $field.model;
@@ -358,6 +360,7 @@ module.exports = class Schema {
             $field.isFKReference = !$field.isPrimaryKey && $field.model?.isMarkedModel && !$field.model?.isEmbedded;
             $field.isEmbedded = Boolean($field.model && !$field.isFKReference && !$field.isPrimaryKey);
             $field.isScalar = scalars.includes($field.type);
+            $field.generator ??= $model.generator;
 
             // Merge Enums and Scalar type definitions
             const enumer = this.#schema.enums[$field.type];
@@ -487,7 +490,7 @@ module.exports = class Schema {
       enum AutoGraphPipelineEnum { ${Object.keys(Pipeline).filter(k => !k.startsWith('$')).join(' ')} }
 
       directive @${model}(
-        id: String # Specify the ID strategy (eg. "toObjectId")
+        id: String # Specify the generator strategy (default: "default")
         pk: String # Specify the PK field (default "id")
         key: String # Specify db table/collection name
         crud: AutoGraphMixed # CRUD API
@@ -510,7 +513,7 @@ module.exports = class Schema {
       ) on OBJECT | INTERFACE
 
       directive @${field}(
-        id: String # Specify the ID strategy (eg. "toObjectId")
+        id: String # Specify the generator strategy (default: "default")
         fk: String # Specify the FK field (default model.pk)
         key: String # Specify db key
         persist: Boolean # Persist this field (default true)

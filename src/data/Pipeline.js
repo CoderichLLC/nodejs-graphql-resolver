@@ -67,14 +67,15 @@ module.exports = class Pipeline {
     //
     Pipeline.define('$pk', (params) => {
       const { pkField } = params.model;
-      const value = get(params.query.doc, params.path) || params.value?.[pkField] || params.value; // I "think" the get() is for embedded documents
-      return Pipeline[params.field.id]({ ...params, value });
+      const v = get(params.query.doc, params.path) || params.value?.[pkField] || params.value; // I "think" the get() is for embedded documents
+      if (v == null) return params.field.generator({ ...params, value: v });
+      return Util.map(v, value => params.field.generator({ ...params, value }));
     }, { ignoreNull: false });
 
     Pipeline.define('$fk', (params) => {
       const { fkField } = params.field;
-      const value = params.value?.[fkField] || params.value;
-      return Pipeline[params.field.id]({ ...params, value });
+      const v = params.value?.[fkField] || params.value;
+      return Util.map(v, value => params.field.generator({ ...params, value }));
     });
 
     Pipeline.define('$default', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
