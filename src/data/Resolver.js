@@ -286,22 +286,17 @@ module.exports = class Resolver {
   }
 
   #createSystemEvent($query, thunk = () => {}) {
-    const query = $query.toObject();
+    let query = $query.toObject();
     const type = query.isMutation ? 'Mutation' : 'Query';
-    const event = { schema: this.#schema, context: this.#context, resolver: this, query };
-
-    // Backwards compat
-    Object.assign(event, query);
-    query.match = query.where;
-    query.toObject = () => query;
-    event.merged = event.input;
-    event.input = event.args?.input;
+    let event = this.#createEvent(query);
 
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly; // Nothing to validate/transform
       // if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
       const tquery = await $query.transform(false);
-      await Emitter.emit('validate', event);
+      query = tquery.toObject();
+      event = this.#createEvent(query)
+      if (query.isMutation) await Emitter.emit('validate', event);
       return thunk(tquery);
     }).then((result) => {
       event.doc ??= result; // Case of create
@@ -312,6 +307,19 @@ module.exports = class Resolver {
       const { data = {} } = e;
       throw Boom.boomify(e, { data: { ...event, ...data } });
     });
+  }
+
+  #createEvent(query) {
+    const event = { schema: this.#schema, context: this.#context, resolver: this, query };
+
+    // Backwards compat
+    Object.assign(event, query);
+    query.match = query.where;
+    query.toObject = () => query;
+    event.merged = event.input;
+    event.input = event.args?.input;
+
+    return event;
   }
 
   static $loader(name, resolver, config) {
