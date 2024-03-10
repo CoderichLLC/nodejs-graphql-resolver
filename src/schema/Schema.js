@@ -104,7 +104,7 @@ module.exports = class Schema {
     }
 
     if (schema.resolvers) {
-      this.#resolvers = mergeDeep(this.#resolvers, schema.resolvers);
+      this.#resolvers = mergeDeep(schema.resolvers, this.#resolvers);
     }
 
     return this;

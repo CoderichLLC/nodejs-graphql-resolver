@@ -318,6 +318,7 @@ module.exports = class Resolver {
     query.toObject = () => query;
     event.merged = event.input;
     event.input = event.args?.input;
+    event.doc ??= event.merged;
 
     return event;
   }

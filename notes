@@ -1,5 +1,6 @@
 WHAT MATTERS:
   * Emitter: args.parentPath is not a function
+  * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
   * input vs merged event
 
 TODO:
