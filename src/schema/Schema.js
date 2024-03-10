@@ -164,13 +164,15 @@ module.exports = class Schema {
         }
 
         if (enumKinds.includes(node.kind)) {
+          const values = Schema.#resolveNodeValue(node);
+
           target = this.#schema.enums[name] = {
+            values,
             directives: {},
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
           };
 
           // Define (and assign) an Allow pipeline for the enumeration
-          const values = Schema.#resolveNodeValue(node);
           Pipeline.define(name, Pipeline.Allow(...values), { configurable: true });
           target.pipelines.finalize.push(name);
         }
@@ -360,7 +362,10 @@ module.exports = class Schema {
             // Merge Enums and Scalar type definitions
             const enumer = this.#schema.enums[$field.type];
             const scalar = this.#schema.scalars[$field.type];
-            if (enumer) Object.entries(enumer.pipelines).forEach(([key, values]) => $field.pipelines[key].push(...values));
+            if (enumer) {
+              $field.allows = enumer.values;
+              Object.entries(enumer.pipelines).forEach(([key, values]) => $field.pipelines[key].push(...values));
+            }
             if (scalar) Object.entries(scalar.pipelines).forEach(([key, values]) => $field.pipelines[key].push(...values));
 
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
@@ -745,6 +750,7 @@ module.exports = class Schema {
             [model]: Object.values(model.fields).filter(field => field.model?.isEntity).reduce((prev2, field) => {
               return Object.assign(prev2, {
                 [field]: (doc, args, context, info) => {
+                  if (!doc.$) doc = context[schema.namespace].resolver.toResultSet(model, doc); // Ensure resultSet
                   return doc.$.lookup(field).args(args).info(info).resolve(info);
                 },
               });

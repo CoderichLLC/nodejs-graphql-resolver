@@ -924,5 +924,15 @@ describe('TestSuite', () => {
       expect(chapter.name).toBe('Chapter1');
       expect(nada).toBeUndefined();
     });
+
+    test('$ returns $', async () => {
+      const doc = await resolver.match('Person').id(christie.id).one();
+      const $doc = await doc.$.one();
+      expect(await $doc.$.many()).toEqual([expect.objectContaining({ id: doc.id })]);
+      const $save = await $doc.$.save();
+      expect(await $save.$.many()).toEqual([expect.objectContaining({ id: doc.id })]);
+      const $$save = await $doc.$save();
+      expect(await $$save.$.many()).toEqual([expect.objectContaining({ id: doc.id })]);
+    });
   });
 });

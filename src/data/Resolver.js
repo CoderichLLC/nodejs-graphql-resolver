@@ -190,13 +190,11 @@ module.exports = class Resolver {
    */
   async resolve(query) {
     let thunk;
-    const { model, crud, isMutation, flags } = query.toObject();
+    const { doc, model, crud, isMutation, flags } = query.toObject();
     const currSession = this.#sessions.slice(-1).pop();
 
     if (isMutation) {
       thunk = tquery => this.#schema.models[model].source.client.resolve(tquery.toDriver().toObject()).then((results) => {
-        const { doc, input } = tquery.toObject();
-
         // We clear the cache immediately (regardless if we're in transaction or not)
         this.clear(model);
 
@@ -205,7 +203,6 @@ module.exports = class Resolver {
 
         // Return results
         if (crud === 'delete') return doc;
-        if (crud === 'update') return input;
         return this.toResultSet(model, results);
       });
     } else {
@@ -261,6 +258,15 @@ module.exports = class Resolver {
         },
         $model: { value: model },
         $cursor: { value: doc.$cursor },
+        // Backwards compat
+        $save: { value: (...args) => $doc.$.save(...args) },
+        $lookup: {
+          value: async (prop, args) => {
+            const field = model.fields[prop];
+            const method = field.isArray ? 'many' : 'one';
+            return $doc.$.lookup(prop).args(args)[method]();
+          },
+        },
       });
     }), {
       $pageInfo: { value: result.$pageInfo },
