@@ -300,8 +300,8 @@ module.exports = class Resolver {
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly; // Nothing to validate/transform
       // if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
-      const tquery = await $query.transform();
-      // await Emitter.emit('validate', event); // We need to re-connect tquery to event
+      const tquery = await $query.transform(false);
+      await Emitter.emit('validate', event);
       return thunk(tquery);
     }).then((result) => {
       event.doc ??= result; // Case of create
