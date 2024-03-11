@@ -63,9 +63,11 @@ module.exports = class Query {
    * Transform entire query via pipeline. At minimum, pipeline is needed to unflatten the data...
    */
   transform(asClone = true) {
+    const args = { query: this.#query, context: this.#context };
+
     return Promise.all([
-      // this.#model.transformers.input.transform(this.#query.input),
-      this.pipeline('input', this.#query.input),
+      this.pipeline('input', this.#model.transformers.input.transform(this.#query.input, args), ['$finalize']),
+      // this.pipeline('input', this.#query.input),
       this.#query.isNative ? this.#query.where : this.pipeline('where', this.#query.where ?? {}),
       this.pipeline('sort', this.#query.sort),
     ]).then(([input, where, sort]) => {

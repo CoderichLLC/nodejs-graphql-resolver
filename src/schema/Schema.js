@@ -145,8 +145,8 @@ module.exports = class Schema {
             generator: this.#config.generators?.default,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
             transformers: {
-              input: new Transformer(),
-              doc: new Transformer({ args: { model, schema: this.#schema } }),
+              input: new Transformer({ args: { schema: this.#schema, path: [] } }),
+              doc: new Transformer({ args: { schema: this.#schema, path: [] } }),
             },
             directives: {},
             toString: () => name,
@@ -158,9 +158,6 @@ module.exports = class Schema {
             name,
             key: name,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
-            transformers: {
-              input: new Transformer({ args: { model, field, schema: this.#schema } }),
-            },
             directives: {},
             toString: () => name,
           };
@@ -352,18 +349,33 @@ module.exports = class Schema {
 
             $model.transformers.input.config({
               shape: Object.values($model.fields).reduce((prev, curr) => {
+                const args = { model: $model, field: curr };
+
                 const rules = [
-                  a => Pipeline.$default({ ...a, field: curr }),
-                  a => Pipeline.$cast({ ...a, field: curr }),
-                  a => Pipeline.$normalize({ ...a, field: curr }),
-                  a => Pipeline.$instruct({ ...a, field: curr }),
-                  // a => Pipeline.$finalize({ ...a, field: curr }),
+                  a => Pipeline.$default({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$cast({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$normalize({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$instruct({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  (a) => {
+                    if (a.query.crud === 'create') return Pipeline.$construct({ ...a, ...args, path: a.path.concat(curr.name) });
+                    if (a.query.crud === 'update') return Pipeline.$restruct({ ...a, ...args, path: a.path.concat(curr.name) });
+                    return undefined;
+                  },
+                  a => Pipeline.$serialize({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  // a => Pipeline.$finalize({ ...a, ...args }),
                 ];
-                // if (curr.isEmbedded) rules.push(a => Util.map(a.value, value => curr.model.transformers.input.transform(value)));
-                if (curr.isEmbedded) rules.push(a => curr.model.transformers.input.transform(a.value));
+
+                if (curr.isEmbedded) {
+                  rules.push(a => Util.map(a.value, (value, i) => {
+                    const path = a.path.concat(curr.name);
+                    if (curr.isArray) path.push(i);
+                    return curr.model.transformers.input.transform(value, { ...args, query: a.query, context: a.context, path });
+                  }));
+                }
                 // rules.push(curr.key); // rename
                 return Object.assign(prev, { [curr.name]: rules });
               }, {}),
+              defaults: $model.pipelineFields.input,
             });
 
             $model.transformers.doc.config({
