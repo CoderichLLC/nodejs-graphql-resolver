@@ -1,8 +1,15 @@
 const Util = require('@coderich/util');
 
+// { query, path: path.concat(key), context: this.#context }
+
 module.exports = class Transformer {
-  #config;
-  #operation;
+  #config = {
+    args: {},
+    shape: {},
+    defaults: {},
+    operation: 'set',
+  };
+
   #operations = {
     get: {
       get: () => {
@@ -10,21 +17,25 @@ module.exports = class Transformer {
       },
     },
     set: {
-      set: (target, prop, value) => {
+      set: (target, prop, startValue) => {
         const transforms = this.#config.shape[prop] ?? [];
-        const $value = transforms.reduce((prev, t) => {
-          if (typeof t === 'function') return t(prev);
+
+        const result = transforms.reduce((value, t) => {
+          if (typeof t === 'function') return Util.uvl(t({ startValue, value, ...this.#config.args }), value);
           prop = t;
-          return prev;
-        }, value);
-        target[prop] = $value;
+          return value;
+        }, startValue);
+
+        target[prop] = result;
         return true;
       },
     },
   };
 
+  #operation;
+
   /**
-   * Allowing construction of object before knowing configuration
+   * Allowing construction of object before knowing full configuration
    */
   constructor(config = {}) {
     this.config(config);
@@ -34,14 +45,21 @@ module.exports = class Transformer {
    * Re-assign configuration after instantiation
    */
   config(config = {}) {
-    this.#config = config;
-    this.#config.shape ??= {};
-    this.#config.defaults ??= {};
-    this.#config.operation ??= 'set';
+    Object.assign(this.#config, config);
     this.#operation = this.#operations[this.#config.operation];
+    return this;
   }
 
-  transform(mixed) {
+  /**
+   * Re-assign args after instantiation
+   */
+  args(args = {}) {
+    Object.assign(this.#config.args, args);
+    return this;
+  }
+
+  transform(mixed, args) {
+    this.args(args);
     return Util.map(mixed, data => Object.assign(new Proxy({}, this.#operation), this.#config.defaults, data));
   }
 };

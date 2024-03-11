@@ -12,7 +12,7 @@ describe('Transformer', () => {
   });
 
   test('multiplier', () => {
-    const transformer = new Transformer({ shape: { age: [v => v * 2] } });
+    const transformer = new Transformer({ shape: { age: [({ value }) => value * 2] } });
     const data = transformer.transform({ age: 10, name: 'anne' });
     expect(data).toEqual({ age: 20, name: 'anne' });
     data.age = 11;
@@ -21,12 +21,12 @@ describe('Transformer', () => {
 
   test('nested', () => {
     const transformer1 = new Transformer({
-      shape: { name: [v => v.toLowerCase()] },
+      shape: { name: [({ value }) => value.toLowerCase()] },
       defaults: { name: 'defaultName' },
     });
 
     const transformer2 = new Transformer({
-      shape: { age: [v => v * 2], sections: [v => Util.map(v, el => transformer1.transform(el))] },
+      shape: { age: [({ value }) => value * 2], sections: [({ value }) => Util.map(value, v => transformer1.transform(v))] },
     });
 
     const data = transformer2.transform({ name: 'name', sections: [{ age: 10 }, { name: 'NAME', age: 20 }] });
@@ -35,12 +35,12 @@ describe('Transformer', () => {
 
   test('performance', () => {
     const section = new Transformer({
-      shape: { id: [v => new ObjectId(v)], name: [v => v.toLowerCase()] },
+      shape: { id: [({ value }) => new ObjectId(value)], name: [({ value }) => value.toLowerCase()] },
       defaults: { id: undefined, name: 'defaultName' },
     });
 
     const base = new Transformer({
-      shape: { id: [v => new ObjectId(v)], age: [v => v * 2], sections: [v => Util.map(v, el => section.transform(el)), 'sectors'] },
+      shape: { id: [({ value }) => new ObjectId(value)], age: [({ value }) => value * 2], sections: [({ value }) => Util.map(value, v => section.transform(v)), 'sectors'] },
       defaults: { id: undefined },
     });
 

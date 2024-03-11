@@ -14,7 +14,7 @@ describe('performance', () => {
       name: `person${i}`,
       emailAddress: `email${i}@gmail.com`,
       sections: Array.from(new Array(100)).map((ej, j) => ({
-        name: `section${j}`,
+        name: `Section${j}`,
       })),
     }));
 
@@ -22,6 +22,7 @@ describe('performance', () => {
     const create = await resolver.match('Person').save(input);
     console.timeEnd('createMany');
     expect(create.length).toBe(1000);
+    // console.log(create[0]);
     expect(create[0].age).toBe(45);
     expect(create[0].sections[0].name).toBe('section0');
 
@@ -31,7 +32,7 @@ describe('performance', () => {
     expect(update.length).toBe(1000);
 
     // console.time('updateRaw');
-    // await resolver.raw('Person').updateMany({}, { age: 40 });
+    // await resolver.raw('Person').updateMany({}, { $set: { age: 40 } });
     // console.timeEnd('updateRaw');
 
     console.time('findMany');

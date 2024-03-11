@@ -64,6 +64,7 @@ module.exports = class Query {
    */
   transform(asClone = true) {
     return Promise.all([
+      // this.#model.transformers.input.transform(this.#query.input),
       this.pipeline('input', this.#query.input),
       this.#query.isNative ? this.#query.where : this.pipeline('where', this.#query.where ?? {}),
       this.pipeline('sort', this.#query.sort),

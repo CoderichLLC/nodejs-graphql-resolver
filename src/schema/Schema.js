@@ -144,7 +144,10 @@ module.exports = class Schema {
             loader: this.#config.dataLoaders?.default,
             generator: this.#config.generators?.default,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
-            transformers: { doc: new Transformer() },
+            transformers: {
+              input: new Transformer(),
+              doc: new Transformer({ args: { model, schema: this.#schema } }),
+            },
             directives: {},
             toString: () => name,
           };
@@ -155,7 +158,9 @@ module.exports = class Schema {
             name,
             key: name,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
-            transformers: { doc: new Transformer() },
+            transformers: {
+              input: new Transformer({ args: { model, field, schema: this.#schema } }),
+            },
             directives: {},
             toString: () => name,
           };
@@ -345,11 +350,27 @@ module.exports = class Schema {
               where: Object.values($model.fields).filter(f => f.pipelines.instruct.length).reduce((prev, f) => Object.assign(prev, { [f.name]: undefined }), {}),
             };
 
+            $model.transformers.input.config({
+              shape: Object.values($model.fields).reduce((prev, curr) => {
+                const rules = [
+                  a => Pipeline.$default({ ...a, field: curr }),
+                  a => Pipeline.$cast({ ...a, field: curr }),
+                  a => Pipeline.$normalize({ ...a, field: curr }),
+                  a => Pipeline.$instruct({ ...a, field: curr }),
+                  // a => Pipeline.$finalize({ ...a, field: curr }),
+                ];
+                // if (curr.isEmbedded) rules.push(a => Util.map(a.value, value => curr.model.transformers.input.transform(value)));
+                if (curr.isEmbedded) rules.push(a => curr.model.transformers.input.transform(a.value));
+                // rules.push(curr.key); // rename
+                return Object.assign(prev, { [curr.name]: rules });
+              }, {}),
+            });
+
             $model.transformers.doc.config({
               shape: Object.values($model.fields).reduce((prev, curr) => {
                 const rules = [curr.name]; // Rename key
-                if (curr.isArray) rules.unshift(v => (v == null ? v : Util.ensureArray(v)));
-                if (curr.isEmbedded) rules.unshift(v => Util.map(v, el => curr.model.transformers.doc.transform(el)));
+                if (curr.isArray) rules.unshift(({ value }) => (value == null ? value : Util.ensureArray(value)));
+                if (curr.isEmbedded) rules.unshift(({ value }) => Util.map(value, v => curr.model.transformers.doc.transform(v)));
                 return Object.assign(prev, { [curr.key]: rules });
               }, {}),
             });

@@ -1,3 +1,9 @@
+Performance refactor:
+  * Ability to curry in args to Pipeline from Transform function
+    - Remove resolver from arg to Pipeline
+  * Input Transformations
+  * ensureFK can no longer be a Pipeline since it's async
+
 WHAT MATTERS:
   * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
   * input vs merged event
@@ -10,7 +16,6 @@ TODO:
 Release 0.14
   * Remove deprecations
   * Break up Schema monolith (schema.parse() usage)
-  * Pipeline user-defined id function needs to "ignoreNull" (how to ensure it does?)
   * Easy select('a b c d') syntax
     - GraphQL API passes in .args() and only selects what it needs.... is this ok for DataLoader Cache?
     - I disabled it... when selecting "count" only there are problems
@@ -49,7 +54,6 @@ Improvement Considerations:
     - Composite index keys (probably need to move these tests elsewhere)
   * onDelete defer - could probably be done dynamically instead
   * DataLoader - rewrite for batch queries
-  * EnsureId - inline query?
   * Allow @field(path: "some.path") in order to hoist
   * Support for GUID (node interface)
     - autograph.legacyMode (move to config)

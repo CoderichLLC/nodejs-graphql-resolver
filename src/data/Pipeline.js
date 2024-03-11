@@ -161,9 +161,9 @@ module.exports = class Pipeline {
   static resolve(params, pipeline) {
     const transformers = params.field.pipelines[pipeline] || [];
 
-    return Util.pipeline(transformers.map(t => (value) => {
-      return Pipeline[t]({ ...params, value });
-    }), params.value);
+    return transformers.reduce((value, t) => {
+      return Util.uvl(Pipeline[t]({ ...params, value }), value);
+    }, params.value);
   }
 };
 

@@ -10,9 +10,13 @@ const API = {};
 Pipeline.resolve = (params, pipeline) => {
   const transformers = params.field.pipelines[pipeline] || [];
 
-  return Util.pipeline(transformers.map(t => async (value) => {
-    return API[t]({ ...params, value });
-  }), params.value);
+  return transformers.reduce((value, t) => {
+    return Util.uvl(API[t]({ ...params, value }), value);
+  }, params.value);
+
+  // return Util.pipeline(transformers.map(t => (value) => {
+  //   return API[t]({ ...params, value });
+  // }), params.value);
 };
 
 Object.getOwnPropertyNames(Pipeline).reduce((prev, key) => {
