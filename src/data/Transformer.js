@@ -23,7 +23,17 @@ module.exports = class Transformer {
     },
   };
 
+  /**
+   * Allowing construction of object before knowing configuration
+   */
   constructor(config = {}) {
+    this.config(config);
+  }
+
+  /**
+   * Re-assign configuration after instantiation
+   */
+  config(config = {}) {
     this.#config = config;
     this.#config.shape ??= {};
     this.#config.defaults ??= {};

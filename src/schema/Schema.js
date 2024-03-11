@@ -4,6 +4,7 @@ const Util = require('@coderich/util');
 const { Kind, parse, visit } = require('graphql');
 const { mergeTypeDefs, mergeFields, mergeDirectives } = require('@graphql-tools/merge');
 const { isLeafValue, mergeDeep, fromGUID } = require('../service/AppService');
+const Transformer = require('../data/Transformer');
 const Pipeline = require('../data/Pipeline');
 const Emitter = require('../data/Emitter');
 
@@ -143,6 +144,7 @@ module.exports = class Schema {
             loader: this.#config.dataLoaders?.default,
             generator: this.#config.generators?.default,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
+            transformers: { doc: new Transformer() },
             directives: {},
             toString: () => name,
           };
@@ -153,6 +155,7 @@ module.exports = class Schema {
             name,
             key: name,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
+            transformers: { doc: new Transformer() },
             directives: {},
             toString: () => name,
           };
@@ -341,6 +344,15 @@ module.exports = class Schema {
               input: Object.values($model.fields).filter(f => f.defaultValue !== undefined || inputPipelines.some(k => f.pipelines[k].length)).reduce((prev, f) => Object.assign(prev, { [f.name]: undefined }), {}),
               where: Object.values($model.fields).filter(f => f.pipelines.instruct.length).reduce((prev, f) => Object.assign(prev, { [f.name]: undefined }), {}),
             };
+
+            $model.transformers.doc.config({
+              shape: Object.values($model.fields).reduce((prev, curr) => {
+                const rules = [curr.name]; // Rename key
+                if (curr.isArray) rules.unshift(v => (v == null ? v : Util.ensureArray(v)));
+                if (curr.isEmbedded) rules.unshift(v => Util.map(v, el => curr.model.transformers.doc.transform(el)));
+                return Object.assign(prev, { [curr.key]: rules });
+              }, {}),
+            });
           });
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const $field = field;
