@@ -291,7 +291,7 @@ module.exports = class Resolver {
       const tquery = await $query.transform(false);
       query = tquery.toObject();
       event = this.#createEvent(query);
-      if (query.isMutation) await Emitter.emit('validate', event);
+      // if (query.isMutation) await Emitter.emit('validate', event);
       return thunk(tquery);
     }).then((result) => {
       event.doc ??= result; // Case of create

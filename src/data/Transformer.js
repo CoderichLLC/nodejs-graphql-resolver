@@ -1,38 +1,25 @@
 const Util = require('@coderich/util');
 
-// { query, path: path.concat(key), context: this.#context }
-
 module.exports = class Transformer {
-  #config = {
-    args: {},
-    shape: {},
-    defaults: {},
-    operation: 'set',
-  };
+  #config = { shape: {}, defaults: {}, args: {}, strictSchema: false, keepUndefined: false };
 
-  #operations = {
-    get: {
-      get: () => {
-
-      },
-    },
-    set: {
-      set: (target, prop, startValue) => {
-        const transforms = this.#config.shape[prop] ?? [];
-
-        const result = transforms.reduce((value, t) => {
+  #operation = {
+    set: (target, prop, startValue) => {
+      if (this.#config.shape[prop]) {
+        const result = this.#config.shape[prop].reduce((value, t) => {
           if (typeof t === 'function') return Util.uvl(t({ startValue, value, ...this.#config.args }), value);
           prop = t;
           return value;
         }, startValue);
 
-        target[prop] = result;
-        return true;
-      },
+        if (result !== undefined || this.#config.keepUndefined) target[prop] = result;
+      } else if (!this.#config.strictSchema) {
+        target[prop] = startValue;
+      }
+
+      return true;
     },
   };
-
-  #operation;
 
   /**
    * Allowing construction of object before knowing full configuration
@@ -46,7 +33,6 @@ module.exports = class Transformer {
    */
   config(config = {}) {
     Object.assign(this.#config, config);
-    this.#operation = this.#operations[this.#config.operation];
     return this;
   }
 
@@ -60,6 +46,9 @@ module.exports = class Transformer {
 
   transform(mixed, args) {
     this.args(args);
-    return Util.map(mixed, data => Object.assign(new Proxy({}, this.#operation), this.#config.defaults, data));
+    return Util.map(mixed, (data) => {
+      const $data = Object.assign({}, this.#config.defaults, data); // eslint-disable-line
+      return Object.assign(new Proxy({}, this.#operation), $data);
+    });
   }
 };

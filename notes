@@ -3,6 +3,7 @@ Performance refactor:
     - Remove resolver from arg to Pipeline
   * Input Transformations
   * ensureFK can no longer be a Pipeline since it's async
+  * input transformation does not "reach" into FK but where + sort DOES!
 
 WHAT MATTERS:
   * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)

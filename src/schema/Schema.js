@@ -146,6 +146,7 @@ module.exports = class Schema {
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
             transformers: {
               input: new Transformer({ args: { schema: this.#schema, path: [] } }),
+              where: new Transformer({ args: { schema: this.#schema, path: [] } }),
               doc: new Transformer({ args: { schema: this.#schema, path: [] } }),
             },
             directives: {},
@@ -347,7 +348,16 @@ module.exports = class Schema {
               where: Object.values($model.fields).filter(f => f.pipelines.instruct.length).reduce((prev, f) => Object.assign(prev, { [f.name]: undefined }), {}),
             };
 
+            $model.transformers.toDriver = new Transformer({
+              shape: Object.values($model.fields).reduce((prev, curr) => {
+                const rules = [curr.key]; // Rename key
+                if (curr.isEmbedded) rules.unshift(({ value }) => Util.map(value, v => curr.model.transformers.toDriver.transform(v)));
+                return Object.assign(prev, { [curr.name]: rules });
+              }, {}),
+            });
+
             $model.transformers.input.config({
+              strictSchema: true,
               shape: Object.values($model.fields).reduce((prev, curr) => {
                 const args = { model: $model, field: curr };
 
@@ -362,7 +372,6 @@ module.exports = class Schema {
                     return undefined;
                   },
                   a => Pipeline.$serialize({ ...a, ...args, path: a.path.concat(curr.name) }),
-                  // a => Pipeline.$finalize({ ...a, ...args }),
                 ];
 
                 if (curr.isEmbedded) {
@@ -372,10 +381,37 @@ module.exports = class Schema {
                     return curr.model.transformers.input.transform(value, { ...args, query: a.query, context: a.context, path });
                   }));
                 }
-                // rules.push(curr.key); // rename
+
+                // Finalize/Validate
+                rules.push(a => Pipeline.$finalize({ ...a, ...args, path: a.path.concat(curr.name) }));
+
                 return Object.assign(prev, { [curr.name]: rules });
               }, {}),
               defaults: $model.pipelineFields.input,
+            });
+
+            $model.transformers.where.config({
+              keepUndefined: true,
+              shape: Object.values($model.fields).reduce((prev, curr) => {
+                const args = { model: $model, field: curr };
+
+                const rules = [
+                  a => Pipeline.$cast({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$instruct({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$serialize({ ...a, ...args, path: a.path.concat(curr.name) }),
+                ];
+
+                if (curr.isEmbedded) {
+                  rules.push(a => Util.map(a.value, (value, i) => {
+                    const path = a.path.concat(curr.name);
+                    if (curr.isArray) path.push(i);
+                    return curr.model.transformers.where.transform(value, { ...args, query: a.query, context: a.context, path });
+                  }));
+                }
+
+                return Object.assign(prev, { [curr.name]: rules });
+              }, {}),
+              defaults: $model.pipelineFields.where,
             });
 
             $model.transformers.doc.config({
@@ -427,7 +463,7 @@ module.exports = class Schema {
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
               $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
-              $field.pipelines.finalize.push('ensureFK'); // Absolute Last
+              // $field.pipelines.finalize.push('ensureFK'); // Absolute Last
             }
           });
 

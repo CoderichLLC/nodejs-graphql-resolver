@@ -66,9 +66,10 @@ module.exports = class Query {
     const args = { query: this.#query, context: this.#context };
 
     return Promise.all([
-      this.pipeline('input', this.#model.transformers.input.transform(this.#query.input, args), ['$finalize']),
-      // this.pipeline('input', this.#query.input),
-      this.#query.isNative ? this.#query.where : this.pipeline('where', this.#query.where ?? {}),
+      this.#model.transformers.input.transform(Util.unflatten(this.#query.input, { safe: true }), args),
+      // this.pipeline('input', this.#model.transformers.input.transform(this.#query.input, args), ['$finalize']),
+      this.#query.isNative ? this.#query.where : this.#model.transformers.where.transform(Util.unflatten(this.#query.where ?? {}, { safe: true }), args),
+      // this.#query.isNative ? this.#query.where : this.pipeline('where', this.#query.where ?? {}),
       this.pipeline('sort', this.#query.sort),
     ]).then(([input, where, sort]) => {
       if (asClone) return this.clone({ input, where, sort });
@@ -88,7 +89,9 @@ module.exports = class Query {
     const query = this.clone({
       model: this.#model.key,
       select: this.#query.select.map(name => this.#model.fields[name].key),
-      input: this.#model.walk(input, node => node.value !== undefined && Object.assign(node, { key: node.field.key })),
+      // input: this.#model.walk(input, node => node.value !== undefined && Object.assign(node, { key: node.field.key })),
+      // where: isNative ? where : this.#model.transformers.toDriver.transform(where),
+      input: this.#model.transformers.toDriver.transform(input),
       where: isNative ? where : this.#model.walk(where, node => Object.assign(node, { key: node.field.key })),
       sort: this.#model.walk(sort, node => Object.assign(node, { key: node.field.key })),
       before: (!isCursorPaging || !before) ? undefined : JSONParse(Buffer.from(before, 'base64').toString('ascii')),
