@@ -1,5 +1,4 @@
 const Util = require('@coderich/util');
-const Pipeline = require('../data/Pipeline');
 const { isGlob, globToRegex, mergeDeep, finalizeWhereClause, JSONParse } = require('../service/AppService');
 
 module.exports = class Query {
@@ -46,35 +45,22 @@ module.exports = class Query {
   }
 
   /**
-   * Run a portion of the pipeline against a data set
-   */
-  pipeline(target, data, transformers) {
-    data = Util.unflatten(data, { safe: true });
-    const crudMap = { create: ['$construct', '$serialize'], update: ['$restruct', '$serialize'] };
-    const crudLines = crudMap[this.#query.crud] || [];
-    const transformerMap = { where: ['$cast', '$instruct', '$serialize'], sort: [], input: [] };
-    if (this.#query.isMutation) transformerMap.input = ['$default', '$cast', '$normalize', '$instruct', ...crudLines, '$finalize'];
-    // if (this.#query.crud === 'create') transformerMap.input.unshift('$default'); // Cant because embedded documents on update are really "creates"
-    transformers = transformers || transformerMap[target];
-    return this.#pipeline(this.#query, target, this.#model, data, transformers.map(el => Pipeline[el]));
-  }
-
-  /**
-   * Transform entire query via pipeline. At minimum, pipeline is needed to unflatten the data...
+   * Transform entire query for user consumption
    */
   transform(asClone = true) {
-    return Promise.all([
-      // this.#model.transformers.input.transform(this.#query.input),
-      this.pipeline('input', this.#query.input),
-      this.#query.isNative ? this.#query.where : this.pipeline('where', this.#query.where ?? {}),
-      this.pipeline('sort', this.#query.sort),
-    ]).then(([input, where, sort]) => {
-      if (asClone) return this.clone({ input, where, sort });
-      this.#query.input = input;
-      this.#query.where = where;
-      this.#query.sort = sort;
-      return this;
-    });
+    const args = { query: this.#query, resolver: this.#resolver, context: this.#context };
+
+    const [input, where, sort] = [
+      this.#model.transformers.input.transform(Util.unflatten(this.#query.input, { safe: true }), args),
+      this.#query.isNative ? this.#query.where : this.#model.transformers.where.transform(Util.unflatten(this.#query.where ?? {}, { safe: true }), args),
+      this.#model.transformers.sort.transform(Util.unflatten(this.#query.sort, { safe: true }), args),
+    ];
+
+    if (asClone) return this.clone({ input, where, sort });
+    this.#query.input = input;
+    this.#query.where = where;
+    this.#query.sort = sort;
+    return this;
   }
 
   /**
@@ -86,7 +72,7 @@ module.exports = class Query {
     const query = this.clone({
       model: this.#model.key,
       select: this.#query.select.map(name => this.#model.fields[name].key),
-      input: this.#model.walk(input, node => node.value !== undefined && Object.assign(node, { key: node.field.key })),
+      input: this.#model.transformers.toDriver.transform(input),
       where: isNative ? where : this.#model.walk(where, node => Object.assign(node, { key: node.field.key })),
       sort: this.#model.walk(sort, node => Object.assign(node, { key: node.field.key })),
       before: (!isCursorPaging || !before) ? undefined : JSONParse(Buffer.from(before, 'base64').toString('ascii')),
@@ -97,36 +83,6 @@ module.exports = class Query {
     if (!isNative) this.#finalize(query.toObject());
 
     return query;
-  }
-
-  /**
-   * Recursive pipeline function
-   */
-  #pipeline(query, target, model, data, transformers = [], paths = []) {
-    return Util.mapPromise(data, (doc, index) => {
-      const path = [...paths];
-      if (Array.isArray(data)) path.push(index);
-      if (target === 'input') doc = mergeDeep(model.pipelineFields.input, doc);
-      else if (target === 'where') doc = mergeDeep(model.pipelineFields.where, doc);
-
-      return Util.pipeline(Object.entries(doc).map(([key, startValue]) => async (prev) => {
-        const field = model.fields[key];
-        if (!field) return prev;
-
-        // Transform value
-        let $value = await Util.pipeline(transformers.map(t => async (value) => {
-          const v = await t({ query, model, field, value, path: path.concat(key), startValue, resolver: this.#resolver, context: this.#context, schema: this.#schema });
-          return v === undefined ? value : v;
-        }), startValue);
-
-        // If it's embedded - delegate
-        if (field.isEmbedded) $value = await this.#pipeline(query, target, field.model, $value, transformers, path.concat(key));
-
-        // Assign it back
-        if (target === 'input' && $value === undefined) return prev;
-        return Object.assign(prev, { [field.name]: $value });
-      }), {});
-    });
   }
 
   /**

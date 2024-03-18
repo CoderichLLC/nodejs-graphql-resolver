@@ -48,7 +48,7 @@ describe('Pipeline', () => {
       // Spys
       expect(email).toHaveBeenCalledTimes(1);
       expect(immutable).toHaveBeenCalledTimes(0); // Only called on restruct
-      expect($cast).toHaveBeenCalledTimes(35); // A lot (but we're invoking the wrapper)
+      expect($cast).toHaveBeenCalledTimes(34); // A lot (but we're invoking the wrapper)
       expect($default).toHaveBeenCalledTimes(33); // A lot (but we're invoking the wrapper)
       expect(toLowerCase).toHaveBeenCalledTimes(4); // names
 
@@ -56,7 +56,6 @@ describe('Pipeline', () => {
       expect(email).toHaveBeenCalledWith(expect.objectContaining({
         schema,
         context,
-        resolver,
         value: 'email@gmail.com',
         startValue: 'email@gmail.com',
         query: expect.objectContaining({ model: 'Person' }),

@@ -3,6 +3,7 @@ Performance refactor:
     - Remove resolver from arg to Pipeline
   * Input Transformations
   * ensureFK can no longer be a Pipeline since it's async
+  * input transformation does not "reach" into FK but where + sort DOES!
 
 WHAT MATTERS:
   * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
@@ -33,7 +34,7 @@ Known Issues:
 Improvement Considerations:
   * Resolver.graphql()
     - This requires executableSchema...
-  * Ability to trigger validation/finalize?
+  * Ability to trigger validation?
   * Schema.validate()? Do you need/want schema definitions for Directives and Enums?
   * Can you derive transaction support by virtue of function definition existing?
   * create&updateMany is woefully slow due to individualized CRUD
@@ -66,9 +67,8 @@ BREAKING CHANGELOG:
   * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }
     - No more pipeline on database result! (check default, transform/normalize, deserialize)
     - Pipeline "toId" is completely removed (use custom "toObjectId" Pipeline etc)
-    - Removed Pipelines [transform, deserialize, destruct, validate]
+    - Removed Pipelines [transform, deserialize, destruct]
       - transform -> normalize
-      - validate -> finalize
   * Revamped Emitter { schema, context, resolver, query { args, id, model, crud, key, doc, input, sort, result } }
     - "Basic" functions are hoisted to the top for execution; RETURNING a value will bypass thunk()
     - "Next" functions are run next, next() must ALWAYS be called; passing a value to next() will bypass thunk()
@@ -99,7 +99,7 @@ BREAKING CHANGELOG:
   '$construct', [input] - On Create
   '$restruct', [input] - On Update
   '$serialize', [input, where] - transformations to db driver
-  '$finalize', [input] - After preMutation Before postMutation (old validation step)
+  '$validate', [input] - After preMutation Before postMutation (validate fields)
 ]
 
 Query/Mutation

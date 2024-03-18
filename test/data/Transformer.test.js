@@ -12,11 +12,19 @@ describe('Transformer', () => {
   });
 
   test('multiplier', () => {
-    const transformer = new Transformer({ shape: { age: [({ value }) => value * 2] } });
+    const transformer = new Transformer({ shape: { age: [({ value }) => value * 2, ({ value }) => undefined, ({ value }) => value * 2] } });
     const data = transformer.transform({ age: 10, name: 'anne' });
-    expect(data).toEqual({ age: 20, name: 'anne' });
+    expect(data).toEqual({ age: 40, name: 'anne' });
     data.age = 11;
-    expect(data).toEqual({ age: 22, name: 'anne' });
+    expect(data).toEqual({ age: 44, name: 'anne' });
+  });
+
+  test('arrays', () => {
+    const transformer = new Transformer({ shape: { tags: [({ value }) => Util.map(value, v => v.toLowerCase())] } });
+    const data = transformer.transform({ tags: ['a', 'b', 'C'] });
+    expect(data).toEqual({ tags: ['a', 'b', 'c'] });
+    // data.tags.push('D');
+    // expect(data).toEqual({ tags: ['a', 'b', 'c', 'd'] });
   });
 
   test('nested', () => {
@@ -44,6 +52,10 @@ describe('Transformer', () => {
       defaults: { id: undefined },
     });
 
+    const renamer = new Transformer({
+      shape: { sections: ['spectors'] },
+    });
+
     const data = Array.from(new Array(1000)).map((el, i) => ({
       name: `Richard${i}`,
       age: 45,
@@ -60,5 +72,12 @@ describe('Transformer', () => {
       { id: expect.any(ObjectId), name: 'Richard2', age: 90, sectors: expect.arrayContaining([{ id: expect.any(ObjectId), name: 'section2', age: 22, state: 'GA' }]) },
     ]));
     console.timeEnd('transform');
+
+    console.time('rename');
+    expect(renamer.transform(data)).toEqual(expect.arrayContaining([
+      { name: 'Richard1', age: 45, spectors: expect.arrayContaining([{ name: 'Section1', age: 22, state: 'GA' }]) },
+      { name: 'Richard2', age: 45, spectors: expect.arrayContaining([{ name: 'Section2', age: 22, state: 'GA' }]) },
+    ]));
+    console.timeEnd('rename');
   });
 });

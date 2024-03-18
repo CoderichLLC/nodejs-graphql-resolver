@@ -16,8 +16,8 @@ const scalarKinds = [Kind.SCALAR_TYPE_DEFINITION, Kind.SCALAR_TYPE_EXTENSION];
 const fieldKinds = [Kind.FIELD_DEFINITION];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION].concat(interfaceKinds);
 const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE).concat(scalarKinds).concat(enumKinds);
-const pipelines = ['finalize', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
-const inputPipelines = ['finalize', 'construct', 'instruct', 'normalize', 'serialize'];
+const pipelines = ['validate', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
+const inputPipelines = ['validate', 'construct', 'instruct', 'normalize', 'serialize'];
 const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
 
 module.exports = class Schema {
@@ -145,8 +145,9 @@ module.exports = class Schema {
             generator: this.#config.generators?.default,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
             transformers: {
-              input: new Transformer(),
-              doc: new Transformer({ args: { model, schema: this.#schema } }),
+              input: new Transformer({ args: { schema: this.#schema, path: [] } }),
+              where: new Transformer({ args: { schema: this.#schema, path: [] } }),
+              doc: new Transformer({ args: { schema: this.#schema, path: [] } }),
             },
             directives: {},
             toString: () => name,
@@ -158,9 +159,6 @@ module.exports = class Schema {
             name,
             key: name,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
-            transformers: {
-              input: new Transformer({ args: { model, field, schema: this.#schema } }),
-            },
             directives: {},
             toString: () => name,
           };
@@ -185,7 +183,7 @@ module.exports = class Schema {
 
           // Define (and assign) an Allow pipeline for the enumeration
           Pipeline.define(name, Pipeline.Allow(...values), { configurable: true });
-          target.pipelines.finalize.push(name);
+          target.pipelines.validate.push(name);
         }
 
         if (node.kind === Kind.NON_NULL_TYPE) {
@@ -239,8 +237,8 @@ module.exports = class Schema {
                 target.isConnection = value;
                 break;
               }
-              case `${directives.field}-validate`: { // Alias for finalize
-                target.pipelines.finalize = target.pipelines.finalize.concat(value).filter(Boolean);
+              case `${directives.field}-validate`: {
+                target.pipelines.validate = target.pipelines.validate.concat(value).filter(Boolean);
                 break;
               }
               case `${directives.field}-transform`: { // Deprecated
@@ -350,21 +348,73 @@ module.exports = class Schema {
               where: Object.values($model.fields).filter(f => f.pipelines.instruct.length).reduce((prev, f) => Object.assign(prev, { [f.name]: undefined }), {}),
             };
 
-            $model.transformers.input.config({
+            $model.transformers.toDriver = new Transformer({
               shape: Object.values($model.fields).reduce((prev, curr) => {
-                const rules = [
-                  a => Pipeline.$default({ ...a, field: curr }),
-                  a => Pipeline.$cast({ ...a, field: curr }),
-                  a => Pipeline.$normalize({ ...a, field: curr }),
-                  a => Pipeline.$instruct({ ...a, field: curr }),
-                  // a => Pipeline.$finalize({ ...a, field: curr }),
-                ];
-                // if (curr.isEmbedded) rules.push(a => Util.map(a.value, value => curr.model.transformers.input.transform(value)));
-                if (curr.isEmbedded) rules.push(a => curr.model.transformers.input.transform(a.value));
-                // rules.push(curr.key); // rename
+                const rules = [curr.key]; // Rename key
+                if (curr.isEmbedded) rules.unshift(({ value }) => Util.map(value, v => curr.model.transformers.toDriver.transform(v)));
                 return Object.assign(prev, { [curr.name]: rules });
               }, {}),
             });
+
+            $model.transformers.input.config({
+              strictSchema: true,
+              shape: Object.values($model.fields).reduce((prev, curr) => {
+                const args = { model: $model, field: curr };
+
+                const rules = [
+                  a => Pipeline.$default({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$cast({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$normalize({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$instruct({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  (a) => {
+                    if (a.query.crud === 'create') return Pipeline.$construct({ ...a, ...args, path: a.path.concat(curr.name) });
+                    if (a.query.crud === 'update') return Pipeline.$restruct({ ...a, ...args, path: a.path.concat(curr.name) });
+                    return undefined;
+                  },
+                  a => Pipeline.$serialize({ ...a, ...args, path: a.path.concat(curr.name) }),
+                ];
+
+                if (curr.isEmbedded) {
+                  rules.push(a => Util.map(a.value, (value, i) => {
+                    const path = a.path.concat(curr.name);
+                    if (curr.isArray) path.push(i);
+                    return curr.model.transformers.input.transform(value, { ...args, thunks: a.thunks, query: a.query, resolver: a.resolver, context: a.context, path });
+                  }));
+                }
+
+                // Validate
+                rules.push(a => Pipeline.$validate({ ...a, ...args, path: a.path.concat(curr.name) }));
+
+                return Object.assign(prev, { [curr.name]: rules });
+              }, {}),
+              defaults: $model.pipelineFields.input,
+            });
+
+            $model.transformers.where.config({
+              keepUndefined: true,
+              shape: Object.values($model.fields).reduce((prev, curr) => {
+                const args = { model: $model, field: curr };
+
+                const rules = [
+                  a => Pipeline.$cast({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$instruct({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$serialize({ ...a, ...args, path: a.path.concat(curr.name) }),
+                ];
+
+                if (curr.isEmbedded) {
+                  rules.push(a => Util.map(a.value, (value, i) => {
+                    const path = a.path.concat(curr.name);
+                    if (curr.isArray) path.push(i);
+                    return curr.model.transformers.where.transform(value, { ...args, query: a.query, context: a.context, path });
+                  }));
+                }
+
+                return Object.assign(prev, { [curr.name]: rules });
+              }, {}),
+              defaults: $model.pipelineFields.where,
+            });
+
+            $model.transformers.sort = $model.transformers.where.clone({ defaults: {} });
 
             $model.transformers.doc.config({
               shape: Object.values($model.fields).reduce((prev, curr) => {
@@ -406,7 +456,7 @@ module.exports = class Schema {
 
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
-            if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.finalize.push('required');
+            if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
 
             if ($field.isFKReference) {
               const to = $field.model.key;
@@ -415,7 +465,7 @@ module.exports = class Schema {
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
               $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
-              $field.pipelines.finalize.push('ensureFK'); // Absolute Last
+              $field.pipelines.validate.push('ensureFK'); // Absolute Last
             }
           });
 
@@ -561,8 +611,7 @@ module.exports = class Schema {
         construct: [AutoGraphPipelineEnum!]
         restruct: [AutoGraphPipelineEnum!]
         serialize: [AutoGraphPipelineEnum!]
-        finalize: [AutoGraphPipelineEnum!]
-        validate: [AutoGraphPipelineEnum!] # Alias for finalize
+        validate: [AutoGraphPipelineEnum!]
 
         # TEMP TO APPEASE TRANSITION
         ref: AutoGraphMixed # Specify the modelRef field's name (overrides isEmbedded)

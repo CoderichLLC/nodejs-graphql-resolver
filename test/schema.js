@@ -17,8 +17,8 @@ module.exports = {
       roles: [Role!]! @field(default: [])
       gender: Gender! @field(default: male)
       authored: [Book] @link(by: author) @field(connection: true)
-      emailAddress: String! @field(key: "email_address", finalize: email)
-      friends: [Person] @field(normalize: dedupe, finalize: selfless, onDelete: cascade, connection: true)
+      emailAddress: String! @field(key: "email_address", validate: email)
+      friends: [Person] @field(normalize: dedupe, validate: selfless, onDelete: cascade, connection: true)
       status: String @field(key: "state")
       state: String @field(key: "address_state")
       telephone: String @field(default: "###-###-####")
@@ -33,8 +33,8 @@ module.exports = {
       @model
       @index(name: "uix_book", type: unique, on: [name, author])
     {
-      name: String! @field(normalize: toTitleCase, finalize: bookName)
-      price: Float! @field(finalize: bookPrice)
+      name: String! @field(normalize: toTitleCase, validate: bookName)
+      price: Float! @field(validate: bookPrice)
       author: Person! @field(restruct: immutable, onDelete: cascade)
       bestSeller: Boolean
       bids: [Float]
@@ -103,7 +103,7 @@ module.exports = {
     type Color
       @model
     {
-      type: String! @field(finalize: colors)
+      type: String! @field(validate: colors)
       isDefault: Boolean
     }
 
@@ -112,7 +112,7 @@ module.exports = {
     {
       name: String! @field(normalize: toTitleCase)
       bids: [Float]
-      comments: [String] @field(finalize: artComment)
+      comments: [String] @field(validate: artComment)
       sections: [Section]
     }
 

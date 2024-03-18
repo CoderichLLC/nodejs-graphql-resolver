@@ -22,7 +22,6 @@ describe('performance', () => {
     const create = await resolver.match('Person').save(input);
     console.timeEnd('createMany');
     expect(create.length).toBe(1000);
-    // console.log(create[0]);
     expect(create[0].age).toBe(45);
     expect(create[0].sections[0].name).toBe('section0');
 
