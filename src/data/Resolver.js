@@ -1,11 +1,11 @@
 const { graphql } = require('graphql');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
+const QueryResolver = require('../query/QueryResolver');
 const Emitter = require('./Emitter');
 const Loader = require('./Loader');
 const DataLoader = require('./DataLoader');
 const Transaction = require('./Transaction');
-const QueryResolver = require('../query/QueryResolver');
 
 const loaders = {};
 
@@ -291,7 +291,7 @@ module.exports = class Resolver {
       const tquery = await $query.transform(false);
       query = tquery.toObject();
       event = this.#createEvent(query);
-      // if (query.isMutation) await Emitter.emit('validate', event);
+      if (query.isMutation) await Promise.all([...query.input.$thunks, Emitter.emit('validate', event)]);
       return thunk(tquery);
     }).then((result) => {
       event.doc ??= result; // Case of create

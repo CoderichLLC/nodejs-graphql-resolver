@@ -16,8 +16,8 @@ const scalarKinds = [Kind.SCALAR_TYPE_DEFINITION, Kind.SCALAR_TYPE_EXTENSION];
 const fieldKinds = [Kind.FIELD_DEFINITION];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION].concat(interfaceKinds);
 const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE).concat(scalarKinds).concat(enumKinds);
-const pipelines = ['finalize', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
-const inputPipelines = ['finalize', 'construct', 'instruct', 'normalize', 'serialize'];
+const pipelines = ['validate', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
+const inputPipelines = ['validate', 'construct', 'instruct', 'normalize', 'serialize'];
 const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
 
 module.exports = class Schema {
@@ -183,7 +183,7 @@ module.exports = class Schema {
 
           // Define (and assign) an Allow pipeline for the enumeration
           Pipeline.define(name, Pipeline.Allow(...values), { configurable: true });
-          target.pipelines.finalize.push(name);
+          target.pipelines.validate.push(name);
         }
 
         if (node.kind === Kind.NON_NULL_TYPE) {
@@ -237,8 +237,8 @@ module.exports = class Schema {
                 target.isConnection = value;
                 break;
               }
-              case `${directives.field}-validate`: { // Alias for finalize
-                target.pipelines.finalize = target.pipelines.finalize.concat(value).filter(Boolean);
+              case `${directives.field}-validate`: {
+                target.pipelines.validate = target.pipelines.validate.concat(value).filter(Boolean);
                 break;
               }
               case `${directives.field}-transform`: { // Deprecated
@@ -378,12 +378,12 @@ module.exports = class Schema {
                   rules.push(a => Util.map(a.value, (value, i) => {
                     const path = a.path.concat(curr.name);
                     if (curr.isArray) path.push(i);
-                    return curr.model.transformers.input.transform(value, { ...args, query: a.query, context: a.context, path });
+                    return curr.model.transformers.input.transform(value, { ...args, thunks: a.thunks, query: a.query, resolver: a.resolver, context: a.context, path });
                   }));
                 }
 
-                // Finalize/Validate
-                rules.push(a => Pipeline.$finalize({ ...a, ...args, path: a.path.concat(curr.name) }));
+                // Validate
+                rules.push(a => Pipeline.$validate({ ...a, ...args, path: a.path.concat(curr.name) }));
 
                 return Object.assign(prev, { [curr.name]: rules });
               }, {}),
@@ -413,6 +413,8 @@ module.exports = class Schema {
               }, {}),
               defaults: $model.pipelineFields.where,
             });
+
+            $model.transformers.sort = $model.transformers.where.clone({ defaults: {} });
 
             $model.transformers.doc.config({
               shape: Object.values($model.fields).reduce((prev, curr) => {
@@ -454,7 +456,7 @@ module.exports = class Schema {
 
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
             if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
-            if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.finalize.push('required');
+            if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
 
             if ($field.isFKReference) {
               const to = $field.model.key;
@@ -463,7 +465,7 @@ module.exports = class Schema {
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
               $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
-              // $field.pipelines.finalize.push('ensureFK'); // Absolute Last
+              $field.pipelines.validate.push('ensureFK'); // Absolute Last
             }
           });
 
@@ -609,8 +611,7 @@ module.exports = class Schema {
         construct: [AutoGraphPipelineEnum!]
         restruct: [AutoGraphPipelineEnum!]
         serialize: [AutoGraphPipelineEnum!]
-        finalize: [AutoGraphPipelineEnum!]
-        validate: [AutoGraphPipelineEnum!] # Alias for finalize
+        validate: [AutoGraphPipelineEnum!]
 
         # TEMP TO APPEASE TRANSITION
         ref: AutoGraphMixed # Specify the modelRef field's name (overrides isEmbedded)

@@ -6,8 +6,8 @@ const config = {
     default: `
       type decorator {
         id: ID! @field(key: "_id")
-        createdAt: Date @field(finalize: createdAt, crud: r)
-        updatedAt: Date @field(finalize: [timestamp, toDate], crud: r)
+        createdAt: Date @field(serialize: createdAt, crud: r)
+        updatedAt: Date @field(serialize: [timestamp, toDate], crud: r)
       }
     `,
   },

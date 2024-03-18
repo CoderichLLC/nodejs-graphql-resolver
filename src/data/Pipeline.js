@@ -62,7 +62,7 @@ module.exports = class Pipeline {
     Pipeline.define('$construct', params => Pipeline.resolve(params, 'construct'), { ignoreNull: false });
     Pipeline.define('$restruct', params => Pipeline.resolve(params, 'restruct'), { ignoreNull: false });
     Pipeline.define('$serialize', params => Pipeline.resolve(params, 'serialize'), { ignoreNull: false });
-    Pipeline.define('$finalize', params => Pipeline.resolve(params, 'finalize'), { ignoreNull: false });
+    Pipeline.define('$validate', params => Pipeline.resolve(params, 'validate'), { ignoreNull: false });
 
     //
     Pipeline.define('$pk', (params) => {
@@ -114,6 +114,7 @@ module.exports = class Pipeline {
     Pipeline.define('ensureFK', ({ query, resolver, field, value }) => {
       const { type, fkField } = field;
       const ids = Util.filterBy(Util.ensureArray(value), (a, b) => `${a}` === `${b}`);
+      if (!ids.length) return undefined;
       return resolver.match(type).flags(query.flags).where({ [fkField]: ids }).count().then((count) => {
         if (count !== ids.length) throw Boom.notFound(`${type} Not Found`);
       });

@@ -44,9 +44,9 @@ module.exports = class QueryResolver extends QueryBuilder {
         });
       }
       case 'pushOne': {
-        return this.#get(query).then(async (doc) => {
+        return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
-          const values = get(await query.pipeline('input', input), key);
+          const values = get(this.#model.transformers.input.transform(input), key);
           const $input = { [key]: (get(doc, key) || []).concat(...values) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
@@ -58,9 +58,9 @@ module.exports = class QueryResolver extends QueryBuilder {
         });
       }
       case 'pullOne': {
-        return this.#get(query).then(async (doc) => {
+        return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
-          const values = get(await query.pipeline('input', input), key);
+          const values = get(this.#model.transformers.input.transform(input), key);
           const $input = { [key]: (get(doc, key) || []).filter(el => values.every(v => `${v}` !== `${el}`)) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
@@ -72,9 +72,9 @@ module.exports = class QueryResolver extends QueryBuilder {
         });
       }
       case 'spliceOne': {
-        return this.#get(query).then(async (doc) => {
+        return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
-          const [find, replace] = get(await query.pipeline('input', input), key);
+          const [find, replace] = get(this.#model.transformers.input.transform(input), key);
           const $input = { [key]: (get(doc, key) || []).map(el => (`${el}` === `${find}` ? replace : el)) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });

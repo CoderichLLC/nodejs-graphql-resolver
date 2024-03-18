@@ -1,5 +1,5 @@
 const Query = require('./Query');
-const { getGQLReturnType, getGQLSelectFields, mergeDeep } = require('../service/AppService');
+const { getGQLReturnType, mergeDeep } = require('../service/AppService');
 
 module.exports = class QueryBuilder {
   #query;
