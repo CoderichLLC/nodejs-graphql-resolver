@@ -1,8 +1,4 @@
 Performance refactor:
-  * Ability to curry in args to Pipeline from Transform function
-    - Remove resolver from arg to Pipeline
-  * Input Transformations
-  * ensureFK can no longer be a Pipeline since it's async
   * input transformation does not "reach" into FK but where + sort DOES!
 
 WHAT MATTERS:
