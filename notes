@@ -1,14 +1,13 @@
-Performance refactor:
-  * input transformation does not "reach" into FK but where + sort DOES!
-
 WHAT MATTERS:
   * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
-  * input vs merged event
 
 TODO:
+  * Referential integrity (onDelete) defined in embedded documents is not implemented
+    - Also does not seem to work at all
   * Atlas Search Support
   * Tests overhaul
     - Need to make sure that Scalar @field() is working
+    - Failing tests are blowing up due to Jest and Circular Reference
 
 Release 0.14
   * Remove deprecations
@@ -20,7 +19,6 @@ Release 0.14
 Known Issues:
   * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
-  * Referential integrity (onDelete) defined in embedded documents is not implemented
   * .flags({ debug: true }) - You will never see debug info when the result is cached and no driver called
     - query.flags.debug should not be at driver level
   * Transactions still act up once in a while when running the tests; also sometimes see a JSON circular reference

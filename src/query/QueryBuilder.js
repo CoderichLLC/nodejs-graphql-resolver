@@ -62,7 +62,7 @@ module.exports = class QueryBuilder {
     return this;
   }
 
-  args(args) {
+  args(args = {}) {
     Object.entries(args).forEach(([key, value]) => { if (this[key]) this[key](value); }); // Call method only if exists
     return this;
   }

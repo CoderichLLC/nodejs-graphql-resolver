@@ -247,6 +247,8 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ emailAddress: 'Rich@CodeRich.com' }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
       expect((await resolver.match('Person').where({ name: ['Richard', 'Christie'] }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'christie' }, { id: richard.id, name: 'richard' }].sort(sorter));
       expect((await resolver.match('Person').where({ name: '*' }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'christie' }, { id: richard.id, name: 'richard' }].sort(sorter));
+      expect((await resolver.match('Person').where({ name: '!richard' }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'christie' }].sort(sorter));
+      expect((await resolver.match('Person').where({ name: '!RIC*' }).many()).sort(sorter)).toMatchObject([{ id: christie.id, name: 'christie' }].sort(sorter));
       expect(await resolver.match('Person').where({ authored: mobyDick.id }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
       expect(await resolver.match('Person').where({ id: richard.id }).many()).toMatchObject([{ id: richard.id, name: 'richard' }]);
       expect(await resolver.match('Person').where({ id: richard.id }).one()).toMatchObject({ id: richard.id, name: 'richard' });
