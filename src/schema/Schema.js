@@ -342,12 +342,6 @@ module.exports = class Schema {
               }, {});
             };
 
-            // Pre-processing
-            $model.pipelineFields = {
-              input: Object.values($model.fields).filter(f => f.defaultValue !== undefined || inputPipelines.some(k => f.pipelines[k].length)).reduce((prev, f) => Object.assign(prev, { [f.name]: undefined }), {}),
-              where: Object.values($model.fields).filter(f => f.pipelines.instruct.length).reduce((prev, f) => Object.assign(prev, { [f.name]: undefined }), {}),
-            };
-
             $model.transformers.toDriver = new Transformer({
               shape: Object.values($model.fields).reduce((prev, curr) => {
                 const rules = [curr.key]; // Rename key
@@ -362,7 +356,6 @@ module.exports = class Schema {
                 const args = { model: $model, field: curr };
 
                 const rules = [
-                  a => Pipeline.$default({ ...a, ...args, path: a.path.concat(curr.name) }),
                   a => Pipeline.$cast({ ...a, ...args, path: a.path.concat(curr.name) }),
                   a => Pipeline.$normalize({ ...a, ...args, path: a.path.concat(curr.name) }),
                   a => Pipeline.$instruct({ ...a, ...args, path: a.path.concat(curr.name) }),
@@ -387,7 +380,11 @@ module.exports = class Schema {
 
                 return Object.assign(prev, { [curr.name]: rules });
               }, {}),
-              defaults: $model.pipelineFields.input,
+              defaults: Object.values($model.fields).reduce((prev, curr) => {
+                if (curr.defaultValue !== undefined) return Object.assign(prev, { [curr.name]: curr.defaultValue });
+                if (inputPipelines.some(el => curr.pipelines[el].length)) return Object.assign(prev, { [curr.name]: undefined });
+                return prev;
+              }, {}),
             });
 
             $model.transformers.where.config({
@@ -411,7 +408,10 @@ module.exports = class Schema {
 
                 return Object.assign(prev, { [curr.name]: rules });
               }, {}),
-              defaults: $model.pipelineFields.where,
+              defaults: Object.values($model.fields).reduce((prev, curr) => {
+                if (curr.pipelines.instruct.length) return Object.assign(prev, { [curr.name]: undefined });
+                return prev;
+              }, {}),
             });
 
             $model.transformers.sort = $model.transformers.where.clone({ defaults: {} });
@@ -422,6 +422,10 @@ module.exports = class Schema {
                 if (curr.isArray) rules.unshift(({ value }) => (value == null ? value : Util.ensureArray(value)));
                 if (curr.isEmbedded) rules.unshift(({ value }) => Util.map(value, v => curr.model.transformers.doc.transform(v)));
                 return Object.assign(prev, { [curr.key]: rules });
+              }, {}),
+              defaults: Object.values($model.fields).reduce((prev, curr) => {
+                if (curr.defaultValue === undefined) return prev;
+                return Object.assign(prev, { [curr.key]: curr.defaultValue });
               }, {}),
             });
           });

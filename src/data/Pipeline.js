@@ -78,8 +78,6 @@ module.exports = class Pipeline {
       return Util.map(v, value => params.field.generator({ ...params, value }));
     });
 
-    Pipeline.define('$default', ({ field: { defaultValue }, value }) => (value === undefined ? defaultValue : value), { ignoreNull: false });
-
     //
     Pipeline.define('$cast', ({ field, value }) => {
       const { type, isEmbedded } = field;

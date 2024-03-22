@@ -56,12 +56,13 @@ Improvement Considerations:
     - autograph.legacyMode (move to config)
 
 BREAKING CHANGELOG:
+  * You MUST NOT mutate the response from resolver without understanding that it's also cached!
   * PageInfo and cursor no longer required schema (only defined when cursorPaginating...)
   * Revamped how transactions work
   * Revamped how initial setup works (config.js)
     - makeExecutableSchema
   * Revamped Pipeline { schema, context, resolver, query, model, field, value, path, startValue }
-    - No more pipeline on database result! (check default, transform/normalize, deserialize)
+    - No more pipeline on database result! (check transform/normalize, deserialize)
     - Pipeline "toId" is completely removed (use custom "toObjectId" Pipeline etc)
     - Removed Pipelines [transform, deserialize, destruct]
       - transform -> normalize
@@ -69,7 +70,6 @@ BREAKING CHANGELOG:
     - "Basic" functions are hoisted to the top for execution; RETURNING a value will bypass thunk()
     - "Next" functions are run next, next() must ALWAYS be called; passing a value to next() will bypass thunk()
     - Event arguments refactored (no more merged! use query.input)
-    - Getter to "changeset" on update
   * Emitter.on('setup') is passed the "parsedSchema" object
   * No more gqlScope, dalScope, fieldScope (use crud + scope)
   * resolver.resolve() now takes 1 argument (info) and requires you to use .args() etc if need be
@@ -88,7 +88,7 @@ BREAKING CHANGELOG:
 ---------
 
 [
-  '$default', [input] - Assign default value when undefined
+  '$default', [input, doc] - Assign default value when undefined
   '$cast', [input, where] - Cast value to schema defined type
   '$normalize', [input] - Normalize the input
   '$instruct', [input, where] - Instruct value (will define attribute even if undefined)

@@ -3,7 +3,7 @@ const Pipeline = require('../../src/data/Pipeline');
 
 describe('Pipeline', () => {
   let schema, resolver, context;
-  let $cast, $default, email, immutable, toLowerCase;
+  let $cast, email, immutable, toLowerCase;
 
   beforeAll(() => {
     ({ schema, resolver, context } = global);
@@ -11,7 +11,6 @@ describe('Pipeline', () => {
 
   beforeEach(() => {
     $cast = jest.spyOn(Pipeline, '$cast');
-    $default = jest.spyOn(Pipeline, '$default');
     email = jest.spyOn(Pipeline, 'email');
     immutable = jest.spyOn(Pipeline, 'immutable');
     toLowerCase = jest.spyOn(Pipeline, 'toLowerCase');
@@ -49,7 +48,6 @@ describe('Pipeline', () => {
       expect(email).toHaveBeenCalledTimes(1);
       expect(immutable).toHaveBeenCalledTimes(0); // Only called on restruct
       expect($cast).toHaveBeenCalledTimes(34); // A lot (but we're invoking the wrapper)
-      expect($default).toHaveBeenCalledTimes(33); // A lot (but we're invoking the wrapper)
       expect(toLowerCase).toHaveBeenCalledTimes(4); // names
 
       // Email payload

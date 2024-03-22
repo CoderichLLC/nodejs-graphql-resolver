@@ -11,8 +11,8 @@ module.exports = class Loader {
   constructor(model, resolver) {
     this.#model = model;
     this.#resolver = resolver;
-    model.loader.cacheKeyFn ??= (query => hashObject(query.toCacheKey()));
-    this.#loader = new DataLoader(keys => this.#resolve(keys), model.loader);
+    this.#model.loader.cacheKeyFn ??= query => hashObject(query.toCacheKey());
+    this.#loader = new DataLoader(keys => this.#resolve(keys), this.#model.loader);
   }
 
   clearAll() {
