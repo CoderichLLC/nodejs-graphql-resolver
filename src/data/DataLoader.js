@@ -29,49 +29,58 @@ module.exports = class Loader {
      * preserve the order and adhere to the DataLoader API. This step simply creates a map of batch
      * queries to run; saving the order ("i") along with useful query information
      */
-    // const batchQueries = queries.reduce((prev, query, i) => {
-    //   const $query = query.toDriver().toObject();
-    //   const key = ($query.op === 'findOne' || $query.op === 'findMany') && Object.keys($query.where).length === 1 ? Object.keys($query.where)[0] : '__default__';
-    //   const [values] = key === '__default__' ? [] : Object.values(Util.flatten($query.where, { safe: true }));
-    //   prev[key] = prev[key] || [];
-    //   prev[key].push({ query, $query, values, i });
-    //   return prev;
-    // }, {});
+    const batchesByKey = queries.reduce((prev, query, i) => {
+      const $query = query.toDriver().toObject();
+      const key = $query.batch ?? '__default__';
+      const [values] = key === '__default__' ? [] : Object.values(Util.flatten($query.where, { safe: true }));
+      const $values = Util.ensureArray(values).map(value => (value instanceof RegExp ? value : new RegExp(`${value}`, 'i')));
+      prev[key] = prev[key] || [];
+      prev[key].push({ query, $query, values, $values, i });
+      return prev;
+    }, {});
 
-    // return Promise.all(Object.entries(batchQueries).map(([key, batches]) => {
-    //   switch (key) {
-    //     case '__default__': {
-    //       return batches.map(batch => this.#model.source.client.resolve(batch.$query).then(data => ({ data, ...batch })));
-    //     }
-    //     default: {
-    //       const values = Array.from(new Set(batches.map(batch => batch.values).flat()));
-    //       const $query = { ...batches[0].$query, op: 'findMany', where: { [key]: { $in: values } } };
-    //       return batches.map(batch => this.#model.source.client.resolve($query).then((docs) => {
-    //         const matches = docs.filter(doc => Util.ensureArray(batch.values).every(value => Util.ensureArray(doc[key]).some(val => `${value}`.match(new RegExp(`${val}`, 'i')))));
-    //         if (docs.length !== matches.length) console.log(docs.length, matches.length, batch.values, docs.map(doc => doc[key]).flat());
-    //         const data = batch.$query.op === 'findOne' ? matches[0] : matches;
-    //         return { data, ...batch };
-    //       }));
-    //     }
-    //   }
-    // }).flat()).then((results) => {
-    //   return results.flat().sort((a, b) => a.i - b.i).map(({ query, $query, data }) => {
-    //     if (data == null) return null; // Explicit return null;
-    //     if ($query.isCursorPaging && Array.isArray(data)) data = Loader.#paginateResults(data, query.toObject());
-    //     return this.#resolver.toResultSet(this.#model, data);
-    //   });
-    // });
-
-    return Promise.all(queries.map((query, i) => {
-      const dquery = query.toDriver();
-      const $query = dquery.toObject();
-
-      return this.#model.source.client.resolve($query).then((data) => {
+    return Promise.all(Object.entries(batchesByKey).map(([key, batches]) => {
+      switch (key) {
+        case '__default__': {
+          return batches.map(batch => this.#model.source.client.resolve(batch.$query).then(data => ({ data, ...batch })));
+        }
+        default: {
+          const values = Array.from(new Set(batches.map(batch => batch.values).flat()));
+          const $query = { ...batches[0].$query, op: 'findMany', where: { [key]: values } };
+          return this.#model.source.client.resolve($query).then((docs) => {
+            return batches.map((batch) => {
+              const matches = docs.filter((doc) => {
+                let match = false;
+                Util.pathmap(key, doc, (mixed) => {
+                  match = match || Util.ensureArray(mixed).some(value => batch.$values.some($value => `${value}`.match($value)));
+                  return mixed;
+                });
+                return match;
+              });
+              const data = batch.$query.op === 'findOne' ? matches[0] : matches;
+              return { data, ...batch };
+            });
+          });
+        }
+      }
+    }).flat()).then((results) => {
+      return results.flat().sort((a, b) => a.i - b.i).map(({ query, $query, data }) => {
         if (data == null) return null; // Explicit return null;
         if ($query.isCursorPaging && Array.isArray(data)) data = Loader.#paginateResults(data, query.toObject());
         return this.#resolver.toResultSet(this.#model, data);
       });
-    }));
+    });
+
+    // return Promise.all(queries.map((query, i) => {
+    //   const dquery = query.toDriver();
+    //   const $query = dquery.toObject();
+
+    //   return this.#model.source.client.resolve($query).then((data) => {
+    //     if (data == null) return null; // Explicit return null;
+    //     if ($query.isCursorPaging && Array.isArray(data)) data = Loader.#paginateResults(data, query.toObject());
+    //     return this.#resolver.toResultSet(this.#model, data);
+    //   });
+    // }));
   }
 
   static #paginateResults(rs, query) {

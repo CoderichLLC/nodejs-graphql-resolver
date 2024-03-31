@@ -2,7 +2,6 @@ WHAT MATTERS:
   * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
 
 TODO:
-  * Batch Queries
   * .flags({ debug: true }) - You will never see debug info when the result is cached and no driver called
     - query.flags.debug should not be at driver level
   * Referential integrity (onDelete) defined in embedded documents is not implemented

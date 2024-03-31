@@ -89,7 +89,7 @@ module.exports = class Query {
    * Finalize the query for the driver
    */
   #finalize(query) {
-    const { where = {}, sort = {} } = query;
+    const { where = {}, sort = {}, op } = query;
     const flatSort = Util.flatten(sort, { safe: true });
     const flatWhere = Util.flatten(where, { safe: true });
     const $sort = Util.unflatten(Object.keys(flatSort).reduce((prev, key) => Object.assign(prev, { [key]: {} }), {}), { safe: true });
@@ -101,11 +101,11 @@ module.exports = class Query {
     }, { key: 'key' });
 
     // Reconstruct the where clause by pulling out anything that requires a join
-    query.where = Util.unflatten(Object.entries(flatWhere).reduce((prev, [key, value]) => {
+    query.where = Object.entries(flatWhere).reduce((prev, [key, value]) => {
       if (this.#model.isJoinPath(key, 'key')) return prev;
       value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
       return Object.assign(prev, { [key]: value });
-    }, {}), { safe: true });
+    }, {});
 
     // Determine what join data is needed (derived from where + sort)
     const joinData = mergeDeep($sort, Util.unflatten(Object.entries(flatWhere).reduce((prev, [key, value]) => {
@@ -114,7 +114,7 @@ module.exports = class Query {
     }, {}), { safe: true }));
 
     // If we have 1 field in where clause this is a candidate for batching
-    query.batch = Object.keys(query.where).length === 1 ? Object.keys(query.where)[0] : '__default__';
+    query.batch = (op === 'findOne' || op === 'findMany') && Object.keys(query.where).length === 1 ? Object.keys(query.where)[0] : '__default__';
 
     // Construct joins
     query.joins = [];
