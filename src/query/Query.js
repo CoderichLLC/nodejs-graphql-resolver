@@ -1,5 +1,5 @@
 const Util = require('@coderich/util');
-const { isGlob, globToRegex, mergeDeep, finalizeWhereClause, JSONParse } = require('../service/AppService');
+const { isGlob, globToRegex, mergeDeep, JSONParse } = require('../service/AppService');
 
 module.exports = class Query {
   #config;
@@ -101,17 +101,20 @@ module.exports = class Query {
     }, { key: 'key' });
 
     // Reconstruct the where clause by pulling out anything that requires a join
-    query.where = finalizeWhereClause(Util.unflatten(Object.entries(flatWhere).reduce((prev, [key, value]) => {
+    query.where = Util.unflatten(Object.entries(flatWhere).reduce((prev, [key, value]) => {
       if (this.#model.isJoinPath(key, 'key')) return prev;
       value = Util.map(value, el => (isGlob(el) ? globToRegex(el) : el));
       return Object.assign(prev, { [key]: value });
-    }, {}), { safe: true }));
+    }, {}), { safe: true });
 
     // Determine what join data is needed (derived from where + sort)
     const joinData = mergeDeep($sort, Util.unflatten(Object.entries(flatWhere).reduce((prev, [key, value]) => {
       if (this.#model.isJoinPath(key, 'key')) return Object.assign(prev, { [key]: value });
       return prev;
     }, {}), { safe: true }));
+
+    // If we have 1 field in where clause this is a candidate for batching
+    query.batch = Object.keys(query.where).length === 1 ? Object.keys(query.where)[0] : '__default__';
 
     // Construct joins
     query.joins = [];

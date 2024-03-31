@@ -17,14 +17,6 @@ exports.hashObject = obj => ObjectHash(obj, { respectType: false, respectFunctio
 exports.fromGUID = guid => Buffer.from(`${guid}`, 'base64').toString('ascii').split(',');
 exports.guidToId = (autograph, guid) => (autograph.legacyMode ? guid : exports.uvl(exports.fromGUID(guid)[1], guid));
 
-exports.finalizeWhereClause = (obj, arrayOp = '$in') => {
-  return Object.entries(Util.flatten(obj, { safe: true })).reduce((prev, [key, value]) => {
-    const isArray = Array.isArray(value);
-    if (isArray) return Object.assign(prev, { [key]: { [arrayOp]: value } });
-    return Object.assign(prev, { [key]: value });
-  }, {});
-};
-
 exports.getGQLReturnType = (info) => {
   const returnType = `${info.returnType}`;
   const typeMap = { array: /^\[.+\].?$/, connection: /.+Connection!?$/, number: /^(Int|Float)!?$/, scalar: /.*/ };

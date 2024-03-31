@@ -278,6 +278,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Book').where({ 'author.id': christie.id }).many()).toMatchObject([{ id: healthBook.id, name: 'Health And Wellness', author: christie.id }]);
       expect(await resolver.match('Book').where({ bestSeller: true }).many()).toMatchObject([{ id: mobyDick.id, name: 'Moby Dick', author: richard.id }]);
       expect(await resolver.match('Book').where({ bestSeller: 'TRu?' }).many()).toMatchObject([{ id: mobyDick.id, name: 'Moby Dick', author: richard.id }]);
+      expect(await resolver.match('Book').where({ bestSeller: ['TRu?'] }).many()).toMatchObject([{ id: mobyDick.id, name: 'Moby Dick', author: richard.id }]);
       expect(await resolver.match('Book').where({ bestSeller: 'tru' }).many()).toMatchObject([]);
       expect(await resolver.match('Book').where({ price: '?.??' }).many()).toMatchObject([{ id: mobyDick.id, name: 'Moby Dick', author: richard.id }]);
       expect(await resolver.match('Book').where({ price: '??.*' }).many()).toMatchObject([{ id: healthBook.id, name: 'Health And Wellness', author: christie.id }]);

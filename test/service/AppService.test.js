@@ -5,6 +5,7 @@ describe('AppService', () => {
   test('isGlob', () => {
     expect(isGlob('4?')).toBe(true);
     expect(isGlob('!value')).toBe(true);
+    expect(isGlob('TRu?')).toBe(true);
   });
 
   test('hashObject', () => {

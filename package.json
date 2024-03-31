@@ -32,7 +32,7 @@
   },
   "devDependencies": {
     "@apollo/server": "4.9.5",
-    "@coderich/autograph-mongodb": "0.0.2",
+    "@coderich/autograph-mongodb": "0.0.4",
     "@coderich/dev": "0.2.1",
     "@graphql-tools/schema": "10.0.0",
     "graphql": "16.8.1",
