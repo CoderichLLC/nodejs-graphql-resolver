@@ -50,6 +50,11 @@ module.exports = class Loader {
           const values = Array.from(new Set(batches.map(batch => batch.values).flat()));
           const $query = { ...batches[0].$query, op: 'findMany', where: { [key]: values } };
 
+          //
+          if (values.length < 3) {
+            return batches.map(batch => this.#model.source.client.resolve(batch.$query).then(data => ({ data, ...batch })));
+          }
+
           // Collect all the $values (Regular Expressions) to match doc (result) data by
           const $values = Array.from(new Set(batches.map(batch => batch.$values).flat()));
           const docsByRegExpKey = $values.reduce((map, re) => map.set(re, []), new Map());

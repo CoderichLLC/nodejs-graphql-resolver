@@ -205,7 +205,22 @@ module.exports = class Resolver {
         return this.toResultSet(model, results);
       });
     } else {
-      thunk = tquery => this.#dataLoaders[model].resolve(tquery);
+      thunk = (tquery) => {
+        const { where, op } = query.toObject();
+        const values = Object.values(where);
+        const $values = values.flat();
+        const skipQuery = values.length && (!$values.length || $values.includes(undefined));
+
+        if (skipQuery) {
+          switch (op) {
+            case 'count': return Promise.resolve(0);
+            case 'findMany': return Promise.resolve([]);
+            default: return Promise.resolve(null);
+          }
+        }
+
+        return this.#dataLoaders[model].resolve(tquery);
+      };
     }
 
     return this.#createSystemEvent(query, (tquery) => {
