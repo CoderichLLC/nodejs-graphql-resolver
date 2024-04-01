@@ -32,7 +32,8 @@ Improvement Considerations:
   * Can you derive transaction support by virtue of function definition existing?
   * create&updateMany is woefully slow due to individualized CRUD
   * Ability to override models' terminal commands (eg. one(), many())?
-  * There are times you may NOT want resolver to CRUD an attribute (eg. NetworkPlace.parent should be set via meta because of side-effects)
+  * There are times you may NOT want resolver to CRUD an attribute
+    - eg. NetworkPlace.parent should be set via meta because of side-effects
   * Upsert???
   * EventEmitter
     - Debounce a function (debounce) to prevent excessive/redundant calls?
@@ -47,7 +48,6 @@ Improvement Considerations:
     - Referential Integrity (no need to ensureId)
     - Composite index keys (probably need to move these tests elsewhere)
   * onDelete defer - could probably be done dynamically instead
-  * DataLoader - rewrite for batch queries
   * Allow @field(path: "some.path") in order to hoist
   * Support for GUID (node interface)
     - autograph.legacyMode (move to config)
@@ -94,15 +94,3 @@ BREAKING CHANGELOG:
   '$serialize', [input, where] - transformations to db driver
   '$validate', [input] - After preMutation Before postMutation (validate fields)
 ]
-
-Query/Mutation
-  1. Resolver.match() -> QueryResolver/Builder
-  2. QueryResolver/Builder...terminate() -> Query.clone()
-      a. Update: Query.clone({ doc, input: merged })
-  3. Resolver.resolve(Query)
-  4. Query.transform()
-      a. Pipeline() [input, where, sort]
-
-  5. SystemEvent
-  6. Mutation ? DataSource.resolve(query.toDriver()) : DataLoader.resolve(query)
-  7. Resolver.toResultSet(result)

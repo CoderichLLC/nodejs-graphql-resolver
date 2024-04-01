@@ -173,7 +173,7 @@ module.exports = class Resolver {
 
     // All transactions bound to this resolver are to be rolled back
     return Util.promiseChain(session.map(transaction => () => {
-      transaction.rollback().catch(e => errors.push(e));
+      return transaction.rollback().catch(e => errors.push(e));
     })).then(() => {
       return errors.length ? Promise.reject(errors) : Promise.all(session.thunks.map(thunk => thunk()));
     });

@@ -79,11 +79,12 @@ module.exports = class Pipeline {
     });
 
     //
-    Pipeline.define('$cast', ({ field, value }) => {
-      const { type, isEmbedded } = field;
-      if (isEmbedded) return value;
+    Pipeline.define('$cast', (params) => {
+      const { field, value } = params;
 
-      switch (type.toLowerCase()) {
+      if (field.isEmbedded) return value;
+
+      switch (field.type.toLowerCase()) {
         case 'string': {
           return `${value}`;
         }

@@ -188,6 +188,7 @@ describe('TestSuite', () => {
   describe('Get', () => {
     test('Person', async () => {
       expect(await resolver.match('Person').one()).toBeDefined();
+      expect(await resolver.match('Person').id(undefined).one()).toBeNull();
       expect(await resolver.match('Person').id(richard.id).one()).toMatchObject({ id: richard.id, name: richard.name, network: 'networkId' });
       expect(await resolver.match('Person').id(christie.id).one()).toMatchObject({ id: christie.id, name: christie.name, friends: [richard.id], network: 'networkId' });
       expect(await resolver.match('Person').id(christie.id).many()).toMatchObject([{ id: christie.id, name: christie.name, friends: [richard.id], network: 'networkId' }]);
