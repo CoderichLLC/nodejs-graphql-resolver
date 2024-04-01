@@ -28,6 +28,24 @@ describe('Query', () => {
       });
     });
 
+    test('one (undefined)', async () => {
+      expect((await factory('Person').id(undefined).one().transform()).toObject()).toMatchObject({
+        id: undefined,
+        crud: 'read',
+        op: 'findOne',
+        key: 'getPerson',
+        model: 'Person',
+        input: undefined,
+        where: {
+          id: undefined,
+          network: 'network',
+        },
+        args: {
+          id: undefined,
+        },
+      });
+    });
+
     test('many', async () => {
       expect((await factory('Person').where({ name: 'RICH' }).sort({ age: 'desc' }).many().transform()).toObject()).toMatchObject({
         id: undefined,

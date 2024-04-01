@@ -73,8 +73,9 @@ module.exports = class Pipeline {
     }, { ignoreNull: false });
 
     Pipeline.define('$fk', (params) => {
-      const { fkField } = params.field;
-      const v = params.value?.[fkField] || params.value;
+      const { fkField, isPrimaryKey } = params.field;
+      const lookupField = isPrimaryKey ? params.field : fkField;
+      const v = params.value?.[lookupField] || params.value;
       return Util.map(v, value => params.field.generator({ ...params, value }));
     });
 

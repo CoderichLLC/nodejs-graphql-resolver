@@ -459,7 +459,16 @@ module.exports = class Schema {
             if (scalar) Object.entries(scalar.pipelines).forEach(([key, values]) => $field.pipelines[key].push(...values));
 
             if ($field.isArray) $field.pipelines.normalize.unshift('toArray');
-            if ($field.isPrimaryKey) $field.pipelines.serialize.unshift('$pk'); // Will create/convert to FK type always
+
+            // Will create/convert to ID type always
+            if ($field.isPrimaryKey) {
+              $field.pipelines.construct.unshift('$pk');
+              $field.pipelines.restruct.unshift('$pk');
+            }
+
+            // Will convert to ID type IFF defined in payload
+            if ($field.isFKReference || $field.isPrimaryKey) $field.pipelines.serialize.unshift('$fk');
+
             if ($field.isRequired && $field.isPersistable && !$field.isVirtual) $field.pipelines.validate.push('required');
 
             if ($field.isFKReference) {
@@ -468,7 +477,6 @@ module.exports = class Schema {
               const from = $field.linkField.key;
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
-              $field.pipelines.serialize.unshift('$fk'); // Will convert to FK type IFF defined in payload
               $field.pipelines.validate.push('ensureFK'); // Absolute Last
             }
           });
