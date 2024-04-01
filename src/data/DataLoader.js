@@ -32,8 +32,9 @@ module.exports = class Loader {
     const batchesByKey = queries.reduce((prev, query, i) => {
       const $query = query.toDriver().toObject();
       const key = $query.batch ?? '__default__';
-      const [values] = key === '__default__' ? [] : Object.values(Util.flatten($query.where, { safe: true }));
-      const $values = Util.ensureArray(values).map(value => (value instanceof RegExp ? value : new RegExp(`${value}`, 'i')));
+      let [values] = key === '__default__' ? [] : Object.values(Util.flatten($query.where, { safe: true }));
+      values = Array.from(new Set(Util.ensureArray(values)));
+      const $values = values.map(value => (value instanceof RegExp ? value : new RegExp(`${value}`, 'i')));
       prev[key] = prev[key] || [];
       prev[key].push({ query, $query, values, $values, i });
       return prev;
@@ -45,18 +46,32 @@ module.exports = class Loader {
           return batches.map(batch => this.#model.source.client.resolve(batch.$query).then(data => ({ data, ...batch })));
         }
         default: {
+          // Collect all the values for the where clause
           const values = Array.from(new Set(batches.map(batch => batch.values).flat()));
           const $query = { ...batches[0].$query, op: 'findMany', where: { [key]: values } };
+
+          // Collect all the $values (Regular Expressions) to match doc (result) data by
+          const $values = Array.from(new Set(batches.map(batch => batch.$values).flat()));
+          const docsByRegExpKey = $values.reduce((map, re) => map.set(re, []), new Map());
+
+          // Now we perform 1 query, instead of many smaller ones
           return this.#model.source.client.resolve($query).then((docs) => {
-            return batches.map((batch) => {
-              const matches = docs.filter((doc) => {
-                let match = false;
-                Util.pathmap(key, doc, (mixed) => {
-                  match = match || Util.ensureArray(mixed).some(value => batch.$values.some($value => `${value}`.match($value)));
-                  return mixed;
+            // This one-time transformation keys all the docs by $value (regex) match
+            docs.forEach((doc) => {
+              Util.pathmap(key, doc, (value) => {
+                docsByRegExpKey.forEach((set, re) => {
+                  Util.map(value, (v) => {
+                    if (`${v}`.match(re)) {
+                      set.push(doc);
+                    }
+                  });
                 });
-                return match;
+                return value;
               });
+            });
+
+            return batches.map((batch) => {
+              const matches = Array.from(new Set(batch.$values.map(re => docsByRegExpKey.get(re)).flat().filter(v => v !== undefined)));
               const data = batch.$query.op === 'findOne' ? matches[0] : matches;
               return { data, ...batch };
             });

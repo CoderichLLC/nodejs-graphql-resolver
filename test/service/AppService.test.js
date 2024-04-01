@@ -4,6 +4,7 @@ const { isGlob, hashObject } = require('../../src/service/AppService');
 describe('AppService', () => {
   test('isGlob', () => {
     expect(isGlob('4?')).toBe(true);
+    expect(isGlob('1.??')).toBe(true);
     expect(isGlob('!value')).toBe(true);
     expect(isGlob('TRu?')).toBe(true);
   });
