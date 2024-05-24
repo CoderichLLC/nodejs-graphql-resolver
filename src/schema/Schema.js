@@ -16,7 +16,7 @@ const scalarKinds = [Kind.SCALAR_TYPE_DEFINITION, Kind.SCALAR_TYPE_EXTENSION];
 const fieldKinds = [Kind.FIELD_DEFINITION];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION].concat(interfaceKinds);
 const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE).concat(scalarKinds).concat(enumKinds);
-const pipelines = ['validate', 'construct', 'restruct', 'instruct', 'normalize', 'serialize'];
+const pipelines = ['validate', 'construct', 'restruct', 'instruct', 'normalize', 'serialize', 'deserialize'];
 const inputPipelines = ['validate', 'construct', 'instruct', 'normalize', 'serialize'];
 const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
 
@@ -418,7 +418,12 @@ module.exports = class Schema {
 
             $model.transformers.doc.config({
               shape: Object.values($model.fields).reduce((prev, curr) => {
-                const rules = [curr.name]; // Rename key
+                const args = { model: $model, field: curr };
+
+                const rules = [
+                  curr.name, // Rename key
+                  a => Pipeline.$deserialize({ ...a, ...args, path: a.path.concat(curr.name) }),
+                ];
                 if (curr.isArray) rules.unshift(({ value }) => (value == null ? value : Util.ensureArray(value)));
                 if (curr.isEmbedded) rules.unshift(({ value }) => Util.map(value, v => curr.model.transformers.doc.transform(v)));
                 return Object.assign(prev, { [curr.key]: rules });
@@ -623,6 +628,7 @@ module.exports = class Schema {
         construct: [AutoGraphPipelineEnum!]
         restruct: [AutoGraphPipelineEnum!]
         serialize: [AutoGraphPipelineEnum!]
+        deserialize: [AutoGraphPipelineEnum!]
         validate: [AutoGraphPipelineEnum!]
 
         # TEMP TO APPEASE TRANSITION
@@ -630,7 +636,6 @@ module.exports = class Schema {
         gqlScope: AutoGraphMixed # Dictate how GraphQL API behaves
         dalScope: AutoGraphMixed # Dictate how the DAL behaves
         transform: [AutoGraphPipelineEnum!]
-        deserialize: [AutoGraphPipelineEnum!]
       ) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION | SCALAR
 
       directive @${link}(

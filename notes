@@ -1,36 +1,39 @@
-WHAT MATTERS:
-  * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
-
-TODO:
-  * .flags({ debug: true }) - You will never see debug info when the result is cached and no driver called
-    - query.flags.debug should not be at driver level
+Release 0.13:
+  * Do we need the concept of deserialize? (multiLang)
+  * Sort by name (name.en) does not work
+    - I believe the transformations on where + sort are not accurate
   * Referential integrity (onDelete) defined in embedded documents is not implemented
     - Also does not seem to work at all
+    - onDelete defer - could probably be done dynamically instead?
   * Atlas Search Support
-  * Tests overhaul
-    - Need to make sure that Scalar @field() is working
-    - Failing tests are blowing up due to Jest and Circular Reference
+    - How to modify the query?
+  * Do we support input meta?
+  * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
 
-Release 0.14
+Release 0.14:
   * Remove deprecations
   * Break up Schema monolith (schema.parse() usage)
-  * Easy select('a b c d') syntax
-    - GraphQL API passes in .args() and only selects what it needs.... is this ok for DataLoader Cache?
-    - I disabled it... when selecting "count" only there are problems
+  * .flags({ debug: true }) - You will never see debug info when the result is cached and no driver called
+    - query.flags.debug should not be at driver level
 
 Known Issues:
-  * MongoClient - not all queries go through $aggregateQuery and so you lose things like $project the result
+  * MongoClient - not all queries (mutations) go through $aggregateQuery and so you lose things like $project the result
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
   * Transactions still act up once in a while when running the tests; also sometimes see a JSON circular reference
     - Circular ref presents itself as a problem when Jest test fails and it cannot JSON serialize the object
     - It's unclear how taboo this is
+  * Tests overhaul
+    - Need to make sure that Scalar @field() is working
+    - Failing tests are blowing up due to Jest and Circular Reference
 
 Improvement Considerations:
   * Resolver.graphql()
     - This requires executableSchema...
   * Ability to trigger validation?
+  * Easy select('a b c d') syntax
+    - GraphQL API passes in .args() and only selects what it needs.... is this ok for DataLoader Cache?
+    - I disabled it... when selecting "count" only there are problems
   * Can you derive transaction support by virtue of function definition existing?
-  * create&updateMany is woefully slow due to individualized CRUD
   * Ability to override models' terminal commands (eg. one(), many())?
   * There are times you may NOT want resolver to CRUD an attribute
     - eg. NetworkPlace.parent should be set via meta because of side-effects
@@ -47,7 +50,6 @@ Improvement Considerations:
     - Batches
     - Referential Integrity (no need to ensureId)
     - Composite index keys (probably need to move these tests elsewhere)
-  * onDelete defer - could probably be done dynamically instead
   * Allow @field(path: "some.path") in order to hoist
   * Support for GUID (node interface)
     - autograph.legacyMode (move to config)
@@ -71,7 +73,7 @@ BREAKING CHANGELOG:
   * No more gqlScope, dalScope, fieldScope (use crud + scope)
   * resolver.resolve() now takes 1 argument (info) and requires you to use .args() etc if need be
   * $Magic methods now have signature doc.$.<method> and are more powerful and chainable
-  * Resolver now sets itself at context.autograph
+  * Resolver now sets itself at context.autograph (configurable)
   * createNamedQuery is replaced by Resolver.$loader
     - cb function now has signature (args, context)
     - cache is on by default and persists indefinitely (must be managed)
