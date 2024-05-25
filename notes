@@ -1,10 +1,9 @@
 Release 0.13:
-  * Do we need the concept of deserialize? (multiLang)
-  * Sort by name (name.en) does not work
-    - I believe the transformations on where + sort are not accurate
   * Referential integrity (onDelete) defined in embedded documents is not implemented
     - Also does not seem to work at all
     - onDelete defer - could probably be done dynamically instead?
+  * Sort by name (name.en) does not work
+    - I believe the transformations on where + sort are not accurate
   * Atlas Search Support
     - How to modify the query?
   * Do we support input meta?

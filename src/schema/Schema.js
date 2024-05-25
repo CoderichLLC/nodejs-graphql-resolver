@@ -425,7 +425,14 @@ module.exports = class Schema {
                   a => Pipeline.$deserialize({ ...a, ...args, path: a.path.concat(curr.name) }),
                 ];
                 if (curr.isArray) rules.unshift(({ value }) => (value == null ? value : Util.ensureArray(value)));
-                if (curr.isEmbedded) rules.unshift(({ value }) => Util.map(value, v => curr.model.transformers.doc.transform(v)));
+                // if (curr.isEmbedded) rules.unshift(({ value }) => Util.map(value, v => curr.model.transformers.doc.transform(v)));
+                if (curr.isEmbedded) {
+                  rules.unshift(a => Util.map(a.value, (value, i) => {
+                    const path = a.path.concat(curr.name);
+                    if (curr.isArray) path.push(i);
+                    return curr.model.transformers.doc.transform(value, { ...args, query: a.query, context: a.context, path });
+                  }));
+                }
                 return Object.assign(prev, { [curr.key]: rules });
               }, {}),
               defaults: Object.values($model.fields).reduce((prev, curr) => {
