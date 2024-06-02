@@ -1,7 +1,13 @@
 const Util = require('@coderich/util');
 
 module.exports = class Transformer {
-  #config = { shape: {}, defaults: {}, args: {}, strictSchema: false, keepUndefined: false };
+  #config = {
+    args: {}, // Arguments passed to each thunk
+    shape: {}, // The final shape
+    defaults: {}, // Default values applied at beginning of transformation
+    strictSchema: false, // If true, will strip away unknown attributes
+    keepUndefined: false, // If true, will preserve undefined values
+  };
 
   #operation = {
     set: (target, prop, startValue, proxy) => {

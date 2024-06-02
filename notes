@@ -2,6 +2,8 @@ Release 0.13:
   * Referential integrity (onDelete) defined in embedded documents is not implemented
     - Also does not seem to work at all
     - onDelete defer - could probably be done dynamically instead?
+    !! input is being evaluated (validation) even when it's a query
+
   * Sort by name (name.en) does not work
     - I believe the transformations on where + sort are not accurate
   * Atlas Search Support

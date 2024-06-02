@@ -790,7 +790,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ name: '{christie,richard}' }).many()).toMatchObject([{ id: christie.id }]);
       expect(await resolver.match('Book').many()).toMatchObject([{ id: healthBook.id }]);
       expect(await resolver.match('Chapter').sortBy({ name: 'asc' }).many()).toMatchObject([{ id: chapter1.id }, { id: chapter2.id }]);
-      // expect(await resolver.match('Person').id(christie.id).one()).toMatchObject({ friends: [], section: null });
+      expect(await resolver.match('Person').id(christie.id).one()).toMatchObject({ friends: [], section: expect.objectContaining({ person: null }) });
     });
 
     test('remove multi', async () => {

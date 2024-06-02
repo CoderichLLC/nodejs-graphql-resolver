@@ -60,7 +60,7 @@ module.exports = class QueryResolver extends QueryBuilder {
       case 'pullOne': {
         return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
-          const values = get(this.#model.transformers.input.transform(input), key);
+          const values = get(this.#model.transformers.input.transform(input), key, []);
           const $input = { [key]: (get(doc, key) || []).filter(el => values.every(v => `${v}` !== `${el}`)) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
@@ -109,17 +109,17 @@ module.exports = class QueryResolver extends QueryBuilder {
     const { id } = query.toObject();
     const txn = this.#resolver.transaction(false);
 
-    // if (this.#model.name === 'Person') console.log(this.#model.referentialIntegrity);
-    return txn.run(Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, fieldRef, isArray, op }) => () => {
-      const fieldStr = fieldRef ? `${field}.${fieldRef}` : `${field.name}`;
-      const $where = { [fieldStr]: id };
+    return txn.run(Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, path }) => () => {
+      const { onDelete, isArray } = field;
+      const $path = path.join('.');
+      const $where = { [$path]: id };
 
-      switch (op) {
-        case 'cascade': return isArray ? txn.match(model).where($where).pull(fieldStr, id) : txn.match(model).where($where).remove();
-        case 'nullify': return txn.match(model).where($where).save({ [fieldStr]: null });
+      switch (onDelete) {
+        case 'cascade': return isArray ? txn.match(model).where($where).pull($path, id) : txn.match(model).where($where).remove();
+        case 'nullify': return txn.match(model).where($where).save({ [$path]: null });
         case 'restrict': return txn.match(model).where($where).count().then(count => (count ? Promise.reject(new Error('Restricted')) : count));
         case 'defer': return Promise.resolve(); // Used for embedded models (could be improved)
-        default: throw new Error(`Unknown onDelete operator: '${op}'`);
+        default: throw new Error(`Unknown onDelete operator: '${onDelete}'`);
       }
     })));
   }

@@ -129,6 +129,7 @@ module.exports = class Schema {
     visit(this.#typeDefs, {
       enter: (node) => {
         const name = node.name?.value;
+
         if (!allowedKinds.includes(node.kind) || operations.includes(name)) return false;
 
         if (modelKinds.includes(node.kind)) {
@@ -424,8 +425,9 @@ module.exports = class Schema {
                   curr.name, // Rename key
                   a => Pipeline.$deserialize({ ...a, ...args, path: a.path.concat(curr.name) }),
                 ];
+
                 if (curr.isArray) rules.unshift(({ value }) => (value == null ? value : Util.ensureArray(value)));
-                // if (curr.isEmbedded) rules.unshift(({ value }) => Util.map(value, v => curr.model.transformers.doc.transform(v)));
+
                 if (curr.isEmbedded) {
                   rules.unshift(a => Util.map(a.value, (value, i) => {
                     const path = a.path.concat(curr.name);
@@ -433,6 +435,7 @@ module.exports = class Schema {
                     return curr.model.transformers.doc.transform(value, { ...args, query: a.query, context: a.context, path });
                   }));
                 }
+
                 return Object.assign(prev, { [curr.key]: rules });
               }, {}),
               defaults: Object.values($model.fields).reduce((prev, curr) => {
@@ -450,6 +453,7 @@ module.exports = class Schema {
 
           // Field resolution comes first (unshift)
           thunks.unshift(($schema) => {
+            $field.parent = $model;
             $field.model = $schema.models[$field.type];
             $field.crud = Util.uvl($field.crud, $field.model?.scope, 'crud');
             $field.linkTo ??= $field.model;
@@ -514,8 +518,12 @@ module.exports = class Schema {
     });
 
     // Resolve referential integrity
+    const onDeleteFields = Array.from(new Set(Object.values(this.#schema.models).reduce((prev, curr) => {
+      return prev.concat(Object.values(curr.fields).filter(el => el.onDelete)).flat();
+    }, [])));
+
     Object.values(this.#schema.models).forEach(($model) => {
-      $model.referentialIntegrity = Schema.#identifyOnDeletes(Object.values(this.#schema.models), $model.name);
+      $model.referentialIntegrity = Schema.#identifyOnDeletes(Object.values(this.#schema.models).filter(m => m.isEntity), onDeleteFields.filter(f => `${f.model}` === `${$model}`));
     });
 
     // Helper methods
@@ -894,21 +902,25 @@ module.exports = class Schema {
     `;
   }
 
-  static #identifyOnDeletes(models, parentName) {
-    return models.reduce((prev, model) => {
-      Object.values(model.fields).filter(f => f.onDelete).forEach((field) => {
-        if (`${field.model.name}` === `${parentName}`) {
-          if (model.isEntity) {
-            prev.push({ model, field, isArray: field.isArray, op: field.onDelete });
-          }
-          // else {
-          //   prev.push(...Schema.#identifyOnDeletes(models, model.name).map(od => Object.assign(od, { fieldRef: field.name, isArray: field.isArray, op: field.onDelete })));
-          // }
-        }
-      });
+  static #findPathToField(model, field, path = []) {
+    const { target, embeds } = Object.values(model.fields).reduce((prev, curr) => {
+      if (curr === field) prev.target = curr;
+      else if (curr.isEmbedded) prev.embeds.push(curr);
+      return prev;
+    }, { embeds: [] });
 
-      // Assign model referential integrity
-      return Util.filterBy(prev, (a, b) => `${a.model.name}:${a.field.name}:${a.fieldRef}:${a.op}` === `${b.model.name}:${b.field.name}:${b.fieldRef}:${b.op}`);
-    }, []);
+    if (target) return path.concat(target.name);
+    if (embeds.length) return embeds.map(f => Schema.#findPathToField(f.model, field, path.concat(f.name))).filter(Boolean)[0];
+    return undefined;
+  }
+
+  static #identifyOnDeletes(models, fields) {
+    return models.map((model) => {
+      return fields.map((field) => {
+        const path = Schema.#findPathToField(model, field);
+        if (!path) return null;
+        return { model, field, path };
+      });
+    }).flat().filter(Boolean);
   }
 };
