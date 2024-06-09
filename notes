@@ -1,7 +1,15 @@
 Release 0.13:
+  ** There is a potential race condition/issue when using $magic methods... I'm seeing Transaction committed/aborted messages when using them in nested transactions
+    - DO NOT USE THEM YET!!!
+
+  ** When performing an update, we do a query on the doc and "merge" that into input
+     The problem is that if you try to update a record that has a recently deleted FK reference;
+     The pipeline for the "input/merged" is run and that FK reference fails
+      - If run in a txn, it should find the FK reference
+      - Why does it even try to do this? I don't think it should
+
   * Referential integrity (onDelete) defined in embedded documents is not implemented
     - Also does not seem to work at all
-    - onDelete defer - could probably be done dynamically instead?
     !! input is being evaluated (validation) even when it's a query
 
   * Sort by name (name.en) does not work
@@ -31,6 +39,7 @@ Improvement Considerations:
   * Resolver.graphql()
     - This requires executableSchema...
   * Ability to trigger validation?
+  * onDelete defer - could probably be done dynamically instead?
   * Easy select('a b c d') syntax
     - GraphQL API passes in .args() and only selects what it needs.... is this ok for DataLoader Cache?
     - I disabled it... when selecting "count" only there are problems

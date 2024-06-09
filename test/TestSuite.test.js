@@ -564,6 +564,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').id(richard.id).save({ status: 'active' })).toMatchObject({ id: richard.id, name: 'richard', status: 'active' });
       expect(await resolver.match('Person').id(richard.id).save({ status: null })).toMatchObject({ id: richard.id, name: 'richard', status: null });
       expect(await resolver.match('Person').id(richard.id).save({ id: `${richard.id}` })).toMatchObject({ id: richard.id, name: 'richard', status: null, network: 'networkId' });
+      expect(await resolver.match('Person').id(christie.id).save({})).toMatchObject({ id: christie.id, gender: 'female' });
     });
 
     test('Book', async () => {
@@ -803,6 +804,20 @@ describe('TestSuite', () => {
       const results = await resolver.match('Color').sortBy({ type: 'asc' }).many();
       expect(ids.sort(sorter)).toMatchObject([{ id: colors[1].id }, { id: colors[3].id }].sort(sorter));
       expect(results).toMatchObject([{ type: 'blue' }, { type: 'green' }]);
+    });
+
+    test('remove linked fk reference on delete cascade', async () => {
+      const dj = await resolver.match('Dependent').save();
+      const pj = await resolver.match('PlainJane').save({ dependents: [dj.id] });
+      await resolver.match('PlainJane').id(pj.id).delete();
+      expect(await resolver.match('Dependent').id(dj.id).one()).toBeNull();
+    });
+
+    test.skip('remove fk reference (then update parent)', async () => {
+      const r = await resolver.match('Role').save({ name: 'toBeDeleted' });
+      const pj = await resolver.match('PlainJane').save({ roles: ['toBeDeleted'] });
+      await resolver.match('Role').id(r.id).delete();
+      await resolver.match('PlainJane').id(pj.id).save({}); // Bug where deleted role would fail FK constraint when trying to update/save parent record
     });
   });
 

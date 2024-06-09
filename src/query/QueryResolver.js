@@ -34,6 +34,10 @@ module.exports = class QueryResolver extends QueryBuilder {
       }
       case 'updateOne': {
         return this.#get(query).then((doc) => {
+          // const $input = this.#model.walk(doc, (node) => {
+          //   if (node.field.defaultValue !== undefined || ['instruct', 'restruct', 'serialize'].some(el => node.field.pipelines[el]?.length)) return node;
+          //   return false;
+          // });
           const merged = mergeDeep({}, doc, Util.unflatten(input, { safe: true }));
           return this.#resolver.resolve(query.clone({ doc, input: merged }));
         });
@@ -81,7 +85,7 @@ module.exports = class QueryResolver extends QueryBuilder {
       }
       case 'deleteOne': {
         return this.#get(query).then((doc) => {
-          return this.#resolveReferentialIntegrity(query).then(() => {
+          return this.#resolveReferentialIntegrity(doc).then(() => {
             return this.#resolver.resolve(query.clone({ doc })).then(() => doc);
           });
         });
@@ -105,19 +109,19 @@ module.exports = class QueryResolver extends QueryBuilder {
     return this.#resolver.resolve(query.clone({ op: 'findMany', key: `find${this.#model.name}`, crud: 'read', isMutation: false }));
   }
 
-  #resolveReferentialIntegrity(query) {
-    const { id } = query.toObject();
+  #resolveReferentialIntegrity(doc) {
+    const { id } = doc;
     const txn = this.#resolver.transaction(false);
 
     return txn.run(Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, path }) => () => {
       const { onDelete, isArray } = field;
       const $path = path.join('.');
-      const $where = { [$path]: id };
+      const where = field.isVirtual ? { [field.model.pkField]: get(doc, field.linkBy) } : { [$path]: id };
 
       switch (onDelete) {
-        case 'cascade': return isArray ? txn.match(model).where($where).pull($path, id) : txn.match(model).where($where).remove();
-        case 'nullify': return txn.match(model).where($where).save({ [$path]: null });
-        case 'restrict': return txn.match(model).where($where).count().then(count => (count ? Promise.reject(new Error('Restricted')) : count));
+        case 'cascade': return isArray ? txn.match(model).where(where).pull($path, id) : txn.match(model).where(where).remove();
+        case 'nullify': return txn.match(model).where(where).save({ [$path]: null });
+        case 'restrict': return txn.match(model).where(where).count().then(count => (count ? Promise.reject(new Error('Restricted')) : count));
         case 'defer': return Promise.resolve(); // Used for embedded models (could be improved)
         default: throw new Error(`Unknown onDelete operator: '${onDelete}'`);
       }

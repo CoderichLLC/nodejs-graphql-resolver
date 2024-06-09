@@ -128,7 +128,12 @@ module.exports = {
       id: ID!
       name: String
       role: RoleEmbedded
+      dependents: [Dependent!]
       roles: [Role!]! @field(default: [], fk: name)
+    }
+
+    type Dependent @model {
+      jane: PlainJane! @field(onDelete: cascade) @link(by: dependents)
     }
 
     type Role @model {
