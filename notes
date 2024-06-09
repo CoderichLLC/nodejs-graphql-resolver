@@ -8,9 +8,7 @@ Release 0.13:
       - If run in a txn, it should find the FK reference
       - Why does it even try to do this? I don't think it should
 
-  * Referential integrity (onDelete) defined in embedded documents is not implemented
-    - Also does not seem to work at all
-    !! input is being evaluated (validation) even when it's a query
+  ** !! input is being evaluated (validation) even when it's a query (non mutation)
 
   * Sort by name (name.en) does not work
     - I believe the transformations on where + sort are not accurate
