@@ -527,11 +527,15 @@ module.exports = class Schema {
     });
 
     // Helper methods
+    const resolvePathCache = {};
     this.#schema.resolvePath = (path, prop = 'key') => {
-      const [modelKey, ...fieldKeys] = path.split('.');
-      const $model = Object.values(this.#schema.models).find(el => el[prop] === modelKey);
-      if (!$model || !fieldKeys.length) return $model;
-      return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
+      resolvePathCache[path] ??= (() => {
+        const [modelKey, ...fieldKeys] = path.split('.');
+        const $model = Object.values(this.#schema.models).find(el => el[prop] === modelKey);
+        if (!$model || !fieldKeys.length) return $model;
+        return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
+      })();
+      return resolvePathCache[path];
     };
 
     // Mutate typeDefs
