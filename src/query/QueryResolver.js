@@ -65,8 +65,10 @@ module.exports = class QueryResolver extends QueryBuilder {
         return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
           const values = get(this.#model.transformers.input.transform(input), key, []);
-          const $input = { [key]: (get(doc, key) || []).filter(el => values.every(v => `${v}` !== `${el}`)) };
-          return this.#resolver.match(this.#model.name).id(doc.id).save($input);
+          const $doc = Util.pathmap(key, doc, (arr) => {
+            return arr.filter(el => values.every(v => `${v}` !== `${el}`));
+          });
+          return this.#resolver.match(this.#model.name).id(doc.id).save($doc);
         });
       }
       case 'pullMany': {
@@ -110,11 +112,11 @@ module.exports = class QueryResolver extends QueryBuilder {
   }
 
   #resolveReferentialIntegrity(doc) {
-    const { id } = doc;
     const txn = this.#resolver.transaction(false);
 
     return txn.run(Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, path }) => () => {
-      const { onDelete, isArray } = field;
+      const { onDelete, isArray, fkField } = field;
+      const id = doc[fkField];
       const $path = path.join('.');
       const where = field.isVirtual ? { [field.model.pkField]: get(doc, field.linkBy) } : { [$path]: id };
 

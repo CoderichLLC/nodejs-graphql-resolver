@@ -813,6 +813,14 @@ describe('TestSuite', () => {
       expect(await resolver.match('Dependent').id(dj.id).one()).toBeNull();
     });
 
+    test('cascade (pull) array of arrays', async () => {
+      const roles = await resolver.match('Role').save([{ name: 'RoleA' }, { name: 'RoleB' }]);
+      const pj = await resolver.match('PlainJane').save({ roles });
+      expect(pj.roles).toEqual(['RoleA', 'RoleB']);
+      await resolver.match('Role').id(roles[0].id).delete(); // Delete RoleA
+      expect(await resolver.match('PlainJane').id(pj.id).one()).toMatchObject({ roles: ['RoleB'] });
+    });
+
     test.skip('remove fk reference (then update parent)', async () => {
       const r = await resolver.match('Role').save({ name: 'toBeDeleted' });
       const pj = await resolver.match('PlainJane').save({ roles: ['toBeDeleted'] });

@@ -117,7 +117,9 @@ module.exports = class Pipeline {
       const ids = Util.filterBy(Util.ensureArray(value), (a, b) => `${a}` === `${b}`);
       if (!ids.length) return undefined;
       return resolver.match(type).flags(query.flags).where({ [fkField]: ids }).count().then((count) => {
-        if (count !== ids.length) throw Boom.notFound(`${type} Not Found`);
+        if (count !== ids.length) {
+          throw Boom.notFound(`${type} Not Found`);
+        }
       });
     }, { itemize: false });
 

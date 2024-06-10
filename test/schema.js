@@ -129,7 +129,7 @@ module.exports = {
       name: String
       role: RoleEmbedded
       dependents: [Dependent!]
-      roles: [Role!]! @field(default: [], fk: name)
+      roles: [Role!]! @field(default: [], fk: name, onDelete: cascade)
     }
 
     type Dependent @model {
