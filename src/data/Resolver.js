@@ -2,6 +2,7 @@ const { graphql } = require('graphql');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const QueryResolver = require('../query/QueryResolver');
+const AppService = require('../service/AppService');
 const Emitter = require('./Emitter');
 const Loader = require('./Loader');
 const DataLoader = require('./DataLoader');
@@ -225,7 +226,7 @@ module.exports = class Resolver {
 
     return this.#createSystemEvent(query, (tquery) => {
       return thunk(tquery).then((result) => {
-        if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound();
+        if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound(`${model} Not Found`);
         return result;
       });
     });
@@ -309,7 +310,6 @@ module.exports = class Resolver {
       if (query.isMutation) await Promise.all([...query.input.$thunks, Emitter.emit('validate', event)]);
       return thunk(tquery);
     }).then((result) => {
-      event.doc ??= result; // Case of create
       event.result = result; // backwards compat
       query.result = result;
       return Emitter.emit(`post${type}`, event);
@@ -328,6 +328,7 @@ module.exports = class Resolver {
     query.toObject = () => query;
     event.merged = event.input;
     event.input = event.args?.input;
+    event.doc ??= {};
 
     return event;
   }

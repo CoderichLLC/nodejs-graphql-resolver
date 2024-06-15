@@ -27,8 +27,8 @@ class Emitter extends EventEmitter {
 
       // Next functions are async and control the timing of the next phase
       Promise.all(nextFuncs.sort(Emitter.sort).map((fn) => {
-        return new Promise((next) => {
-          Promise.resolve(fn(data, next));
+        return new Promise((next, err) => {
+          Promise.resolve().then(() => fn(data, next)).catch(err);
         }).then((result) => {
           if (result !== undefined) throw new AbortEarlyError(result);
         }).catch(reject);
@@ -89,7 +89,7 @@ class Emitter extends EventEmitter {
     } : (event, next) => {
       if (arr.includes(`${event.query[prop]}`)) {
         if (once) this.removeListener(eventName, wrapper);
-        return next(listener(event, next));
+        return listener(event, next);
       }
       return next();
     };

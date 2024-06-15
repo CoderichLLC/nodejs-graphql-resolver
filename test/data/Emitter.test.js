@@ -76,14 +76,14 @@ describe('Emitter', () => {
       expect(fn).toBeCalledTimes(1);
     });
 
-    test('order', () => {
+    test('order', async () => {
       const fn1 = jest.fn();
-      const fn2 = jest.fn((event, next) => null);
+      const fn2 = jest.fn((event, next) => next());
       const fn3 = jest.fn();
       Emitter.on('order', fn1);
       Emitter.on('order', fn2);
       Emitter.on('order', fn3);
-      Emitter.emit('order');
+      await Emitter.emit('order');
       const [[order1], [order2], [order3]] = [fn1.mock.invocationCallOrder, fn2.mock.invocationCallOrder, fn3.mock.invocationCallOrder];
       expect(order1).toBeLessThan(order2);
       expect(order1).toBeLessThan(order3);
