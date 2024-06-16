@@ -51,7 +51,7 @@ module.exports = class Query {
     const args = { query: this.#query, resolver: this.#resolver, context: this.#context };
 
     const [input, where, sort] = [
-      this.#model.transformers.input.transform(Util.unflatten(this.#query.input, { safe: true }), args),
+      this.#model.transformers[this.#query.crud]?.transform(Util.unflatten(this.#query.input, { safe: true }), args),
       this.#query.isNative ? this.#query.where : this.#model.transformers.where.transform(Util.unflatten(this.#query.where ?? {}, { safe: true }), args),
       this.#model.transformers.sort.transform(Util.unflatten(this.#query.sort, { safe: true }), args),
     ];

@@ -17,7 +17,8 @@ const fieldKinds = [Kind.FIELD_DEFINITION];
 const modelKinds = [Kind.OBJECT_TYPE_DEFINITION, Kind.OBJECT_TYPE_EXTENSION].concat(interfaceKinds);
 const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NON_NULL_TYPE, Kind.NAMED_TYPE, Kind.LIST_TYPE, Kind.DIRECTIVE).concat(scalarKinds).concat(enumKinds);
 const pipelines = ['validate', 'construct', 'restruct', 'instruct', 'normalize', 'serialize', 'deserialize'];
-const inputPipelines = ['validate', 'construct', 'instruct', 'normalize', 'serialize'];
+const createPipelines = ['validate', 'construct', 'instruct', 'normalize', 'serialize'];
+const updatePipelines = ['validate', 'restruct', 'instruct', 'normalize', 'serialize'];
 const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
 
 module.exports = class Schema {
@@ -146,7 +147,8 @@ module.exports = class Schema {
             generator: this.#config.generators?.default,
             pipelines: pipelines.reduce((prev, key) => Object.assign(prev, { [key]: [] }), {}),
             transformers: {
-              input: new Transformer({ args: { schema: this.#schema, path: [] } }),
+              create: new Transformer({ args: { schema: this.#schema, path: [] } }),
+              update: new Transformer({ args: { schema: this.#schema, path: [] } }),
               where: new Transformer({ args: { schema: this.#schema, path: [] } }),
               doc: new Transformer({ args: { schema: this.#schema, path: [] } }),
             },
@@ -351,7 +353,7 @@ module.exports = class Schema {
               }, {}),
             });
 
-            $model.transformers.input.config({
+            $model.transformers.create.config({
               strictSchema: true,
               shape: Object.values($model.fields).reduce((prev, curr) => {
                 const args = { model: $model, field: curr };
@@ -360,11 +362,7 @@ module.exports = class Schema {
                   a => Pipeline.$cast({ ...a, ...args, path: a.path.concat(curr.name) }),
                   a => Pipeline.$normalize({ ...a, ...args, path: a.path.concat(curr.name) }),
                   a => Pipeline.$instruct({ ...a, ...args, path: a.path.concat(curr.name) }),
-                  (a) => {
-                    if (a.query.crud === 'create') return Pipeline.$construct({ ...a, ...args, path: a.path.concat(curr.name) });
-                    if (a.query.crud === 'update') return Pipeline.$restruct({ ...a, ...args, path: a.path.concat(curr.name) });
-                    return undefined;
-                  },
+                  a => Pipeline.$construct({ ...a, ...args, path: a.path.concat(curr.name) }),
                   a => Pipeline.$serialize({ ...a, ...args, path: a.path.concat(curr.name) }),
                 ];
 
@@ -372,18 +370,51 @@ module.exports = class Schema {
                   rules.push(a => Util.map(a.value, (value, i) => {
                     const path = a.path.concat(curr.name);
                     if (curr.isArray) path.push(i);
-                    return curr.model.transformers.input.transform(value, { ...args, thunks: a.thunks, query: a.query, resolver: a.resolver, context: a.context, path });
+                    return curr.model.transformers.create.transform(value, { ...args, thunks: a.thunks, query: a.query, resolver: a.resolver, context: a.context, path });
                   }));
                 }
 
                 // Validate
-                rules.push(a => Pipeline.$validate({ ...a, ...args, path: a.path.concat(curr.name) }));
+                rules.push(a => (a.query.op === 'createOne' ? Pipeline.$validate({ ...a, ...args, path: a.path.concat(curr.name) }) : undefined));
 
                 return Object.assign(prev, { [curr.name]: rules });
               }, {}),
               defaults: Object.values($model.fields).reduce((prev, curr) => {
                 if (curr.defaultValue !== undefined) return Object.assign(prev, { [curr.name]: curr.defaultValue });
-                if (inputPipelines.some(el => curr.pipelines[el].length)) return Object.assign(prev, { [curr.name]: undefined });
+                if (createPipelines.some(el => curr.pipelines[el].length)) return Object.assign(prev, { [curr.name]: undefined });
+                return prev;
+              }, {}),
+            });
+
+            $model.transformers.update.config({
+              strictSchema: true,
+              shape: Object.values($model.fields).reduce((prev, curr) => {
+                const args = { model: $model, field: curr };
+
+                const rules = [
+                  a => Pipeline.$cast({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$normalize({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$instruct({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$restruct({ ...a, ...args, path: a.path.concat(curr.name) }),
+                  a => Pipeline.$serialize({ ...a, ...args, path: a.path.concat(curr.name) }),
+                ];
+
+                if (curr.isEmbedded) {
+                  rules.push(a => Util.map(a.value, (value, i) => {
+                    const path = a.path.concat(curr.name);
+                    if (curr.isArray) path.push(i);
+                    return curr.model.transformers.update.transform(value, { ...args, thunks: a.thunks, query: a.query, resolver: a.resolver, context: a.context, path });
+                  }));
+                }
+
+                // Validate
+                rules.push(a => (a.query.op === 'updateOne' ? Pipeline.$validate({ ...a, ...args, path: a.path.concat(curr.name) }) : undefined));
+
+                return Object.assign(prev, { [curr.name]: rules });
+              }, {}),
+              defaults: Object.values($model.fields).reduce((prev, curr) => {
+                // if (curr.defaultValue !== undefined) return Object.assign(prev, { [curr.name]: curr.defaultValue });
+                if (updatePipelines.some(el => curr.pipelines[el].length)) return Object.assign(prev, { [curr.name]: undefined });
                 return prev;
               }, {}),
             });

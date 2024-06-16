@@ -66,7 +66,6 @@ describe('Query', () => {
 
     test('update', async () => {
       expect((await factory('Person').where({ name: 'rich' }).save({ name: 'RiChArD', emailAddress: 'rich@gmail.com' }).transform()).toObject()).toMatchObject({
-        // id: undefined,
         crud: 'update',
         op: 'updateMany',
         key: 'updatePerson',
@@ -78,8 +77,6 @@ describe('Query', () => {
             network: 'network',
             emailAddress: 'rich@gmail.com',
             updatedAt: expect.any(Date),
-            createdAt: expect.any(Date),
-            // telephone: undefined, // Update does not set input as default
           }),
         ],
       });

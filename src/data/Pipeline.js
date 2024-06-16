@@ -49,10 +49,10 @@ module.exports = class Pipeline {
     // Additional Transformers
     Pipeline.define('toArray', ({ value }) => (Array.isArray(value) ? value : [value]), { itemize: false });
     Pipeline.define('toDate', ({ value }) => new Date(value), { configurable: true });
+    Pipeline.define('createdAt', ({ query, model, value }) => value || (query.crud === 'create' || model.isEmbedded ? new Date() : undefined), { ignoreNull: false });
     Pipeline.define('updatedAt', () => new Date(), { ignoreNull: false });
     Pipeline.define('toTitleCase', ({ value }) => value.replace(/\w\S*/g, w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()));
     Pipeline.define('toSentenceCase', ({ value }) => value.charAt(0).toUpperCase() + value.slice(1));
-    Pipeline.define('createdAt', ({ value }) => value || new Date(), { ignoreNull: false });
     Pipeline.define('timestamp', () => Date.now(), { ignoreNull: false });
     Pipeline.define('dedupe', ({ value }) => uniqWith(value, (b, c) => hashObject(b) === hashObject(c)), { itemize: false });
 

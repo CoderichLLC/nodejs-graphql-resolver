@@ -821,7 +821,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('PlainJane').id(pj.id).one()).toMatchObject({ roles: ['RoleB'] });
     });
 
-    test.skip('remove fk reference (then update parent)', async () => {
+    test('remove fk reference (then update parent)', async () => {
       const r = await resolver.match('Role').save({ name: 'toBeDeleted' });
       const pj = await resolver.match('PlainJane').save({ roles: ['toBeDeleted'] });
       await resolver.match('Role').id(r.id).delete();
@@ -901,7 +901,7 @@ describe('TestSuite', () => {
       const person = await resolver.match('Person').id(christie.id).save({ section: { name: 'section' } });
       expect(person.section).toEqual(expect.objectContaining({ id: expect.thunk(ObjectId.isValid), name: 'section', frozen: 'frozen' }));
       const dbPerson = await resolver.raw('Person').findOne({ _id: christie.id });
-      expect(dbPerson.section).toEqual(expect.objectContaining({ _id: expect.thunk(ObjectId.isValid), name: 'section', frozen: 'frozen', unknown: 'unknown' }));
+      expect(dbPerson.section).toEqual(expect.objectContaining({ _id: expect.thunk(ObjectId.isValid), name: 'section', unknown: 'unknown' }));
     });
 
     test('update with brand new embedded attributes are correct', async () => {

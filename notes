@@ -2,14 +2,6 @@ Release 0.13:
   ** There is a potential race condition/issue when using $magic methods... I'm seeing Transaction committed/aborted messages when using them in nested transactions
     - DO NOT USE THEM YET!!!
 
-  ** When performing an update, we do a query on the doc and "merge" that into input
-     The problem is that if you try to update a record that has a recently deleted FK reference;
-     The pipeline for the "input/merged" is run and that FK reference fails
-      - If run in a txn, it should find the FK reference
-      - Why does it even try to do this? I don't think it should
-
-  ** Input is being evaluated (validation) even when it's a query (non mutation)
-
   * Sort by name (name.en) does not work
     - I believe the transformations on where + sort are not accurate
   * Atlas Search Support

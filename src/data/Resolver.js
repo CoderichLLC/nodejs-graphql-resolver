@@ -307,7 +307,7 @@ module.exports = class Resolver {
       const tquery = await $query.transform(false);
       query = tquery.toObject();
       event = this.#createEvent(query);
-      if (query.isMutation) await Promise.all([...query.input.$thunks, Emitter.emit('validate', event)]);
+      if (['create', 'update'].includes(query.crud)) await Promise.all([...query.input.$thunks, Emitter.emit('validate', event)]);
       return thunk(tquery);
     }).then((result) => {
       event.result = result; // backwards compat

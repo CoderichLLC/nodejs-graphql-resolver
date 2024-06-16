@@ -34,12 +34,7 @@ module.exports = class QueryResolver extends QueryBuilder {
       }
       case 'updateOne': {
         return this.#get(query).then((doc) => {
-          // const $input = this.#model.walk(doc, (node) => {
-          //   if (node.field.defaultValue !== undefined || ['instruct', 'restruct', 'serialize'].some(el => node.field.pipelines[el]?.length)) return node;
-          //   return false;
-          // });
-          const merged = mergeDeep({}, doc, Util.unflatten(input, { safe: true }));
-          return this.#resolver.resolve(query.clone({ doc, input: merged }));
+          return this.#resolver.resolve(query.clone({ doc }));
         });
       }
       case 'updateMany': {
@@ -50,7 +45,8 @@ module.exports = class QueryResolver extends QueryBuilder {
       case 'pushOne': {
         return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
-          const values = get(this.#model.transformers.input.transform(input), key);
+          const $query = Object.assign(query.toObject(), { doc });
+          const values = get(this.#model.transformers.create.transform(input, { query: $query }), key);
           const $input = { [key]: (get(doc, key) || []).concat(...values) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
@@ -64,7 +60,8 @@ module.exports = class QueryResolver extends QueryBuilder {
       case 'pullOne': {
         return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
-          const values = get(this.#model.transformers.input.transform(input), key, []);
+          const $query = Object.assign(query.toObject(), { doc });
+          const values = get(this.#model.transformers.create.transform(input, { query: $query }), key, []);
           const $doc = Util.pathmap(key, doc, (arr) => {
             return arr.filter(el => values.every(v => `${v}` !== `${el}`));
           });
@@ -80,7 +77,8 @@ module.exports = class QueryResolver extends QueryBuilder {
       case 'spliceOne': {
         return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
-          const [find, replace] = get(this.#model.transformers.input.transform(input), key);
+          const $query = Object.assign(query.toObject(), { doc });
+          const [find, replace] = get(this.#model.transformers.create.transform(input, { query: $query }), key);
           const $input = { [key]: (get(doc, key) || []).map(el => (`${el}` === `${find}` ? replace : el)) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
