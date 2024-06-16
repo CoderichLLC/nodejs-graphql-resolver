@@ -1,6 +1,7 @@
 const get = require('lodash.get');
 const Util = require('@coderich/util');
 const QueryBuilder = require('./QueryBuilder');
+const { mergeDeep } = require('../service/AppService');
 
 module.exports = class QueryResolver extends QueryBuilder {
   #model;
@@ -33,7 +34,8 @@ module.exports = class QueryResolver extends QueryBuilder {
       }
       case 'updateOne': {
         return this.#get(query).then((doc) => {
-          return this.#resolver.resolve(query.clone({ doc }));
+          const merged = mergeDeep({}, doc, Util.unflatten(input, { safe: true })); // This is for backwards compat
+          return this.#resolver.resolve(query.clone({ doc, input: merged }));
         });
       }
       case 'updateMany': {

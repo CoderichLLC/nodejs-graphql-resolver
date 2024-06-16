@@ -2,7 +2,6 @@ const { graphql } = require('graphql');
 const Boom = require('@hapi/boom');
 const Util = require('@coderich/util');
 const QueryResolver = require('../query/QueryResolver');
-const AppService = require('../service/AppService');
 const Emitter = require('./Emitter');
 const Loader = require('./Loader');
 const DataLoader = require('./DataLoader');
@@ -326,9 +325,9 @@ module.exports = class Resolver {
     Object.assign(event, query);
     query.match = query.where;
     query.toObject = () => query;
+    event.merged = event.input;
+    event.input = event.args?.input;
     event.doc ??= {};
-    event.input ??= {};
-    event.merged = AppService.mergeDeep(event.doc, event.input);
 
     return event;
   }
