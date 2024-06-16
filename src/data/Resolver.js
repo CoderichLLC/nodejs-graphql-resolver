@@ -306,10 +306,13 @@ module.exports = class Resolver {
       // if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
       tquery = $query.transform(false);
       query = tquery.toObject();
-      event = this.#createEvent(query);
       if (['create', 'update'].includes(query.crud)) {
-        tquery.validate();
-        await Promise.all([...query.input.$thunks, Emitter.emit('validate', event)]);
+        tquery.validate(); // Transformation sets $thunks
+        await Promise.all([...query.input.$thunks]);
+        event = this.#createEvent(query);
+        await Emitter.emit('validate', event);
+      } else {
+        event = this.#createEvent(query);
       }
       return thunk(tquery);
     }).then((result) => {

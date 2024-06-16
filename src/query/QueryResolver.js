@@ -47,7 +47,8 @@ module.exports = class QueryResolver extends QueryBuilder {
         return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
           const $query = Object.assign(query.toObject(), { doc });
-          const values = get(this.#model.transformers.create.transform(input, { query: $query }), key);
+          const args = { query: $query, resolver: this.#resolver, context: this.#context };
+          const values = get(this.#model.transformers.create.transform(input, args), key);
           const $input = { [key]: (get(doc, key) || []).concat(...values) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
@@ -62,7 +63,8 @@ module.exports = class QueryResolver extends QueryBuilder {
         return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
           const $query = Object.assign(query.toObject(), { doc });
-          const values = get(this.#model.transformers.create.transform(input, { query: $query }), key, []);
+          const args = { query: $query, resolver: this.#resolver, context: this.#context };
+          const values = get(this.#model.transformers.create.transform(input, args), key, []);
           const $doc = Util.pathmap(key, doc, (arr) => {
             return arr.filter(el => values.every(v => `${v}` !== `${el}`));
           });
@@ -79,7 +81,8 @@ module.exports = class QueryResolver extends QueryBuilder {
         return this.#get(query).then((doc) => {
           const [key] = Object.keys(input);
           const $query = Object.assign(query.toObject(), { doc });
-          const [find, replace] = get(this.#model.transformers.create.transform(input, { query: $query }), key);
+          const args = { query: $query, resolver: this.#resolver, context: this.#context };
+          const [find, replace] = get(this.#model.transformers.create.transform(input, args), key);
           const $input = { [key]: (get(doc, key) || []).map(el => (`${el}` === `${find}` ? replace : el)) };
           return this.#resolver.match(this.#model.name).id(doc.id).save($input);
         });
