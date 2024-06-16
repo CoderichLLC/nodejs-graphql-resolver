@@ -41,7 +41,9 @@ describe('TestSuite', () => {
 
   describe('Create', () => {
     test('Person', async () => {
-      richard = await resolver.match('Person').save({ age: 40, name: 'Richard', status: 'alive', state: 'NJ', emailAddress: 'rich@coderich.com', network: 'network', strip: 'mall', multiLang: 'lang', 'multiLang.en': 'en', 'multiLang.es': 'es' });
+      const input = { age: 40, name: 'Richard', status: 'alive', state: 'NJ', emailAddress: 'rich@coderich.com', network: 'network', strip: 'mall', multiLang: 'lang', 'multiLang.en': 'en', 'multiLang.es': 'es' };
+      richard = await resolver.match('Person').save(input);
+      expect(Object.keys(input).includes('id')).toBe(false);
       expect(richard.id).toBeDefined();
       expect(richard._id).not.toBeDefined(); // eslint-disable-line
       expect(richard.age).toBe(40);

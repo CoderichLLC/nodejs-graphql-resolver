@@ -27,6 +27,7 @@ Known Issues:
     - debug flag is not always propagated (findMany, pullMany, etc)
 
 Improvement Considerations:
+  * Proxy transformations
   * Resolver.graphql()
     - This requires executableSchema...
   * Ability to trigger validation?
@@ -79,6 +80,7 @@ BREAKING CHANGELOG:
     - cb function now has signature (args, context)
     - cache is on by default and persists indefinitely (must be managed)
   * MongoClient now seperate NPM module @coderich/autograph-mongodb
+  * No more pre|post Response event
 
 ---------
 

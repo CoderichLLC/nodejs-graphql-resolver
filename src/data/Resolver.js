@@ -296,17 +296,21 @@ module.exports = class Resolver {
   }
 
   #createSystemEvent($query, thunk = () => {}) {
-    let query = $query.toObject();
+    let tquery = $query.transform(false);
+    let query = tquery.toObject();
     const type = query.isMutation ? 'Mutation' : 'Query';
     let event = this.#createEvent(query);
 
     return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly; // Nothing to validate/transform
       // if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
-      const tquery = await $query.transform(false);
+      tquery = $query.transform(false);
       query = tquery.toObject();
       event = this.#createEvent(query);
-      if (['create', 'update'].includes(query.crud)) await Promise.all([...query.input.$thunks, Emitter.emit('validate', event)]);
+      if (['create', 'update'].includes(query.crud)) {
+        tquery.validate();
+        await Promise.all([...query.input.$thunks, Emitter.emit('validate', event)]);
+      }
       return thunk(tquery);
     }).then((result) => {
       event.result = result; // backwards compat
