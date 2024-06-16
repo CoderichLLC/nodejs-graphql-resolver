@@ -564,7 +564,7 @@ module.exports = class Schema {
         const [modelKey, ...fieldKeys] = path.split('.');
         const $model = Object.values(this.#schema.models).find(el => el[prop] === modelKey);
         if (!$model || !fieldKeys.length) return $model;
-        return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model.fields).find(el => el[prop] === key) || parent, $model);
+        return fieldKeys.reduce((parent, key) => Object.values(parent.fields || parent.model?.fields || {}).find(el => el[prop] === key) || parent, $model);
       })();
       return resolvePathCache[path];
     };

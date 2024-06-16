@@ -3,6 +3,7 @@ Release 0.13:
     - DO NOT USE THEM YET!!!
 
   * MongoDB Driver flattens out input which is good (to not clobber existing attributes) however it cannot handling modifying an array to object (eg. MultiLang)
+
   * Sort by name (name.en) does not work
     - I believe the transformations on where + sort are not accurate
   * Atlas Search Support

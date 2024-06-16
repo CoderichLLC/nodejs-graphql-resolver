@@ -175,6 +175,7 @@ describe('TestSuite', () => {
       jane = await resolver.match('PlainJane').save({
         role: { 'detail.scope': 'r' }, // This tests a bug with unflatten (now fixed in Util)
         roles: [role], // This tests if we can have a FK by something other than ID
+        'data.id': 1, // This will test if we can query by nested mixed
       });
 
       expect(jane).toMatchObject({
@@ -196,6 +197,7 @@ describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ age: '40' }).one()).toMatchObject({ id: richard.id, name: richard.name, network: 'networkId' });
       expect(await resolver.match('Person').where({ age: '4?' }).one()).toMatchObject({ id: richard.id, name: richard.name, network: 'networkId' });
       expect(await resolver.match('Person').where({ age: '??' }).one()).toMatchObject({ id: richard.id, name: richard.name, network: 'networkId' });
+      expect(await resolver.match('PlainJane').where({ 'data.id': 1 }).one()).toMatchObject({ id: jane.id });
 
       // Context switch
       context.network.id = 'networkIdd';

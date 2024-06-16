@@ -130,6 +130,7 @@ module.exports = {
       role: RoleEmbedded
       dependents: [Dependent!]
       roles: [Role!]! @field(default: [], fk: name, onDelete: cascade)
+      data: AutoGraphMixed
     }
 
     type Dependent @model {
