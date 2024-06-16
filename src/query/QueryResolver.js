@@ -1,7 +1,6 @@
 const get = require('lodash.get');
 const Util = require('@coderich/util');
 const QueryBuilder = require('./QueryBuilder');
-const { mergeDeep } = require('../service/AppService');
 
 module.exports = class QueryResolver extends QueryBuilder {
   #model;
