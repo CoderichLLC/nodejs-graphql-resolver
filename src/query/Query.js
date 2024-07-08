@@ -48,13 +48,12 @@ module.exports = class Query {
    * Transform entire query for user consumption
    */
   transform(asClone = true) {
+    let { input, where, sort } = this.#query;
     const args = { query: this.#query, resolver: this.#resolver, context: this.#context };
 
-    const [input, where, sort] = [
-      this.#model.transformers[this.#query.crud]?.transform(Util.unflatten(this.#query.input, { safe: true }), args),
-      this.#query.isNative ? this.#query.where : this.#model.transformers.where.transform(Util.unflatten(this.#query.where ?? {}, { safe: true }), args),
-      this.#model.transformers.sort.transform(Util.unflatten(this.#query.sort, { safe: true }), args),
-    ];
+    if (['create', 'update'].includes(this.#query.crud)) input = this.#model.transformers[this.#query.crud]?.transform(Util.unflatten(this.#query.input, { safe: true }), args);
+    if (!this.#query.isNative && ['read', 'update', 'delete'].includes(this.#query.crud)) where = this.#model.transformers.where.transform(Util.unflatten(this.#query.where ?? {}, { safe: true }), args);
+    if (['read'].includes(this.#query.crud)) sort = this.#model.transformers.sort.transform(Util.unflatten(this.#query.sort, { safe: true }), args);
 
     if (asClone) return this.clone({ input, where, sort });
     this.#query.input = input;

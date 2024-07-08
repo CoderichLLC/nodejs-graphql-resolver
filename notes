@@ -19,6 +19,7 @@ Release 0.14:
   * Break up Schema monolith (schema.parse() usage)
 
 Known Issues:
+  * Schema/Resolver not capable of handling intersection tables (eg. TST Audience/Contact)
   * MongoClient - not all queries (mutations) go through $aggregateQuery and so you lose things like $project the result
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
   * Tests overhaul
