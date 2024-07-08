@@ -194,7 +194,7 @@ module.exports = class Schema {
         if (node.kind === Kind.NON_NULL_TYPE) {
           target[isList ? 'isArrayRequired' : 'isRequired'] = true;
         } else if (node.kind === Kind.NAMED_TYPE) {
-          target.type = node.name.value;
+          target.type = target.linkTo = node.name.value;
         } else if (node.kind === Kind.LIST_TYPE) {
           target.isArray = true;
           isList = true;
@@ -503,8 +503,8 @@ module.exports = class Schema {
           thunks.unshift(($schema) => {
             $field.parent = $model;
             $field.model = $schema.models[$field.type];
+            $field.linkTo = $schema.models[$field.linkTo];
             $field.crud = Util.uvl($field.crud, $field.model?.scope, 'crud');
-            $field.linkTo ??= $field.model;
             $field.linkBy ??= $field.linkTo?.pkField; // This defines join logic (below) for both straight+virtual references
             $field.fkField ??= $field.model?.pkField; // This is the fkReference field for straight references
             $field.linkField = $field.isVirtual ? $model.fields[$model.pkField] : $field;
@@ -537,7 +537,7 @@ module.exports = class Schema {
 
             if ($field.isFKReference) {
               const to = $field.model.key;
-              const on = $field.model.fields[$field.linkBy].key;
+              const on = $field.linkTo.fields[$field.linkBy].key;
               const from = $field.linkField.key;
               const as = `join_${to}`;
               $field.join = { to, on, from, as };
