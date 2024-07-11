@@ -268,6 +268,7 @@ module.exports = class Resolver {
         },
         $model: { value: model },
         $cursor: { value: doc.$cursor },
+        toString: { value: () => `${model}` },
         // Backwards compat
         $save: { value: (...args) => $doc.$.save(...args) },
         $lookup: {

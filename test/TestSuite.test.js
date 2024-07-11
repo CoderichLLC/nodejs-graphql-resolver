@@ -860,7 +860,9 @@ describe('TestSuite', () => {
 
       // Raw findOne toResultSet
       const rawPerson = await resolver.raw('Person').findOne({ name: 'christie' });
-      expect(await resolver.toResultSet('Person', rawPerson)).toMatchObject(matchPerson);
+      const $rawPerson = await resolver.toResultSet('Person', rawPerson);
+      expect($rawPerson).toMatchObject(matchPerson);
+      expect(`${$rawPerson}`).toBe('Person');
 
       // Raw array toResultSet
       const rawArray = await resolver.raw('Person').find().then(cursor => cursor.toArray());
