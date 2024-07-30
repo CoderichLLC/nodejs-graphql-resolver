@@ -13,6 +13,7 @@ Release 0.13:
     - How to modify the query?
   * Do we support input meta?
   * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
+  * $field.linkBy & $field.fkField are pointing to the same value; can they be consolidated?
 
 Release 0.14:
   * Remove deprecations

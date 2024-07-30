@@ -360,6 +360,13 @@ describe('TestSuite', () => {
     });
   });
 
+  describe('Search (or)', () => {
+    test('or', async () => {
+      const results = await resolver.match('Person').flags({ debug: true }).where([{ name: 'rich*' }]).many();
+      console.log(results);
+    });
+  });
+
   describe('Count (find)', () => {
     test('Person', async () => {
       expect(await resolver.match('Person').count()).toBe(2);
