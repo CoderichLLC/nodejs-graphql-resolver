@@ -19,7 +19,7 @@ const allowedKinds = modelKinds.concat(fieldKinds).concat(Kind.DOCUMENT, Kind.NO
 const pipelines = ['validate', 'construct', 'restruct', 'instruct', 'normalize', 'serialize', 'deserialize'];
 const createPipelines = ['validate', 'construct', 'instruct', 'normalize', 'serialize'];
 const updatePipelines = ['validate', 'restruct', 'instruct', 'normalize', 'serialize'];
-const validatePipelines = ['validate', 'instruct', 'normalize', 'serialize'];
+// const validatePipelines = ['validate', 'instruct', 'normalize', 'serialize'];
 const scalars = ['ID', 'String', 'Float', 'Int', 'Boolean'];
 
 module.exports = class Schema {

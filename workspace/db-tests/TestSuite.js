@@ -1,5 +1,3 @@
-const { ObjectId } = require('mongodb');
-
 let richard;
 let christie;
 let jane;
@@ -31,11 +29,11 @@ const sorter = (a, b) => {
   return 0;
 };
 
-describe('TestSuite', () => {
-  let resolver, context;
+module.exports = () => describe('TestSuite', () => {
+  let resolver, context, ObjectId;
 
   beforeAll(() => {
-    ({ resolver } = global);
+    ({ resolver, ObjectId } = global);
     context = resolver.getContext();
   });
 

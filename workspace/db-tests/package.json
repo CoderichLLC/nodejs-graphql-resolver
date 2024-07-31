@@ -1,0 +1,16 @@
+{
+  "name": "@coderich/autograph-db-tests",
+  "version": "0.13.58",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "publish": "npm run dev npmPublish"
+  },
+  "dependencies": {
+    "@coderich/autograph": "^0.13.0",
+    "validator": "13.9.0"
+  },
+  "devDependencies": {
+  }
+}

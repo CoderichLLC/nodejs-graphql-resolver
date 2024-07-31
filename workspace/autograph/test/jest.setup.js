@@ -1,7 +1,7 @@
-const Resolver = require('./src/data/Resolver');
+global.ObjectId = require('mongodb').ObjectId;
 const { setup, createIndexes } = require('./jest.service');
 
-let schema, context;
+let schema, context, resolver;
 let mongoClient = { disconnect: () => Promise.resolve() };
 let mongoServer = { stop: () => Promise.resolve() };
 
@@ -24,11 +24,11 @@ expect.extend({
 });
 
 beforeAll(async () => {
-  ({ schema, context, mongoClient, mongoServer } = await setup({ typeDefs: 'type Library { id: ID }' }));
+  ({ resolver, schema, context, mongoClient, mongoServer } = await setup({ typeDefs: 'type Library { id: ID }' }));
   global.$schema = schema;
   global.context = context;
   global.schema = schema.parse();
-  global.resolver = new Resolver({ schema, context });
+  global.resolver = resolver;
   global.mongoClient = mongoClient;
   await createIndexes(mongoClient, global.schema.indexes);
 });
