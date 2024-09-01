@@ -4,8 +4,6 @@ Release 0.13:
 
   ** I believe there is a race condition when performing Emitter methods (in parallel) and the value of "merged"... (I didn't finish my thought)
 
-  * MongoDB Driver flattens out input which is good (to not clobber existing attributes) however it cannot handle modifying an array to object (eg. MultiLang)
-
   * "validate" pipeline should allow modification if user really wants to
   * Sort by name (name.en) does not work
     - I believe the transformations on where + sort are not accurate
@@ -13,11 +11,11 @@ Release 0.13:
     - How to modify the query?
   * Do we support input meta?
   * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
-  * $field.linkBy & $field.fkField are pointing to the same value; can they be consolidated?
 
 Release 0.14:
   * Remove deprecations
   * Break up Schema monolith (schema.parse() usage)
+  * $field.linkBy & $field.fkField are pointing to the same value; can they be consolidated?
 
 Known Issues:
   * Schema/Resolver not capable of handling intersection tables (eg. TST Audience/Contact)

@@ -10,8 +10,8 @@
     "!__mocks__"
   ],
   "scripts": {
-    "test": "NODE_OPTIONS=\"--stack-trace-limit=1000\" jest --config=test/jest.config.js",
-    "lint": "eslint --config=.eslintrc ./",
+    "test": "NODE_OPTIONS=\"--stack-trace-limit=1000\" jest --config=jest.config.js",
+    "lint": "eslint ./",
     "dev": "coderich-dev"
   },
   "dependencies": {

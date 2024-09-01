@@ -1,16 +1,6 @@
-const Validator = require('validator');
-const { Schema, Resolver, Pipeline } = require('@coderich/autograph');
+const { Schema, Resolver } = require('@coderich/autograph');
 const schemaDef = require('./schema');
 const TestSuite = require('./TestSuite');
-
-Pipeline.define('bookName', Pipeline.Deny('The Bible'));
-Pipeline.define('bookPrice', Pipeline.Range(0, 100));
-Pipeline.define('artComment', Pipeline.Allow('yay', 'great', 'boo'));
-Pipeline.define('colors', Pipeline.Allow('blue', 'red', 'green', 'purple'));
-Pipeline.define('networkID', ({ context }) => context.network.id, { ignoreNull: false });
-Pipeline.define('email', ({ value }) => {
-  if (!Validator.isEmail(value)) throw new Error('Invalid email');
-});
 
 exports.testSuite = TestSuite;
 

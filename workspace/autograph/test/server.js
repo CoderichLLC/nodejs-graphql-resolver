@@ -1,7 +1,7 @@
 // const get = require('lodash.get');
 const { ApolloServer } = require('@apollo/server');
 const { startStandaloneServer } = require('@apollo/server/standalone');
-const JestService = require('./jest.service');
+const JestService = require('../jest.service');
 const { Resolver, Emitter } = require('../index');
 
 (async () => {
