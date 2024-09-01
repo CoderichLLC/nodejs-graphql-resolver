@@ -154,5 +154,21 @@ describe('Query', () => {
         ],
       });
     });
+
+    test('deleteOne', async () => {
+      expect((await factory('Person').id(1).delete().transform()).toObject()).toMatchObject({
+        id: 1,
+        crud: 'delete',
+        op: 'deleteOne',
+        key: 'deletePerson',
+        model: 'Person',
+        input: undefined,
+        args: { id: 1 },
+        where: {
+          id: expect.thunk(ObjectId.isValid),
+          network: 'network',
+        },
+      });
+    });
   });
 });
