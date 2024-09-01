@@ -77,7 +77,8 @@ module.exports = class Pipeline {
       const { fkField, linkTo, isPrimaryKey, generator } = params.field;
       const lookupField = isPrimaryKey ? params.field : fkField;
       const v = params.value?.[lookupField] || params.value;
-      const $generator = isPrimaryKey ? generator : linkTo.fields[fkField].generator;
+      // const $generator = isPrimaryKey ? generator : linkTo.fields[fkField].generator;
+      const $generator = linkTo?.fields?.[fkField]?.generator || generator; // ???
       return Util.map(v, value => $generator({ ...params, value }));
     });
 
