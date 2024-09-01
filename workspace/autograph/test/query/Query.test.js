@@ -170,5 +170,12 @@ describe('Query', () => {
         },
       });
     });
+
+    test('clone', async () => {
+      const query = await factory('Person').id(1).delete().transform();
+      expect(query.toObject()).toMatchObject({ input: undefined, args: { id: 1 } });
+      const clone = await query.clone({ input: { name: 'rich' } }).transform();
+      expect(clone.toObject()).toMatchObject({ input: { name: 'rich' }, args: { id: 1 } });
+    });
   });
 });

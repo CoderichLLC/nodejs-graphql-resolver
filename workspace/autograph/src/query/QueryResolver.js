@@ -22,7 +22,7 @@ module.exports = class QueryResolver extends QueryBuilder {
 
   terminate() {
     const query = super.terminate();
-    const { op, input } = query.toObject();
+    const { op, args: { input } } = query.toObject();
 
     // Resolve
     switch (op) {
