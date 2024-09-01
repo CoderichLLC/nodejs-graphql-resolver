@@ -10,7 +10,7 @@ describe('Query', () => {
   });
 
   describe('transform', () => {
-    test('one', async () => {
+    test('findOne', async () => {
       expect((await factory('Person').id(1).one().transform()).toObject()).toMatchObject({
         id: 1,
         crud: 'read',
@@ -28,7 +28,7 @@ describe('Query', () => {
       });
     });
 
-    test('one (undefined)', async () => {
+    test('findOne (undefined)', async () => {
       expect((await factory('Person').id(undefined).one().transform()).toObject()).toMatchObject({
         id: undefined,
         crud: 'read',
@@ -46,7 +46,7 @@ describe('Query', () => {
       });
     });
 
-    test('many', async () => {
+    test('findMany', async () => {
       expect((await factory('Person').where({ name: 'RICH' }).sort({ age: 'desc' }).many().transform()).toObject()).toMatchObject({
         id: undefined,
         crud: 'read',
@@ -61,42 +61,97 @@ describe('Query', () => {
         sort: {
           age: 'desc',
         },
+        args: {
+          where: { name: 'RICH' },
+          sort: { age: 'desc' },
+        },
       });
     });
 
-    test('update', async () => {
+    test('updateMany', async () => {
       expect((await factory('Person').where({ name: 'rich' }).save({ name: 'RiChArD', emailAddress: 'rich@gmail.com' }).transform()).toObject()).toMatchObject({
         crud: 'update',
         op: 'updateMany',
         key: 'updatePerson',
         model: 'Person',
-        input: [
-          expect.objectContaining({
-            id: expect.thunk(ObjectId.isValid),
-            name: 'richard',
-            network: 'network',
-            emailAddress: 'rich@gmail.com',
-            updatedAt: expect.any(Date),
-          }),
-        ],
+        args: {
+          where: { name: 'rich' },
+          input: { name: 'RiChArD', emailAddress: 'rich@gmail.com' },
+        },
+        input: {
+          id: expect.thunk(ObjectId.isValid),
+          name: 'richard',
+          network: 'network',
+          emailAddress: 'rich@gmail.com',
+          updatedAt: expect.any(Date),
+        },
       });
     });
 
-    test('create', async () => {
+    test('createOne', async () => {
       expect((await factory('Person').save({ name: 'RiChArD', emailAddress: 'rich@gmail.com' }).transform()).toObject()).toMatchObject({
         id: undefined,
         crud: 'create',
         op: 'createOne',
         key: 'createPerson',
         model: 'Person',
+        args: {
+          input: {
+            name: 'RiChArD',
+            emailAddress: 'rich@gmail.com',
+          },
+        },
         input: {
           id: expect.thunk(ObjectId.isValid),
           name: 'richard',
           network: 'network',
+          emailAddress: 'rich@gmail.com',
           telephone: '###-###-####', // Create will set default input
           updatedAt: expect.any(Date),
           createdAt: expect.any(Date),
         },
+      });
+    });
+
+    test('createMany', async () => {
+      expect((await factory('Person').save({ name: 'RiChArD', emailAddress: 'rich@gmail.com' }, { name: 'another', emailAddress: 'a@notheR.com' }).transform()).toObject()).toMatchObject({
+        id: undefined,
+        crud: 'create',
+        op: 'createMany',
+        key: 'createPerson',
+        model: 'Person',
+        args: {
+          input: [
+            {
+              name: 'RiChArD',
+              emailAddress: 'rich@gmail.com',
+            },
+            {
+              name: 'another',
+              emailAddress: 'a@notheR.com',
+            },
+          ],
+        },
+        input: [
+          {
+            id: expect.thunk(ObjectId.isValid),
+            name: 'richard',
+            network: 'network',
+            emailAddress: 'rich@gmail.com',
+            telephone: '###-###-####', // Create will set default input
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+          {
+            id: expect.thunk(ObjectId.isValid),
+            name: 'another',
+            network: 'network',
+            emailAddress: 'a@notheR.com',
+            telephone: '###-###-####', // Create will set default input
+            updatedAt: expect.any(Date),
+            createdAt: expect.any(Date),
+          },
+        ],
       });
     });
   });

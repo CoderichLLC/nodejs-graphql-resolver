@@ -54,7 +54,7 @@ module.exports = class QueryResolver extends QueryBuilder {
         });
       }
       case 'pushMany': {
-        const [[key, values]] = Object.entries(input[0]);
+        const [[key, values]] = Object.entries(input);
         return this.#find(query).then((docs) => {
           return this.#resolver.transaction(false).run(Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).push(key, values))));
         });
@@ -72,7 +72,7 @@ module.exports = class QueryResolver extends QueryBuilder {
         });
       }
       case 'pullMany': {
-        const [[key, values]] = Object.entries(input[0]);
+        const [[key, values]] = Object.entries(input);
         return this.#find(query).then((docs) => {
           return this.#resolver.transaction(false).run(Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).pull(key, values))));
         });

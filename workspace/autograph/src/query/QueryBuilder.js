@@ -219,12 +219,13 @@ module.exports = class QueryBuilder {
     args = args.flat();
     const { id, limit } = this.#query;
     const suffix = id || limit === 1 || (crud === 'create' && args.length < 2) ? 'One' : 'Many';
-    let input = suffix === 'One' ? args[0] : args;
+    const op = `${crud}${suffix}`;
+    let input = op === 'createMany' ? args : args[0];
     if (input === undefined) input = {};
     if (id !== undefined) input.id = id;
     this.#query.args.input = input;
     return this.terminate(Object.assign(this.#query, {
-      op: `${crud}${suffix}`,
+      op,
       key: `${crud}${this.#query.model}`,
       crud: ['push', 'pull', 'splice'].includes(crud) ? 'update' : crud,
       input,
