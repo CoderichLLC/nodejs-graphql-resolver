@@ -1,7 +1,7 @@
 {
   "name": "@coderich/autograph",
   "main": "index.js",
-  "version": "0.13.87",
+  "version": "0.13.88",
   "publishConfig": {
     "access": "public"
   },
@@ -10,7 +10,6 @@
     "!__mocks__"
   ],
   "scripts": {
-    "publish": "APP_ROOT_PATH=$(pwd) npm run dev npmPublish",
     "test": "NODE_OPTIONS=\"--stack-trace-limit=1000\" jest --config=test/jest.config.js",
     "lint": "eslint --config=.eslintrc ./",
     "dev": "coderich-dev"
