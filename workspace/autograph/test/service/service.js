@@ -2,8 +2,8 @@ const { ObjectId } = require('mongodb');
 
 exports.query1 = {
   model: 'Person',
-  id: new ObjectId('e4f66987111acdb28f871393'),
   flags: { debug: true },
+  id: new ObjectId('e4f66987111acdb28f871393'),
   options: {
     collation: { locale: 'en', strength: 2 },
     readPreference: 'primary',

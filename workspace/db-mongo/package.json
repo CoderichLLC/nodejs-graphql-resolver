@@ -1,0 +1,25 @@
+{
+  "name": "@coderich/autograph-mongodb",
+  "main": "src/MongoDriver.js",
+  "version": "5.9.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src",
+    "!__mocks__"
+  ],
+  "scripts": {
+    "test": "jest --config=jest.config.js",
+    "lint": "eslint ./",
+    "dev": "coderich-dev"
+  },
+  "dependencies": {
+    "@coderich/util": "1.0.2",
+    "mongodb": "5.9.2"
+  },
+  "devDependencies": {
+    "@coderich/autograph-db-tests": "*",
+    "mongodb-memory-server": "8.13.0"
+  }
+}

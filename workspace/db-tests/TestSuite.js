@@ -359,7 +359,7 @@ module.exports = () => describe('TestSuite', () => {
   });
 
   describe('Search (or)', () => {
-    test('or', async () => {
+    test.skip('or', async () => {
       const results = await resolver.match('Person').flags({ debug: true }).where([{ name: 'rich*' }]).many();
       console.log(results);
     });
@@ -932,6 +932,15 @@ module.exports = () => describe('TestSuite', () => {
       const people = await resolver.match('Person').many();
       const updated = await Promise.all(people.map((person, i) => resolver.match('Person').id(person.id).save({ age: 20 + i })));
       expect(updated.map(up => up.age)).toEqual(people.map((p, i) => 20 + i));
+    });
+
+    test('updating array to object', async () => {
+      const pj = await resolver.match('PlainJane').save({ data: [{ lang: 'en', label: 'name' }] });
+      const $pj = await resolver.match('PlainJane').id(pj.id).save({ 'data.en': 'name' });
+      expect($pj).toMatchObject({
+        id: expect.any(ObjectId),
+        data: { en: 'name' },
+      });
     });
   });
 

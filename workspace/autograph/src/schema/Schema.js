@@ -155,6 +155,7 @@ module.exports = class Schema {
               doc: new Transformer({ args: { schema: this.#schema, path: [] } }),
             },
             directives: {},
+            ignorePaths: [],
             toString: () => name,
           };
         }
@@ -491,6 +492,13 @@ module.exports = class Schema {
                 return Object.assign(prev, { [curr.name]: rules });
               }, {}),
             });
+
+            Util.traverse(Object.values($model.fields), (f, info) => {
+              const path = info.path.concat(f.name);
+              if (f.isEmbedded) return { value: f.model.fields, info: { path } };
+              if (f.isScalar) $model.ignorePaths.push(path.join('.'));
+              return null;
+            }, { path: [] });
           });
         } else if (node.kind === Kind.FIELD_DEFINITION) {
           const $field = field;

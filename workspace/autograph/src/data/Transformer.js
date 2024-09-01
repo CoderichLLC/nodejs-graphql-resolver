@@ -66,10 +66,12 @@ module.exports = class Transformer {
     args.thunks ??= [];
     this.args(args);
 
-    return Util.map(mixed, (data) => {
+    const transformed = Util.map(mixed, (data) => {
       const thunks = Object.defineProperty({}, '$thunks', { value: args.thunks });
       const $data = Object.assign({}, this.#config.defaults, data); // eslint-disable-line
       return Object.assign(new Proxy(thunks, this.#operation), $data);
     });
+
+    return this.#config.postTransform?.(transformed) || transformed;
   }
 };

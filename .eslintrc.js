@@ -22,7 +22,7 @@ module.exports = {
     }],
     'default-param-last': 'off',
     'function-paren-newline': 'off',
-    'import/no-extraneous-dependencies': ['error', { devDependencies: ['**/test/**', '**/__mocks__/**', 'jest.*'] }],
+    'import/no-extraneous-dependencies': ['error', { devDependencies: ['**/test/**', '**/__mocks__/**', '**/jest.*'] }],
     'lines-between-class-members': ['error', 'always', { exceptAfterSingleLine: true }],
     'max-classes-per-file': 0,
     'max-len': 0,

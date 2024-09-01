@@ -71,12 +71,14 @@ module.exports = class Query {
    * Transform entire query for driver
    */
   toDriver() {
-    const { input, where, sort, before, after, isNative, isCursorPaging } = this.#query;
+    const { crud, input, where, sort, before, after, isNative, isCursorPaging } = this.#query;
+    let $input = this.#model.transformers.toDriver.transform(input);
+    if (crud === 'update') $input = Util.flatten($input, { safe: true, ignorePaths: this.#model.ignorePaths });
 
     const query = this.clone({
       model: this.#model.key,
       select: this.#query.select.map(name => this.#model.fields[name].key),
-      input: this.#model.transformers.toDriver.transform(input),
+      input: $input,
       where: isNative ? where : this.#model.walk(where, node => Object.assign(node, { key: node.field.key })),
       sort: this.#model.walk(sort, node => Object.assign(node, { key: node.field.key })),
       before: (!isCursorPaging || !before) ? undefined : JSONParse(Buffer.from(before, 'base64').toString('ascii')),

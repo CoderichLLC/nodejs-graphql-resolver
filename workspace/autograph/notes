@@ -2,9 +2,9 @@ Release 0.13:
   ** There is a potential race condition/issue when using $magic methods... I'm seeing Transaction committed/aborted messages when using them in nested transactions
     - DO NOT USE THEM YET!!!
 
-  ** I believe there is a race condition when performing Emitter methods (in parallel) and the value of "merged" can
+  ** I believe there is a race condition when performing Emitter methods (in parallel) and the value of "merged"... (I didn't finish my thought)
 
-  * MongoDB Driver flattens out input which is good (to not clobber existing attributes) however it cannot handling modifying an array to object (eg. MultiLang)
+  * MongoDB Driver flattens out input which is good (to not clobber existing attributes) however it cannot handle modifying an array to object (eg. MultiLang)
 
   * "validate" pipeline should allow modification if user really wants to
   * Sort by name (name.en) does not work
