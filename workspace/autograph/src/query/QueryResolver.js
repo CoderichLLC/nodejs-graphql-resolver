@@ -68,7 +68,7 @@ module.exports = class QueryResolver extends QueryBuilder {
           const $doc = Util.pathmap(key, doc, (arr) => {
             return arr.filter(el => values.every(v => `${v}` !== `${el}`));
           });
-          return this.#resolver.match(this.#model.name).id(doc.id).save($doc);
+          return this.#resolver.match(this.#model.name).id(doc.id).save({ [key]: get($doc, key) });
         });
       }
       case 'pullMany': {
