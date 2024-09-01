@@ -1,7 +1,7 @@
 {
   "name": "@coderich/autograph-mongodb",
   "main": "src/MongoDriver.js",
-  "version": "5.9.0",
+  "version": "6.0.0",
   "publishConfig": {
     "access": "public"
   },
@@ -15,7 +15,7 @@
     "dev": "coderich-dev"
   },
   "dependencies": {
-    "@coderich/util": "1.0.2",
+    "@coderich/util": "1.2.1",
     "mongodb": "5.9.2"
   },
   "devDependencies": {

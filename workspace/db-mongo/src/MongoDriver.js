@@ -46,7 +46,6 @@ module.exports = class MongoDriver {
 
   updateOne(query) {
     query.options.returnDocument = 'after';
-    // const $update = { $set: Util.flatten(query.input, { safe: true }) };
     const $update = { $set: query.input };
     return this.collection(query.model).findOneAndUpdate(query.where, $update, query.options).then(({ value }) => value);
   }
