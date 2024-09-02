@@ -1,5 +1,6 @@
 // const get = require('lodash.get');
 const { ApolloServer } = require('@apollo/server');
+const { makeExecutableSchema } = require('@graphql-tools/schema');
 const { startStandaloneServer } = require('@apollo/server/standalone');
 const JestService = require('../jest.service');
 const { Resolver, Emitter } = require('../index');
@@ -15,7 +16,7 @@ const { Resolver, Emitter } = require('../index');
   await schema.setup();
 
   const server = new ApolloServer({
-    schema: schema.makeExecutableSchema(),
+    schema: makeExecutableSchema(schema.toObject()),
 
     /**
      * Apollo Server creates a shallow copy of context which creates havoc for the world

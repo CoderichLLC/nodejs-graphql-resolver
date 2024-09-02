@@ -32,6 +32,24 @@ const sorter = (a, b) => {
 module.exports = () => describe('TestSuite', () => {
   let resolver, context, ObjectId;
 
+  // Extend jest!
+  expect.extend({
+    thunk: (val, fn) => {
+      const pass = Boolean(fn(val));
+      return { pass };
+    },
+    multiplex: (val, ...expectations) => {
+      try {
+        expectations.flat().forEach((expectation) => {
+          expectation(val);
+        });
+        return { pass: true };
+      } catch ({ message }) {
+        return { message, pass: false };
+      }
+    },
+  });
+
   beforeAll(() => {
     ({ resolver, ObjectId } = global);
     context = resolver.getContext();

@@ -27,21 +27,3 @@ exports.setup = ({ generator, dataSource }) => {
 
   return { context, schema, resolver };
 };
-
-// Extend jest!
-expect.extend({
-  thunk: (val, fn) => {
-    const pass = Boolean(fn(val));
-    return { pass };
-  },
-  multiplex: (val, ...expectations) => {
-    try {
-      expectations.flat().forEach((expectation) => {
-        expectation(val);
-      });
-      return { pass: true };
-    } catch ({ message }) {
-      return { message, pass: false };
-    }
-  },
-});

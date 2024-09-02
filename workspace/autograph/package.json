@@ -12,7 +12,8 @@
   "scripts": {
     "test": "NODE_OPTIONS=\"--stack-trace-limit=1000\" jest --config=jest.config.js",
     "lint": "eslint ./",
-    "dev": "coderich-dev"
+    "dev": "coderich-dev",
+    "clinic": "clinic flame -- node ./test/server"
   },
   "dependencies": {
     "@coderich/util": "1.2.1",
@@ -35,6 +36,7 @@
     "@coderich/autograph-db-tests": "*",
     "@coderich/autograph-mongodb": "*",
     "@graphql-tools/schema": "10.0.0",
+    "clinic": "13.0.0",
     "graphql": "16.8.1",
     "mongodb": "5.9.2",
     "mongodb-memory-server": "8.13.0"
