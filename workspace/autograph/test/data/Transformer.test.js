@@ -41,6 +41,14 @@ describe('Transformer', () => {
     expect(data).toEqual({ name: 'name', sections: [{ name: 'defaultname', age: 10 }, { name: 'name', age: 20 }] });
   });
 
+  test('rename', () => {
+    const transformer = new Transformer({ shape: { a: ['b'] } });
+    const data = transformer.transform({ a: 'hello' });
+    expect(data).toEqual({ b: 'hello' });
+    data.a = 'bye';
+    expect(data).toEqual({ b: 'bye' });
+  });
+
   test('performance', () => {
     const section = new Transformer({
       shape: { id: [({ value }) => new ObjectId(value)], name: [({ value }) => value.toLowerCase()] },
@@ -79,5 +87,23 @@ describe('Transformer', () => {
       { name: 'Richard2', age: 45, spectors: expect.arrayContaining([{ name: 'Section2', age: 22, state: 'GA' }]) },
     ]));
     console.timeEnd('rename');
+
+    console.time('transformRegular');
+    expect(data.map((obj) => {
+      const newObj = { ...obj };
+      newObj.id = new ObjectId(newObj.id);
+      newObj.age *= 2;
+      newObj.sectors = Util.map(obj.sections, (el) => {
+        el.id = new ObjectId(el.id);
+        el.name = el.name.toLowerCase();
+        return el;
+      });
+      delete newObj.sections;
+      return newObj;
+    })).toEqual(expect.arrayContaining([
+      { id: expect.any(ObjectId), name: 'Richard1', age: 90, sectors: expect.arrayContaining([{ id: expect.any(ObjectId), name: 'section1', age: 22, state: 'GA' }]) },
+      { id: expect.any(ObjectId), name: 'Richard2', age: 90, sectors: expect.arrayContaining([{ id: expect.any(ObjectId), name: 'section2', age: 22, state: 'GA' }]) },
+    ]));
+    console.timeEnd('transformRegular');
   });
 });

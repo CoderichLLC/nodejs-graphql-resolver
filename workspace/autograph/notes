@@ -17,6 +17,7 @@ Release 0.14:
   * Break up Schema monolith (schema.parse() usage)
   * $field.linkBy & $field.fkField are pointing to the same value; can they be consolidated?
   * QueryResolver.pullOne seems strange that it uses Util.pathmap?
+  * Why do you have Query.transform(asClone?????)
 
 Known Issues:
   * Schema/Resolver not capable of handling intersection tables (eg. TST Audience/Contact)

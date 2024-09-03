@@ -17,7 +17,7 @@ module.exports = class Transformer {
         const result = this.#config.shape[prop].reduce((value, t) => {
           previousValue = value;
           if (typeof t === 'function') return Util.uvl(t({ startValue, value, ...this.#config.args }), value);
-          prop = t;
+          prop = t; // rename key
           return value;
         }, startValue);
 
