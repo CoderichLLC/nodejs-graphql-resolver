@@ -4,7 +4,6 @@
     "workspace/*"
   ],
   "scripts": {
-    "publish": "npm run publish --workspaces",
     "test": "npm run test --workspaces",
     "lint": "eslint ./"
   },

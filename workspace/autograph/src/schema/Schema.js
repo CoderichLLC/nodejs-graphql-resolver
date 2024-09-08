@@ -509,7 +509,6 @@ module.exports = class Schema {
 
           // Field resolution comes first (unshift)
           thunks.unshift(($schema) => {
-            $field.parent = $model;
             $field.model = $schema.models[$field.type];
             $field.linkTo = $schema.models[$field.linkTo];
             $field.crud = Util.uvl($field.crud, $field.model?.scope, 'crud');

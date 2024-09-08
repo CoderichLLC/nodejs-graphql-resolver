@@ -65,6 +65,7 @@ module.exports = class Query {
   validate() {
     const args = { query: this.#query, resolver: this.#resolver, context: this.#context };
     this.#query.input = this.#model.transformers.validate.transform(this.#query.input, args);
+    return this;
   }
 
   /**

@@ -12,8 +12,10 @@ describe('Transformer', () => {
   });
 
   test('multiplier', () => {
+    const obj = { age: 10, name: 'anne' };
     const transformer = new Transformer({ shape: { age: [({ value }) => value * 2, ({ value }) => undefined, ({ value }) => value * 2] } });
-    const data = transformer.transform({ age: 10, name: 'anne' });
+    const data = transformer.transform(obj);
+    expect(obj).toEqual({ age: 10, name: 'anne' });
     expect(data).toEqual({ age: 40, name: 'anne' });
     data.age = 11;
     expect(data).toEqual({ age: 44, name: 'anne' });

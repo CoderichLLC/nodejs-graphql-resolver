@@ -5,7 +5,6 @@
     "access": "public"
   },
   "scripts": {
-    "publish": "APP_ROOT_PATH=$(pwd) npm run dev npmPublish",
     "dev": "coderich-dev"
   },
   "dependencies": {

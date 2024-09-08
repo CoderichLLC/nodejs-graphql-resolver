@@ -10,6 +10,15 @@ describe('Query', () => {
   });
 
   describe('transform', () => {
+    // test('validate (object reference)', async () => {
+    //   const query = await factory('Person').save({ name: 'Rich', emailAddress: 'rich@rich.com' }).transform();
+    //   const $query = query.toObject();
+    //   expect($query.input).toMatchObject({ name: 'rich', emailAddress: 'rich@rich.com' });
+    //   expect($query.$thunks).not.toBeDefined();
+    //   const q = query.validate();
+    //   expect(q.toObject().input).toBe($query.input);
+    // });
+
     test('findOne', async () => {
       expect((await factory('Person').id(1).one().transform()).toObject()).toMatchObject({
         id: 1,

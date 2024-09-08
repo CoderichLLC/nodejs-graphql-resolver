@@ -23,7 +23,8 @@ module.exports = class Pipeline {
         return Util.uvl(factory(args), args.value);
       } catch (e) {
         const { data = {} } = e;
-        throw Boom.boomify(e, { data: { ...args, ...data } });
+        throw Boom.boomify(e, { data });
+        // throw Boom.boomify(e, { data: { ...args, ...data } });
       }
     }, 'name', { value: name });
 
