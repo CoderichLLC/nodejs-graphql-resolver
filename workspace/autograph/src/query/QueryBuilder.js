@@ -15,6 +15,7 @@ module.exports = class QueryBuilder {
     this.#query = Object.defineProperties(query, {
       id: { writable: true, enumerable: true, value: query.id },
       args: { writable: true, enumerable: true, value: query.args || {} },
+      meta: { writable: true, enumerable: true, value: query.meta || {} },
       flags: { writable: true, enumerable: true, value: query.flags || {} },
       select: { writable: true, enumerable: true, value: query.select || Object.keys(model.fields) },
       options: { writable: true, enumerable: true, value: query.options || {} },
