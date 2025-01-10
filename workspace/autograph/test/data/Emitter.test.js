@@ -9,6 +9,12 @@ class MyEmitter extends EventEmitter {
 }
 
 describe('Emitter', () => {
+  let resolver;
+
+  beforeAll(async () => {
+    ({ resolver } = global);
+  });
+
   test('EventEmitter internals', () => {
     const e = new MyEmitter();
     e.once('zero', () => {});
@@ -91,6 +97,46 @@ describe('Emitter', () => {
       expect(order2).toBeGreaterThan(order3);
       expect(order3).toBeGreaterThan(order1);
       expect(order3).toBeLessThan(order2);
+    });
+  });
+
+  describe('Event mutations', () => {
+    test('preMutation', (done) => {
+      Emitter.onceModels('preMutation', ['Person'], (event, next) => {
+        event.merged.name = 'rich';
+        // event.query.input.name = 'rich';
+        event.query.input.emailAddress = 'rich@rich.com';
+        next();
+      });
+
+      Emitter.onceModels('postMutation', ['Person'], (event) => {
+        expect(event.result).toMatchObject({ name: 'rich' });
+        done();
+      });
+
+      resolver.match('Person').save().catch((e) => {
+        done(e);
+      });
+    });
+
+    test('validate', (done) => {
+      Emitter.onceModels('validate', ['Person'], (event, next) => {
+        event.query.input.age = 40;
+        next();
+      });
+
+      Emitter.onceModels('postMutation', ['Person'], (event) => {
+        expect(event.result).toMatchObject({
+          age: 40,
+          name: 'rich2',
+          emailAddress: 'rich@rich.com',
+        });
+        done();
+      });
+
+      resolver.match('Person').save({ name: 'rich2', emailAddress: 'rich@rich.com' }).catch((e) => {
+        done(e);
+      });
     });
   });
 

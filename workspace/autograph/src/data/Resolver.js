@@ -26,6 +26,10 @@ module.exports = class Resolver {
     Util.set(this.#context, `${this.#schema.namespace}.resolver`, this);
   }
 
+  getSchema() {
+    return this.#schema;
+  }
+
   getContext() {
     return this.#context;
   }

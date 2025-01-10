@@ -66,6 +66,7 @@ module.exports = class QueryResolver extends QueryBuilder {
           const args = { query: $query, resolver: this.#resolver, context: this.#context };
           const values = get(this.#model.transformers.create.transform(input, args), key, []);
           const $doc = Util.pathmap(key, doc, (arr) => {
+            if (arr == null) return arr;
             return arr.filter(el => values.every(v => `${v}` !== `${el}`));
           });
           return this.#resolver.match(this.#model.name).id(doc.id).save({ [key]: get($doc, key) });

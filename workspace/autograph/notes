@@ -1,10 +1,11 @@
 Release 0.13:
+  ** onDelete defer (embedded nested arrays) does not work!
+
   ** There is a potential race condition/issue when using $magic methods... I'm seeing Transaction committed/aborted messages when using them in nested transactions
     - DO NOT USE THEM YET!!!
 
   ** I believe there is a race condition when performing Emitter methods (in parallel) and the value of "merged"... (I didn't finish my thought)
 
-  * "validate" pipeline should allow modification if user really wants to
   * Sort by name (name.en) does not work
     - I believe the transformations on where + sort are not accurate
   * Atlas Search Support
@@ -36,7 +37,6 @@ Improvement Considerations:
   * Resolver.graphql()
     - This requires executableSchema...
   * Ability to trigger validation?
-  * onDelete defer - could probably be done dynamically instead?
   * Easy select('a b c d') syntax
     - GraphQL API passes in .args() and only selects what it needs.... is this ok for DataLoader Cache?
     - I disabled it... when selecting "count" only there are problems
