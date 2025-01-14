@@ -1,4 +1,7 @@
 Release 0.13:
+  ** This is an issue with Transactions; specifically the automatic use of them in "post" mutation listeners:
+    -
+
   ** onDelete defer (embedded nested arrays) does not work!
 
   ** There is a potential race condition/issue when using $magic methods... I'm seeing Transaction committed/aborted messages when using them in nested transactions

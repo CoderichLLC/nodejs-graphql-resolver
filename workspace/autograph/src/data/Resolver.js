@@ -72,7 +72,7 @@ module.exports = class Resolver {
    * @returns {QueryResolver|QueryResolverTransaction} - An API to build and execute a query
    */
   match(model) {
-    return this.#sessions.slice(-1).pop()?.slice(-1).pop()?.match(model) ?? new QueryResolver({
+    return this.#sessions.at(-1)?.at(-1)?.match(model) ?? new QueryResolver({
       resolver: this,
       schema: this.#schema,
       context: this.#context,
@@ -104,8 +104,8 @@ module.exports = class Resolver {
   transaction(isolated = true, parent = this) {
     if (isolated) return this.clone().transaction(false, parent);
 
-    const currSession = this.#sessions.slice(-1).pop();
-    const currTransaction = currSession?.slice(-1).pop();
+    const currSession = this.#sessions.at(-1);
+    const currTransaction = currSession?.at(-1);
     const realTransaction = new Transaction({ resolver: this, schema: this.#schema, context: this.#context });
     const thunks = currTransaction ? currSession.thunks : []; // If in a transaction, piggy back off session
 
@@ -194,7 +194,7 @@ module.exports = class Resolver {
   async resolve(query) {
     let thunk;
     const { doc, model, crud, isMutation, flags } = query.toObject();
-    const currSession = this.#sessions.slice(-1).pop();
+    const currSession = this.#sessions.at(-1);
 
     if (isMutation) {
       thunk = tquery => this.#schema.models[model].source.client.resolve(tquery.toDriver().toObject()).then((results) => {
