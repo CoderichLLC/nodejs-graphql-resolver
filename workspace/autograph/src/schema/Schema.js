@@ -495,7 +495,7 @@ module.exports = class Schema {
 
             Util.traverse(Object.values($model.fields), (f, info) => {
               const path = info.path.concat(f.name);
-              if (f.isEmbedded) return { value: f.model.fields, info: { path } };
+              if (f.isEmbedded) return { value: Object.values(f.model.fields), info: { path } };
               if (f.isScalar) $model.ignorePaths.push(path.join('.'));
               return null;
             }, { path: [] });

@@ -336,7 +336,7 @@ module.exports = class Resolver {
     query.match = event.args.where;
     query.toObject = () => query;
     event.merged = event.input;
-    event.input = event.args?.input;
+    event.input = Util.unflatten(event.args?.input, { safe: true });
     event.doc ??= {};
 
     return event;
