@@ -5,6 +5,7 @@ module.exports = class Transaction {
   #context;
   #resolver;
   #sourceMap;
+  #queries = [];
 
   constructor(config) {
     this.#schema = config.schema;
@@ -24,13 +25,15 @@ module.exports = class Transaction {
       }));
     }
 
-    return new QueryResolverTransaction({
+    this.#queries.push(new QueryResolverTransaction({
       resolver: this.#resolver,
       schema: this.#schema,
       context: this.#context,
       transaction: this.#sourceMap.get(client),
       query: { model: `${model}` },
-    });
+    }));
+
+    return this.#queries.at(-1);
   }
 
   commit() {
@@ -42,8 +45,10 @@ module.exports = class Transaction {
   }
 
   #close(op) {
-    return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, promise]) => {
-      return promise.then(transaction => transaction[op]());
-    }));
+    return Promise.all(this.#queries.map(q => q.promise())).then(() => {
+      return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, promise]) => {
+        return promise.then(transaction => transaction[op]());
+      }));
+    });
   }
 };

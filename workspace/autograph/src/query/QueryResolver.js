@@ -1,7 +1,7 @@
 const get = require('lodash.get');
 const Util = require('@coderich/util');
 const QueryBuilder = require('./QueryBuilder');
-const { mergeDeep } = require('../service/AppService');
+const { mergeDeep, withResolvers } = require('../service/AppService');
 
 module.exports = class QueryResolver extends QueryBuilder {
   #model;
@@ -9,6 +9,7 @@ module.exports = class QueryResolver extends QueryBuilder {
   #config;
   #context;
   #resolver;
+  #resolution = withResolvers(); // Promise for when the query is resolved
 
   constructor(config) {
     const { schema, context, resolver, query } = config;
@@ -20,7 +21,21 @@ module.exports = class QueryResolver extends QueryBuilder {
     this.#model = schema.models[query.model];
   }
 
+  promise() {
+    return this.#resolution.promise;
+  }
+
   terminate() {
+    return this.#terminate().then((result) => {
+      this.#resolution.resolve(result);
+      return result;
+    }).catch((e) => {
+      this.#resolution.reject(e);
+      return Promise.reject(e);
+    });
+  }
+
+  #terminate() {
     const query = super.terminate();
     const { op, args: { input } } = query.toObject();
 
@@ -101,7 +116,7 @@ module.exports = class QueryResolver extends QueryBuilder {
         });
       }
       default: {
-        throw new Error(`Unknown operation "${op}"`);
+        return Promise.reject(new Error(`Unknown operation "${op}"`));
       }
     }
   }

@@ -1,6 +1,6 @@
 Release 0.13:
-  ** This is an issue with Transactions; specifically the automatic use of them in "post" mutation listeners:
-    -
+  ** When a transaction is started is allows for other queries to "join" the session!
+    - The issue is that the transaction is committed when the original queries are finished because it has no idea there are other queries in the session
 
   ** onDelete defer (embedded nested arrays) does not work!
 
@@ -15,6 +15,9 @@ Release 0.13:
     - How to modify the query?
   * Do we support input meta?
   * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
+  * Must finalize absolute definition for emitter "event" (See BREAKING CHANGES below)
+    - args, query, input, sort, crud, key, doc, merged, result, context, resolver, etc
+    - Legacy unflattened args during QueryBuilder; you no longer do that. Should you?
 
 Release 0.14:
   * Remove deprecations
