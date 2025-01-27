@@ -231,6 +231,8 @@ module.exports = class Resolver {
       return thunk(tquery).then((result) => {
         if (flags?.required && (result == null || result?.length === 0)) throw Boom.notFound(`${model} Not Found`);
         return result;
+      }).finally(() => {
+        query.resolve();
       });
     });
   }

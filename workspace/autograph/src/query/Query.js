@@ -1,5 +1,5 @@
 const Util = require('@coderich/util');
-const { isGlob, globToRegex, mergeDeep, JSONParse } = require('../service/AppService');
+const { isGlob, globToRegex, mergeDeep, JSONParse, withResolvers } = require('../service/AppService');
 
 module.exports = class Query {
   #config;
@@ -8,20 +8,30 @@ module.exports = class Query {
   #schema;
   #model;
   #query;
+  #resolution;
 
   constructor(config) {
-    const { schema, context, resolver, query } = config;
+    const { schema, context, resolver, query, resolution = withResolvers() } = config;
     this.#config = config;
     this.#resolver = resolver;
     this.#context = context;
     this.#schema = schema;
     this.#model = schema.models[query.model];
     this.#query = query;
+    this.#resolution = resolution;
+  }
+
+  promise() {
+    return this.#resolution.promise;
+  }
+
+  resolve() {
+    this.#resolution.resolve();
   }
 
   clone(query) {
     query = { ...this.#query, ...query }; // NO deepMerge here; must replace fields entirely
-    return new Query({ ...this.#config, query });
+    return new Query({ ...this.#config, query, resolution: this.#resolution });
   }
 
   toObject() {

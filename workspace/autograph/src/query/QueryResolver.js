@@ -26,17 +26,8 @@ module.exports = class QueryResolver extends QueryBuilder {
   }
 
   terminate() {
-    return this.#terminate().then((result) => {
-      this.#resolution.resolve(result);
-      return result;
-    }).catch((e) => {
-      this.#resolution.reject(e);
-      return Promise.reject(e);
-    });
-  }
-
-  #terminate() {
     const query = super.terminate();
+    query.promise().then(this.#resolution.resolve).catch(this.#resolution.reject);
     const { op, args: { input } } = query.toObject();
 
     // Resolve
