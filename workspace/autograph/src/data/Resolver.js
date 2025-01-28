@@ -142,10 +142,11 @@ module.exports = class Resolver {
    * @returns {*} - The promise resolution
    */
   run(promise) {
-    return this.commit().then(() => promise);
-    // return this.commit().then(() => promise).catch((e) => {
-    //   return this.rollback().then(() => Promise.reject(e));
-    // });
+    return promise.catch((e) => {
+      return this.rollback().then(() => Promise.reject(e));
+    }).then((results) => {
+      return this.commit().then(() => results);
+    });
   }
 
   /**
@@ -308,7 +309,7 @@ module.exports = class Resolver {
     const type = query.isMutation ? 'Mutation' : 'Query';
     const event = this.#createEvent(query);
 
-    const promise = Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
+    return Emitter.emit(`pre${type}`, event).then(async (resultEarly) => {
       if (resultEarly !== undefined) return resultEarly; // Nothing to validate/transform
       // if (query.crud === 'update' && Util.isEqual({ added: {}, updated: {}, deleted: {} }, Util.changeset(query.doc, query.input))) return query.doc;
 
@@ -319,9 +320,7 @@ module.exports = class Resolver {
       }
 
       return thunk(tquery);
-    });
-
-    promise.then((result) => {
+    }).then((result) => {
       event.result = result; // backwards compat
       query.result = result;
       return Emitter.emit(`post${type}`, event);
@@ -330,8 +329,6 @@ module.exports = class Resolver {
       // const { data = {} } = e;
       // throw Boom.boomify(e, { data: { ...event, ...data } });
     });
-
-    return promise;
   }
 
   #createEvent(query) {

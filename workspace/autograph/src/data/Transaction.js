@@ -45,10 +45,10 @@ module.exports = class Transaction {
   }
 
   #close(op) {
-    return Promise.all(this.#queries.map(q => q.promise())).finally(() => {
-      return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, promise]) => {
-        return promise.then(transaction => transaction[op]());
-      }));
-    });
+    // return Promise.all(this.#queries.map(q => q.promise())).finally(() => {
+    return Promise.all(Array.from(this.#sourceMap.entries()).map(([client, promise]) => {
+      return promise.then(transaction => transaction[op]());
+    }));
+    // });
   }
 };
