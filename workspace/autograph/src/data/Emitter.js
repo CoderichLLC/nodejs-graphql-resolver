@@ -18,14 +18,14 @@ class Emitter extends EventEmitter {
       return prev[isBasic ? 0 : 1].push(wrapper) && prev;
     }, [[], []]);
 
-    // Basic functions are not designed to be bound to the query execution so we need an isolated resolver from any transactions
-    const resolver = data?.resolver?.clone();
-    const basicData = { ...data, resolver };
+    // // Basic functions are not designed to be bound to the query execution so we need an isolated resolver from any transactions
+    // const resolver = data?.resolver?.clone();
+    // const basicData = { ...data, resolver };
 
     return new Promise((resolve, reject) => {
       // Basic functions run first; if they return a value they abort the flow of execution
       basicFuncs.sort(Emitter.sort).forEach((fn) => {
-        const value = fn(basicData);
+        const value = fn(data);
         if (value !== undefined && !(value instanceof Promise)) throw new AbortEarlyError(value);
       });
 
