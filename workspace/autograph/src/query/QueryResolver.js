@@ -133,7 +133,6 @@ module.exports = class QueryResolver extends QueryBuilder {
         case 'cascade': return isArray ? txn.match(model).where(where).pull($path, id) : txn.match(model).where(where).remove();
         case 'nullify': return txn.match(model).where(where).save({ [$path]: null });
         case 'restrict': return txn.match(model).where(where).count().then(count => (count ? Promise.reject(new Error('Restricted')) : count));
-        case 'defer': return Promise.resolve(); // Used for embedded models (could be improved)
         default: throw new Error(`Unknown onDelete operator: '${onDelete}'`);
       }
     }));

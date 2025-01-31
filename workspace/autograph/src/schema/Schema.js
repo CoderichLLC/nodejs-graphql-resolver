@@ -142,6 +142,7 @@ module.exports = class Schema {
             crud: 'crud', // For use when creating API Queries and Mutations
             scope: 'crud', // For use when defining types (how it's field.model reference can be used)
             pkField: 'id',
+            isEmbedded: true,
             isPersistable: true,
             source: this.#config.dataSources?.default,
             loader: this.#config.dataLoaders?.default,
@@ -156,6 +157,7 @@ module.exports = class Schema {
             },
             directives: {},
             ignorePaths: [],
+            referentialIntegrity: [],
             toString: () => name,
           };
         }
@@ -202,8 +204,12 @@ module.exports = class Schema {
         } else if (node.kind === Kind.DIRECTIVE) {
           target.directives[name] = target.directives[name] || {};
 
-          if (name === directives.model) model.isMarkedModel = true;
-          else if (name === directives.index) this.#schema.indexes.push({ model });
+          if (name === directives.model) {
+            model.isMarkedModel = true;
+            model.isEmbedded = false;
+          } else if (name === directives.index) {
+            this.#schema.indexes.push({ model });
+          }
 
           node.arguments.forEach((arg) => {
             const key = arg.name.value;
@@ -521,6 +527,9 @@ module.exports = class Schema {
             $field.isScalar = scalars.includes($field.type);
             $field.generator ??= $model.generator;
 
+            // Referential Integrity Setup
+            if ($field.onDelete) $field.model.referentialIntegrity.push(...this.#findModelPathsToField($model, $field));
+
             // Merge Enums and Scalar type definitions
             const enumer = this.#schema.enums[$field.type];
             const scalar = this.#schema.scalars[$field.type];
@@ -571,15 +580,6 @@ module.exports = class Schema {
       const { name, type } = index;
       const on = index.on.map(f => index.model.fields[f].key);
       return { key, name, type, on };
-    });
-
-    // Resolve referential integrity
-    const onDeleteFields = Array.from(new Set(Object.values(this.#schema.models).reduce((prev, curr) => {
-      return prev.concat(Object.values(curr.fields).filter(el => el.onDelete)).flat();
-    }, [])));
-
-    Object.values(this.#schema.models).forEach(($model) => {
-      $model.referentialIntegrity = Schema.#identifyOnDeletes(Object.values(this.#schema.models).filter(m => m.isEntity), onDeleteFields.filter(f => `${f.model}` === `${$model}`));
     });
 
     // Helper methods
@@ -639,6 +639,23 @@ module.exports = class Schema {
     return this.#config.makeExecutableSchema(this.toObject());
   }
 
+  #findModelPathsToField(model, field) {
+    if (!model.isEmbedded) return [{ model, field, path: [`${field}`] }];
+
+    const arr = [];
+
+    Object.values(this.#schema.models).forEach((m) => {
+      Util.traverse(Object.values(m.fields), (f, info) => {
+        const path = info.path.concat(f.name);
+        if (f.isEmbedded) return { value: Object.values(f.model.fields), info: { path } };
+        if (f.type === model.name) arr.push({ model: m, field, path: path.concat(`${field}`) });
+        return null;
+      }, { path: [] });
+    });
+
+    return arr;
+  }
+
   static #resolveNodeValue(node) {
     if (node == null) return node;
 
@@ -661,7 +678,7 @@ module.exports = class Schema {
 
       enum AutoGraphIndexEnum { unique }
       enum AutoGraphAuthzEnum { private protected public } # DELETE WHEN MIGRATED
-      enum AutoGraphOnDeleteEnum { cascade nullify restrict defer }
+      enum AutoGraphOnDeleteEnum { cascade nullify restrict }
       enum AutoGraphPipelineEnum { ${Object.keys(Pipeline).filter(k => !k.startsWith('$')).join(' ')} }
 
       directive @${model}(
@@ -960,27 +977,5 @@ module.exports = class Schema {
       last: Int
       before: String
     `;
-  }
-
-  static #findPathToField(model, field, path = []) {
-    const { target, embeds } = Object.values(model.fields).reduce((prev, curr) => {
-      if (curr === field) prev.target = curr;
-      else if (curr.isEmbedded) prev.embeds.push(curr);
-      return prev;
-    }, { embeds: [] });
-
-    if (target) return path.concat(target.name);
-    if (embeds.length) return embeds.map(f => Schema.#findPathToField(f.model, field, path.concat(f.name))).filter(Boolean)[0];
-    return undefined;
-  }
-
-  static #identifyOnDeletes(models, fields) {
-    return models.map((model) => {
-      return fields.map((field) => {
-        const path = Schema.#findPathToField(model, field);
-        if (!path) return null;
-        return { model, field, path };
-      });
-    }).flat().filter(Boolean);
   }
 };

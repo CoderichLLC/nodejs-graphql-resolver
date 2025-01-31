@@ -1,4 +1,4 @@
-const { Emitter } = require('@coderich/autograph');
+// const { Emitter } = require('@coderich/autograph');
 
 let richard;
 let christie;
@@ -77,7 +77,7 @@ module.exports = () => describe('TestSuite', () => {
       expect(richard.gender).toBe('male');
       expect(richard.telephone).toBe('###-###-####'); // Default value
 
-      christie = await resolver.match('Person').save({ name: 'Christie', emailAddress: 'christie@gmail.com', gender: 'female', friends: [richard.id], telephone: 1112223333, network: 'network', nonsense: 'nonsense', section: { name: 'rich', person: richard.id } });
+      christie = await resolver.match('Person').save({ name: 'Christie', emailAddress: 'christie@gmail.com', gender: 'female', friends: [richard.id], telephone: 1112223333, network: 'network', nonsense: 'nonsense', section: { name: 'rich', person: richard.id }, sections: [{ name: 'rich', person: richard.id }] });
       expect(christie.id).toBeDefined();
       expect(christie.friends).toEqual([richard.id]);
       expect(christie.nonsense).not.toBeDefined();
@@ -828,7 +828,11 @@ module.exports = () => describe('TestSuite', () => {
       expect(await resolver.match('Person').where({ name: '{christie,richard}' }).many()).toMatchObject([{ id: christie.id }]);
       expect(await resolver.match('Book').many()).toMatchObject([{ id: healthBook.id }]);
       expect(await resolver.match('Chapter').sortBy({ name: 'asc' }).many()).toMatchObject([{ id: chapter1.id }, { id: chapter2.id }]);
-      expect(await resolver.match('Person').id(christie.id).one()).toMatchObject({ friends: [], section: expect.objectContaining({ person: null }) });
+      expect(await resolver.match('Person').id(christie.id).one()).toMatchObject({
+        friends: [],
+        section: expect.objectContaining({ person: null }),
+        sections: expect.arrayContaining([expect.objectContaining({ person: null })]), // Embedded array
+      });
     });
 
     test('remove multi', async () => {

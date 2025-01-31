@@ -1,12 +1,4 @@
 Release 0.13:
-  ** When a transaction is started is allows for other queries to "join" the session!
-    - The issue is that the transaction is committed when the original queries are finished because it has no idea there are other queries in the session
-
-  ** onDelete defer (embedded nested arrays) does not work!
-
-  ** There is a potential race condition/issue when using $magic methods... I'm seeing Transaction committed/aborted messages when using them in nested transactions
-    - DO NOT USE THEM YET!!!
-
   ** I believe there is a race condition when performing Emitter methods (in parallel) and the value of "merged"... (I didn't finish my thought)
 
   * Sort by name (name.en) does not work
@@ -18,6 +10,7 @@ Release 0.13:
   * Must finalize absolute definition for emitter "event" (See BREAKING CHANGES below)
     - args, query, input, sort, crud, key, doc, merged, result, context, resolver, etc
     - Legacy unflattened args during QueryBuilder; you no longer do that. Should you?
+      * You actually unflatten input for legacy system even
 
 Release 0.14:
   * Remove deprecations
@@ -27,12 +20,21 @@ Release 0.14:
   * Why do you have Query.transform(asClone?????)
 
 Known Issues:
+  * Transactions (currently removed)
+    - Very tricky to get right
+    - MutateMany should NOT be a transaction of multiple MutateOnes - need to refactor
+    - Trying to re-use a non-isolated transaction runs into race conditions:
+      * The moment a transaction/session is created on the Resolver it opens up other queries to "hop" onto the transaction in an uncontrolled/adhoc manner
+  * There is a potential race condition/issue when using $magic methods... I'm seeing Transaction committed/aborted messages when using them in nested transactions
+    - Currently not in use
+    - Possibly due to Transaction issue (currently removed)
   * Schema/Resolver not capable of handling intersection tables (eg. TST Audience/Contact)
   * MongoClient - not all queries (mutations) go through $aggregateQuery and so you lose things like $project the result
   * You only need to $addFields for mongo regex when it's not already a String (eg. Boolean)
   * Tests overhaul
     - Need to make sure that Scalar @field() is working
     - Failing tests are blowing up due to Jest and Circular Reference
+      * This may be because of messed up Transactions
   * .flags({ debug: true })
     - You will never see debug info when the result is cached and no driver called
     - query.flags.debug should not be at driver level
