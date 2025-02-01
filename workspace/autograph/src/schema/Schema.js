@@ -611,6 +611,8 @@ module.exports = class Schema {
       },
     });
 
+    // console.log(this.#schema.models.Person.referentialIntegrity);
+
     // Return schema
     return this.#schema;
   }
@@ -640,17 +642,17 @@ module.exports = class Schema {
   }
 
   #findModelPathsToField(model, field) {
-    if (!model.isEmbedded) return [{ model, field, path: [`${field}`] }];
+    if (!model.isEmbedded) return [{ model, field, path: [`${field}`], isArray: field.isArray }];
 
     const arr = [];
 
     Object.values(this.#schema.models).forEach((m) => {
       Util.traverse(Object.values(m.fields), (f, info) => {
         const path = info.path.concat(f.name);
-        if (f.isEmbedded) return { value: Object.values(f.model.fields), info: { path } };
-        if (f.type === model.name) arr.push({ model: m, field, path: path.concat(`${field}`) });
+        if (f.isEmbedded) return { value: Object.values(f.model.fields), info: { path, isArray: info.isArray || f.isArray } };
+        if (f.type === model.name) arr.push({ model: m, field, path: path.concat(`${field}`), isArray: info.isArray || field.isArray || f.isArray });
         return null;
-      }, { path: [] });
+      }, { path: [], isArray: false });
     });
 
     return arr;

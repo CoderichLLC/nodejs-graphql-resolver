@@ -67,13 +67,11 @@ module.exports = class QueryResolver extends QueryBuilder {
       }
       case 'pullOne': {
         return this.#get(query).then((doc) => {
-          const [key] = Object.keys(input);
-          const $query = Object.assign(query.toObject(), { doc });
-          const args = { query: $query, resolver: this.#resolver, context: this.#context };
-          const values = get(this.#model.transformers.create.transform(input, args), key, []);
-          const $doc = Util.pathmap(key, doc, (arr) => {
-            if (arr == null) return arr;
-            return arr.filter(el => values.every(v => `${v}` !== `${el}`));
+          const [[path, inputs]] = Object.entries(input);
+          const [key] = path.split('.');
+          const $doc = Util.pathmap(path, doc, (mixed) => { // Pathmap because nested arrays
+            if (mixed == null) return mixed;
+            return mixed.filter(el => inputs.every(v => `${v}` !== `${el}`));
           });
           return this.#resolver.match(this.#model.name).id(doc.id).save({ [key]: get($doc, key) });
         });
@@ -86,12 +84,21 @@ module.exports = class QueryResolver extends QueryBuilder {
       }
       case 'spliceOne': {
         return this.#get(query).then((doc) => {
-          const [key] = Object.keys(input);
-          const $query = Object.assign(query.toObject(), { doc });
-          const args = { query: $query, resolver: this.#resolver, context: this.#context };
-          const [find, replace] = get(this.#model.transformers.create.transform(input, args), key);
-          const $input = { [key]: (get(doc, key) || []).map(el => (`${el}` === `${find}` ? replace : el)) };
-          return this.#resolver.match(this.#model.name).id(doc.id).save($input);
+          const [[path, [find, replace]]] = Object.entries(input);
+          const [key] = path.split('.');
+          const $doc = Util.pathmap(path, doc, (mixed) => { // Pathmap because nested arrays
+            if (mixed == null) return mixed;
+            if (Array.isArray(mixed)) return mixed.map(el => (`${el}` === `${find}` ? replace : el));
+            if (`${mixed}` === `${find}`) return replace;
+            return mixed;
+          });
+          return this.#resolver.match(this.#model.name).id(doc.id).save({ [key]: get($doc, key) });
+        });
+      }
+      case 'spliceMany': {
+        const [[key, values]] = Object.entries(input);
+        return this.#find(query).then((docs) => {
+          return Promise.all(docs.map(doc => this.#resolver.match(this.#model.name).id(doc.id).splice(key, ...values)));
         });
       }
       case 'deleteOne': {
@@ -123,15 +130,15 @@ module.exports = class QueryResolver extends QueryBuilder {
   #resolveReferentialIntegrity(doc) {
     const txn = this.#resolver;
 
-    return Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, path }) => () => {
-      const { onDelete, isArray, fkField } = field;
+    return Util.promiseChain(this.#model.referentialIntegrity.map(({ model, field, isArray, path }) => () => {
+      const { onDelete, fkField } = field;
       const id = doc[fkField];
       const $path = path.join('.');
       const where = field.isVirtual ? { [field.model.pkField]: get(doc, field.linkBy) } : { [$path]: id };
 
       switch (onDelete) {
         case 'cascade': return isArray ? txn.match(model).where(where).pull($path, id) : txn.match(model).where(where).remove();
-        case 'nullify': return txn.match(model).where(where).save({ [$path]: null });
+        case 'nullify': return isArray ? txn.match(model).where(where).splice($path, id, null) : txn.match(model).where(where).save({ [$path]: null });
         case 'restrict': return txn.match(model).where(where).count().then(count => (count ? Promise.reject(new Error('Restricted')) : count));
         default: throw new Error(`Unknown onDelete operator: '${onDelete}'`);
       }

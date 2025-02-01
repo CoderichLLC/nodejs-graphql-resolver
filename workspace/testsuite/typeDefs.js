@@ -121,6 +121,7 @@ module.exports = `
     type: BuildingType
     description: String
     person: Person @field(onDelete: nullify)
+    persons: [Person!] @field(onDelete: cascade)
   }
 
   type PlainJane @model {

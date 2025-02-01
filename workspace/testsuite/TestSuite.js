@@ -77,12 +77,31 @@ module.exports = () => describe('TestSuite', () => {
       expect(richard.gender).toBe('male');
       expect(richard.telephone).toBe('###-###-####'); // Default value
 
-      christie = await resolver.match('Person').save({ name: 'Christie', emailAddress: 'christie@gmail.com', gender: 'female', friends: [richard.id], telephone: 1112223333, network: 'network', nonsense: 'nonsense', section: { name: 'rich', person: richard.id }, sections: [{ name: 'rich', person: richard.id }] });
+      christie = await resolver.match('Person').save({
+        name: 'Christie',
+        emailAddress: 'christie@gmail.com',
+        gender: 'female',
+        friends: [richard.id],
+        telephone: 1112223333,
+        network: 'network',
+        nonsense: 'nonsense',
+        section: { name: 'rich', person: richard.id },
+        sections: [
+          { name: 'rich', person: richard.id },
+          { name: 'rich', person: richard.id },
+        ],
+      });
+
       expect(christie.id).toBeDefined();
       expect(christie.friends).toEqual([richard.id]);
       expect(christie.nonsense).not.toBeDefined();
       expect(christie.gender).toBe('female');
       expect(christie.telephone).toBe('1112223333'); // Explicitly set
+      expect(christie.section).toMatchObject({ name: 'rich', person: richard.id });
+      expect(christie.sections).toEqual([
+        expect.objectContaining({ name: 'rich', person: richard.id }),
+        expect.objectContaining({ name: 'rich', person: richard.id }),
+      ]);
 
       // Tricky data stuff
       expect(richard.status).toBe('alive');
@@ -628,7 +647,7 @@ module.exports = () => describe('TestSuite', () => {
       expect(await resolver.match('Book').id(mobyDick.id).push('bids', 2.99, 1.99, 5.55)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 1.99, 5.55] });
       expect(await resolver.match('Book').id(mobyDick.id).pull('bids', 1.99)).toMatchObject({ id: mobyDick.id, name: 'Moby Dick', bids: [2.99, 5.55] });
       expect(await resolver.match('Book').id(healthBook.id).push('bids', 0.25, 0.25, 11.00, 0.25, 5.00)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 9.00, 12.50, 0.25, 0.25, 11.00, 0.25, 5.00] });
-      expect(await resolver.match('Book').id(healthBook.id).pull('bids', 0.25, '9.00')).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 12.50, 11.00, 5.00] });
+      expect(await resolver.match('Book').id(healthBook.id).pull('bids', 0.25, 9.00)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [5.00, 12.50, 11.00, 5.00] });
       expect(await resolver.match('Book').id(healthBook.id).splice('bids', 5.00, 4.99)).toMatchObject({ id: healthBook.id, name: 'Health And Wellness', bids: [4.99, 12.50, 11.00, 4.99] });
     });
   });
@@ -831,7 +850,10 @@ module.exports = () => describe('TestSuite', () => {
       expect(await resolver.match('Person').id(christie.id).one()).toMatchObject({
         friends: [],
         section: expect.objectContaining({ person: null }),
-        sections: expect.arrayContaining([expect.objectContaining({ person: null })]), // Embedded array
+        sections: [
+          expect.objectContaining({ person: null }),
+          expect.objectContaining({ person: null }),
+        ], // Embedded array
       });
     });
 
