@@ -1,12 +1,9 @@
 Release 0.13:
-  ** I believe there is a race condition when performing Emitter methods (in parallel) and the value of "merged"... (I didn't finish my thought)
-
   * Sort by name (name.en) does not work
     - I believe the transformations on where + sort are not accurate
   * Atlas Search Support
     - How to modify the query?
   * Do we support input meta?
-  * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
   * Must finalize absolute definition for emitter "event" (See BREAKING CHANGES below)
     - args, query, input, sort, crud, key, doc, merged, result, context, resolver, etc
     - Legacy unflattened args during QueryBuilder; you no longer do that. Should you?
@@ -14,9 +11,9 @@ Release 0.13:
 
 Release 0.14:
   * Remove deprecations
+  * Schema.merge - what is the order of priority and do we need to specify it as a param (passive?)
   * Break up Schema monolith (schema.parse() usage)
   * $field.linkBy & $field.fkField are pointing to the same value; can they be consolidated?
-  * QueryResolver.pullOne seems strange that it uses Util.pathmap?
   * Why do you have Query.transform(asClone?????)
 
 Known Issues:

@@ -205,6 +205,7 @@ module.exports = class Schema {
           target.directives[name] = target.directives[name] || {};
 
           if (name === directives.model) {
+            model.isEntity = true;
             model.isMarkedModel = true;
             model.isEmbedded = false;
           } else if (name === directives.index) {
@@ -234,6 +235,7 @@ module.exports = class Schema {
               }
               case `${directives.model}-embed`: {
                 model.isEmbedded = value;
+                model.isEntity = !value;
                 break;
               }
               // Field specific directives
@@ -312,8 +314,6 @@ module.exports = class Schema {
 
           // Model resolution after field resolution (push)
           thunks.push(($schema) => {
-            $model.isEntity = Boolean($model.isMarkedModel && !$model.isEmbedded);
-
             $model.resolvePath = (path, prop = 'name') => this.#schema.resolvePath(`${$model[prop]}.${path}`, prop);
 
             $model.isJoinPath = (path, prop = 'name') => {
@@ -611,8 +611,6 @@ module.exports = class Schema {
       },
     });
 
-    // console.log(this.#schema.models.Person.referentialIntegrity);
-
     // Return schema
     return this.#schema;
   }
@@ -646,11 +644,11 @@ module.exports = class Schema {
 
     const arr = [];
 
-    Object.values(this.#schema.models).forEach((m) => {
+    Object.values(this.#schema.models).filter(m => m.isEntity).forEach((m) => {
       Util.traverse(Object.values(m.fields), (f, info) => {
         const path = info.path.concat(f.name);
-        if (f.isEmbedded) return { value: Object.values(f.model.fields), info: { path, isArray: info.isArray || f.isArray } };
         if (f.type === model.name) arr.push({ model: m, field, path: path.concat(`${field}`), isArray: info.isArray || field.isArray || f.isArray });
+        else if (f.isEmbedded) return { value: Object.values(f.model.fields), info: { path, isArray: info.isArray || f.isArray } };
         return null;
       }, { path: [], isArray: false });
     });
