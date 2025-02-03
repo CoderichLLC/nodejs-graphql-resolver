@@ -39,7 +39,7 @@ module.exports = class Query {
   }
 
   toCacheKey() {
-    return {
+    return JSON.stringify({
       op: this.#query.op,
       select: this.#query.select,
       where: this.#query.where,
@@ -51,7 +51,7 @@ module.exports = class Query {
       after: this.#query.after,
       first: this.#query.first,
       last: this.#query.last,
-    };
+    });
   }
 
   /**

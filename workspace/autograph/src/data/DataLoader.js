@@ -1,7 +1,6 @@
 const get = require('lodash.get');
 const Util = require('@coderich/util');
 const DataLoader = require('dataloader');
-const { hashObject } = require('../service/AppService');
 
 module.exports = class Loader {
   #model;
@@ -11,7 +10,7 @@ module.exports = class Loader {
   constructor(model, resolver) {
     this.#model = model;
     this.#resolver = resolver;
-    this.#model.loader.cacheKeyFn ??= query => hashObject(query.toCacheKey());
+    this.#model.loader.cacheKeyFn ??= query => query.toCacheKey();
     this.#loader = new DataLoader(keys => this.#resolve(keys), this.#model.loader);
   }
 
